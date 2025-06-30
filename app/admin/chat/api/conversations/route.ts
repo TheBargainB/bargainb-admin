@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     const conversationsWithDetails = await Promise.all(
       (conversations || []).map(async (conv) => {
         // Get the last message
-        const { data: lastMessage } = await supabase
+        const { data: lastMessage } = await supabaseAdmin
           .from('messages')
           .select(`
             id,
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure the contact exists in whatsapp_contacts table
     let whatsappContact;
-    const { data: existingContact, error: contactFetchError } = await supabase
+    const { data: existingContact, error: contactFetchError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .select('*')
       .eq('phone_number', contact.phone_number)
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
       
       // Update contact info if provided
       if (contact.name || contact.notify || contact.img_url) {
-        const { data: updatedContact, error: updateError } = await supabase
+        const { data: updatedContact, error: updateError } = await supabaseAdmin
           .from('whatsapp_contacts')
           .update({
             push_name: contact.notify || existingContact.push_name,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
         ? contact.phone_number 
         : `${contact.phone_number.replace('+', '')}@s.whatsapp.net`;
 
-      const { data: newContact, error: contactCreateError } = await supabase
+      const { data: newContact, error: contactCreateError } = await supabaseAdmin
         .from('whatsapp_contacts')
         .insert({
           phone_number: contact.phone_number,
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
 
       // Also create CRM profile for the new contact
       try {
-        const { error: crmProfileError } = await supabase
+        const { error: crmProfileError } = await supabaseAdmin
           .from('crm_profiles')
           .insert({
             id: whatsappContact.id, // Link to whatsapp_contacts
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if conversation already exists for this contact
-    const { data: existingConversation, error: convFetchError } = await supabase
+    const { data: existingConversation, error: convFetchError } = await supabaseAdmin
       .from('conversations')
       .select('id')
       .eq('whatsapp_contact_id', whatsappContact.id)
