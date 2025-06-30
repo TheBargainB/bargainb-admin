@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
       const formattedPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
       // Find the WhatsApp contact by phone number
-      const { data: whatsappContact } = await supabase
+      const { data: whatsappContact } = await supabaseAdmin
         .from('whatsapp_contacts')
         .select('id')
         .eq('phone_number', formattedPhoneNumber)
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Find conversation by WhatsApp contact ID
-      const { data: conversation } = await supabase
+      const { data: conversation } = await supabaseAdmin
         .from('conversations')
         .select('id')
         .eq('whatsapp_contact_id', whatsappContact.id)
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch messages for the conversation
-    const { data: messages, error } = await supabase
+    const { data: messages, error } = await supabaseAdmin
       .from('messages')
       .select(`
         id,
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get the conversation details for contact info
-    const { data: conversation } = await supabase
+    const { data: conversation } = await supabaseAdmin
       .from('conversations')
       .select(`
         id,

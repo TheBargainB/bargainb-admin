@@ -52,7 +52,7 @@ export async function POST(req: Request) {
       const whatsappMessageId = apiData.data?.msgId?.toString() || `out_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Store the outbound message in the messages table
-        const { error: messageError } = await supabase
+        const { error: messageError } = await supabaseAdmin
         .from('messages')
           .insert({
             conversation_id: conversationId,
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         }
 
       // Update conversation stats manually
-      const { data: currentConversation } = await supabase
+      const { data: currentConversation } = await supabaseAdmin
         .from('conversations')
         .select('total_messages')
         .eq('id', conversationId)
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       if (currentConversation) {
         const newTotalMessages = (currentConversation.total_messages || 0) + 1;
 
-        const { error: statsError } = await supabase
+        const { error: statsError } = await supabaseAdmin
           .from('conversations')
           .update({
             total_messages: newTotalMessages,

@@ -67,7 +67,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
     const formattedPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
     // Try to find existing contact
-    const { data: existingContact, error: fetchError } = await supabase
+    const { data: existingContact, error: fetchError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .select('*')
       .eq('phone_number', formattedPhoneNumber)
@@ -83,7 +83,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
       
       // Update contact name if we have new information
       if (pushName && (!existingContact.push_name || !existingContact.display_name)) {
-        const { data: updatedContact, error: updateError } = await supabase
+        const { data: updatedContact, error: updateError } = await supabaseAdmin
           .from('whatsapp_contacts')
           .update({
             push_name: pushName,
@@ -110,7 +110,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
     // Create new WhatsApp contact
     console.log('🆕 Creating new WhatsApp contact for:', formattedPhoneNumber);
     
-    const { data: newContact, error: createError } = await supabase
+    const { data: newContact, error: createError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .insert({
         phone_number: formattedPhoneNumber,
@@ -133,7 +133,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
 
     // Also create CRM profile for the new contact
     try {
-      const { error: crmProfileError } = await supabase
+      const { error: crmProfileError } = await supabaseAdmin
         .from('crm_profiles')
         .insert({
           whatsapp_contact_id: newContact.id, // Link to whatsapp_contacts
@@ -166,7 +166,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
 async function getOrCreateConversation(contactId: string, contactName: string, remoteJid: string) {
   try {
     // Try to find existing conversation
-    const { data: existingConversation, error: fetchError } = await supabase
+    const { data: existingConversation, error: fetchError } = await supabaseAdmin
       .from('conversations')
       .select('*')
       .eq('whatsapp_contact_id', contactId)
@@ -189,7 +189,7 @@ async function getOrCreateConversation(contactId: string, contactName: string, r
     // Generate a unique WhatsApp conversation ID from the remoteJid
     const whatsappConversationId = remoteJid.replace('@s.whatsapp.net', '') + '_conversation';
     
-    const { data: newConversation, error: createError } = await supabase
+    const { data: newConversation, error: createError } = await supabaseAdmin
       .from('conversations')
       .insert({
         whatsapp_contact_id: contactId,
@@ -224,7 +224,7 @@ async function storeMessage(conversationId: string, content: string, direction: 
     // Generate a unique WhatsApp message ID
     const whatsappMessageId = metadata.whatsapp_message_id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    const { data: newMessage, error: messageError } = await supabase
+    const { data: newMessage, error: messageError } = await supabaseAdmin
       .from('messages')
       .insert({
         conversation_id: conversationId,
@@ -245,7 +245,7 @@ async function storeMessage(conversationId: string, content: string, direction: 
     }
 
     // Update conversation stats - get current conversation first
-    const { data: currentConversation } = await supabase
+    const { data: currentConversation } = await supabaseAdmin
       .from('conversations')
       .select('total_messages, unread_count')
       .eq('id', conversationId)
@@ -257,7 +257,7 @@ async function storeMessage(conversationId: string, content: string, direction: 
         ? (currentConversation.unread_count || 0) + 1 
         : (currentConversation.unread_count || 0);
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from('conversations')
         .update({
           total_messages: newTotalMessages,
@@ -381,7 +381,7 @@ export async function POST(request: NextRequest) {
         const timestampStart = new Date(messageTimestampMs - 30000).toISOString(); // 30 seconds before
         const timestampEnd = new Date(messageTimestampMs + 30000).toISOString();   // 30 seconds after
 
-        const { data: existingMessage } = await supabase
+        const { data: existingMessage } = await supabaseAdmin
           .from('messages')
           .select('id, raw_message_data')
           .eq('conversation_id', conversation.id)
@@ -404,7 +404,7 @@ export async function POST(request: NextRequest) {
             from_me: fromMe
           };
 
-          const { error: updateError } = await supabase
+          const { error: updateError } = await supabaseAdmin
             .from('messages')
             .update({ 
               whatsapp_message_id: messageId,
@@ -442,7 +442,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // Find the message in CRM system by WhatsApp message ID
-        const { data: existingMessage } = await supabase
+        const { data: existingMessage } = await supabaseAdmin
           .from('messages')
           .select('id, raw_message_data, conversation_id')
           .eq('whatsapp_message_id', messageId)
@@ -459,7 +459,7 @@ export async function POST(request: NextRequest) {
             status_updated_at: new Date().toISOString()
           };
 
-          const { error: updateError } = await supabase
+          const { error: updateError } = await supabaseAdmin
             .from('messages')
             .update({ 
               whatsapp_status: getStatusName(status),
