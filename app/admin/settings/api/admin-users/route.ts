@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         const authPayload = {
           email: email.toLowerCase(),
           password: password,
-          email_confirm: !sendWelcomeEmail, // Auto-confirm if not sending welcome email
+          email_confirm: true, // Always auto-confirm when password is provided
           user_metadata: {
             full_name: fullName,
             username: username || email.split('@')[0],
