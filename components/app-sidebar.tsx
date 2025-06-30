@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, MessageSquare, Package, Users, Settings, Home, Activity } from "lucide-react"
+import { BarChart3, MessageSquare, Package, Users, Settings, Home, Activity, Bug } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -48,6 +48,12 @@ const menuItems = [
     url: "/admin/analytics",
     icon: BarChart3,
     description: "Performance metrics",
+  },
+  {
+    title: "QA Testing",
+    url: "/admin/testing",
+    icon: Bug,
+    description: "QA tools & system monitoring",
   },
   {
     title: "Settings",
