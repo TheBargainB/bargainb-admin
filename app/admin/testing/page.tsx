@@ -106,12 +106,12 @@ export default function QATestingCenter() {
     setTestResults(prev => [testResult, ...prev])
 
     try {
-      const response = await fetch('/admin/chat/api/send-message', {
+      const response = await fetch('/admin/testing/api/test-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phoneNumber: testPhoneNumber,
-          message: `[QA TEST] ${testMessage}`
+          message: testMessage
         })
       })
 
