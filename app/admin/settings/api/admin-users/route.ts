@@ -112,36 +112,72 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 1: Create user in Supabase Auth
+    // Step 0: Check if user already exists in admin_users table
+    const { data: existingAdminUser, error: adminCheckError } = await supabaseAdmin
+      .from('admin_users')
+      .select('id, email, auth_user_id')
+      .eq('email', email.toLowerCase())
+      .single()
+
+    if (adminCheckError && adminCheckError.code !== 'PGRST116') {
+      console.error('Error checking existing admin user:', adminCheckError)
+      return NextResponse.json(
+        { success: false, error: 'Failed to check existing admin user' },
+        { status: 500 }
+      )
+    }
+
+    if (existingAdminUser) {
+      return NextResponse.json(
+        { success: false, error: 'Admin user with this email already exists in admin table' },
+        { status: 400 }
+      )
+    }
+
+    // Step 0.5: Check if auth user exists but has no admin record (orphaned user)
+    let existingAuthUser = null
+    try {
+      const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers()
+      existingAuthUser = authUsers.users?.find(user => user.email?.toLowerCase() === email.toLowerCase())
+    } catch (authListError) {
+      console.warn('Could not list auth users:', authListError)
+    }
+
+    // Step 1: Create or use existing auth user
     let authUser: any
     let authError: any
 
-    if (password && password.trim()) {
-      // Create user with password
-      const authPayload = {
-        email: email.toLowerCase(),
-        password: password,
-        email_confirm: !sendWelcomeEmail, // Auto-confirm if not sending welcome email
-        user_metadata: {
-          full_name: fullName,
-          username: username || email.split('@')[0],
-          department: department,
-          role: role,
-          require_password_change: requirePasswordChange,
-          enable_two_fa: enableTwoFA
-        }
-      }
+    if (existingAuthUser) {
+      // Use existing orphaned auth user
+      console.log(`📧 Found orphaned auth user for ${email}, reusing auth user ID: ${existingAuthUser.id}`)
+      authUser = { user: existingAuthUser }
+      authError = null
 
-      const result = await supabaseAdmin.auth.admin.createUser(authPayload)
-      authUser = result.data
-      authError = result.error
+      // Update the auth user metadata if needed
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, {
+          user_metadata: {
+            full_name: fullName,
+            username: username || email.split('@')[0],
+            department: department,
+            role: role,
+            require_password_change: requirePasswordChange,
+            enable_two_fa: enableTwoFA
+          }
+        })
+        console.log('✅ Updated existing auth user metadata')
+      } catch (updateError) {
+        console.warn('⚠️ Could not update auth user metadata:', updateError)
+      }
     } else {
-      // Send invitation email (user will set password later)
-      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-        email.toLowerCase(),
-        {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/login`,
-          data: {
+      // Create new auth user
+      if (password && password.trim()) {
+        // Create user with password
+        const authPayload = {
+          email: email.toLowerCase(),
+          password: password,
+          email_confirm: !sendWelcomeEmail, // Auto-confirm if not sending welcome email
+          user_metadata: {
             full_name: fullName,
             username: username || email.split('@')[0],
             department: department,
@@ -150,18 +186,38 @@ export async function POST(request: NextRequest) {
             enable_two_fa: enableTwoFA
           }
         }
-      )
-      
-      authUser = inviteData
-      authError = inviteError
-    }
 
-    if (authError) {
-      console.error('Error creating auth user:', authError)
-      return NextResponse.json(
-        { success: false, error: `Failed to create user account: ${authError.message}` },
-        { status: 400 }
-      )
+        const result = await supabaseAdmin.auth.admin.createUser(authPayload)
+        authUser = result.data
+        authError = result.error
+      } else {
+        // Send invitation email (user will set password later)
+        const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+          email.toLowerCase(),
+          {
+            redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/admin/login`,
+            data: {
+              full_name: fullName,
+              username: username || email.split('@')[0],
+              department: department,
+              role: role,
+              require_password_change: requirePasswordChange,
+              enable_two_fa: enableTwoFA
+            }
+          }
+        )
+        
+        authUser = inviteData
+        authError = inviteError
+      }
+
+      if (authError) {
+        console.error('Error creating auth user:', authError)
+        return NextResponse.json(
+          { success: false, error: `Failed to create user account: ${authError.message}` },
+          { status: 400 }
+        )
+      }
     }
 
     if (!authUser.user) {
@@ -186,16 +242,19 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (adminError) {
-      // If admin user creation fails, clean up auth user
+      // If admin user creation fails, clean up auth user (only if we created it)
       console.error('Error creating admin user record:', adminError)
       
-      try {
-        const userId = authUser.user?.id || authUser.id
-        if (userId) {
-          await supabaseAdmin.auth.admin.deleteUser(userId)
+      if (!existingAuthUser) {
+        // Only delete auth user if we created it in this request
+        try {
+          const userId = authUser.user?.id || authUser.id
+          if (userId) {
+            await supabaseAdmin.auth.admin.deleteUser(userId)
+          }
+        } catch (cleanupError) {
+          console.error('Error cleaning up auth user:', cleanupError)
         }
-      } catch (cleanupError) {
-        console.error('Error cleaning up auth user:', cleanupError)
       }
 
       return NextResponse.json(
@@ -208,11 +267,17 @@ export async function POST(request: NextRequest) {
     // NOTE: Removed - we no longer use the chat_users table in the new CRM system
     // All chat functionality now uses whatsapp_contacts + conversations + messages tables
 
+    const successMessage = existingAuthUser 
+      ? 'Admin user created successfully using existing auth account'
+      : (password && password.trim()) 
+        ? 'Admin user created successfully' 
+        : 'Admin user created and invitation email sent'
+
     return NextResponse.json({
       success: true,
       data: { 
         user: adminUser,
-        message: (password && password.trim()) ? 'Admin user created successfully' : 'Admin user created and invitation email sent'
+        message: successMessage
       }
     })
 
