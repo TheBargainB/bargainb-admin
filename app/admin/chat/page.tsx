@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -671,45 +671,50 @@ export default function ChatPage() {
   }
 
   // Convert database messages to chat messages format
-  const getContactMessages = (): ChatMessage[] => {
+  // Memoize messages to prevent unnecessary re-calculations
+  const messages = useMemo((): ChatMessage[] => {
+    // Return empty array if no contact is selected
     if (!selectedContact) return []
     
     // Use database messages instead of webhook messages
     return databaseMessages
-  }
-
-  const messages = getContactMessages()
+  }, [selectedContact, databaseMessages])
 
   // Use database conversations instead of generating from webhook messages
-  const conversations: ChatConversation[] = databaseConversations
+  const conversations = useMemo((): ChatConversation[] => {
+    return databaseConversations
+  }, [databaseConversations])
 
-  // Get selected conversation
-  const selectedConversation = conversations.find(conv => conv.id === selectedContact) || 
-    (selectedContact ? {
-      id: selectedContact,
-      user: whatsappContacts.find(c => c.jid === selectedContact)?.name || 
-           whatsappContacts.find(c => c.jid === selectedContact)?.notify || 
-           selectedContact,
-      email: selectedContact,
-      avatar: whatsappContacts.find(c => c.jid === selectedContact)?.imgUrl || "/placeholder.svg",
-      lastMessage: "No messages yet",
-      timestamp: "Never",
-      status: 'active' as const,
-      unread_count: 0,
-      type: 'whatsapp',
-      aiConfidence: 85,
-      lastMessageAt: new Date().toISOString(),
-      remoteJid: selectedContact,
-      phoneNumber: selectedContact.replace('@s.whatsapp.net', '')
-    } : undefined)
+  // Get selected conversation - memoized to prevent re-calculations
+  const selectedConversation = useMemo(() => {
+    return conversations.find(conv => conv.id === selectedContact) || 
+      (selectedContact ? {
+        id: selectedContact,
+        user: whatsappContacts.find(c => c.jid === selectedContact)?.name || 
+             whatsappContacts.find(c => c.jid === selectedContact)?.notify || 
+             selectedContact,
+        email: selectedContact,
+        avatar: whatsappContacts.find(c => c.jid === selectedContact)?.imgUrl || "/placeholder.svg",
+        lastMessage: "No messages yet",
+        timestamp: "Never",
+        status: 'active' as const,
+        unread_count: 0,
+        type: 'whatsapp',
+        aiConfidence: 85,
+        lastMessageAt: new Date().toISOString(),
+        remoteJid: selectedContact,
+        phoneNumber: selectedContact.replace('@s.whatsapp.net', '')
+      } : undefined)
+  }, [conversations, selectedContact, whatsappContacts])
 
-  // Check if the selected conversation is with a system user (non-WhatsApp contact)
-  const isSystemConversation = selectedConversation && (() => {
+  // Check if the selected conversation is with a system user (non-WhatsApp contact) - memoized to prevent re-calculations
+  const isSystemConversation = useMemo(() => {
+    if (!selectedConversation) return false
     const remoteJid = selectedConversation.remoteJid || selectedConversation.email
     if (!remoteJid) return false
     const phoneNumber = remoteJid.replace('@s.whatsapp.net', '')
     return phoneNumber === 'admin' || phoneNumber.includes('@') || !phoneNumber.match(/^\+?\d+$/)
-  })()
+  }, [selectedConversation])
 
   // Start a new chat with a contact
   const startNewChat = async (contact: WhatsAppContact) => {
@@ -910,20 +915,24 @@ export default function ChatPage() {
     }
   }
   
-  // Filter conversations by search term
-  const filteredConversations = conversations.filter(
-    (conv) =>
-      conv.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conv.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  // Filter conversations by search term - memoized to prevent re-calculations
+  const filteredConversations = useMemo(() => {
+    return conversations.filter(
+      (conv) =>
+        conv.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conv.email.toLowerCase().includes(searchTerm.toLowerCase()),
+    )
+  }, [conversations, searchTerm])
 
-  // Filter all contacts by search term
-  const filteredAllContacts = allContacts.filter(
-    (contact) =>
-      (contact.name || "").toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
-      (contact.notify || "").toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
-      contact.jid.toLowerCase().includes(contactSearchTerm.toLowerCase())
-  )
+  // Filter all contacts by search term - memoized to prevent re-calculations
+  const filteredAllContacts = useMemo(() => {
+    return allContacts.filter(
+      (contact) =>
+        (contact.name || "").toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+        (contact.notify || "").toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+        contact.jid.toLowerCase().includes(contactSearchTerm.toLowerCase())
+    )
+  }, [allContacts, contactSearchTerm])
 
   // Clear all chat data (both Zustand store and component state)
   const clearAllChatData = () => {
