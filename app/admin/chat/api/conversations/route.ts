@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
     // Fetch all active conversations with their WhatsApp contacts and last messages
-    const { data: conversations, error } = await supabase
+    const { data: conversations, error } = await supabaseAdmin
       .from('conversations')
       .select(`
         id,

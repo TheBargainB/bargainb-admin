@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -52,12 +52,12 @@ export async function POST(req: Request) {
       const whatsappMessageId = apiData.data?.msgId?.toString() || `out_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Store the outbound message in the messages table
-      const { error: messageError } = await supabase
+        const { error: messageError } = await supabase
         .from('messages')
-        .insert({
-          conversation_id: conversationId,
+          .insert({
+            conversation_id: conversationId,
           whatsapp_message_id: whatsappMessageId,
-          content: text,
+            content: text,
           message_type: 'text',
           direction: 'outbound',
           from_me: true,
@@ -68,14 +68,14 @@ export async function POST(req: Request) {
             sent_by: 'admin',
             original_phone: cleanPhoneNumber,
             api_timestamp: now
-          }
-        });
+            }
+          });
 
-      if (messageError) {
+        if (messageError) {
         console.error('❌ Error storing message in new structure:', messageError);
-      } else {
+        } else {
         console.log('✅ Message stored in new CRM structure');
-      }
+        }
 
       // Update conversation stats manually
       const { data: currentConversation } = await supabase

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         senderType = 'user';
         senderName = contactName;
       }
-
+      
       // Check raw message data for AI generation indicators
       const rawData = msg.raw_message_data as any;
       if (rawData?.ai_generated || rawData?.from_ai) {

@@ -213,7 +213,7 @@ export class ContactService {
         const batchPromises = batch.map(({ phoneNumber, data }) => 
           this.upsertContact(phoneNumber, data)
         )
-        
+
         const batchResults = await Promise.allSettled(batchPromises)
         batchResults.forEach(result => {
           if (result.status === 'fulfilled' && result.value) {
@@ -455,7 +455,7 @@ export class ContactService {
       
       const wasenderData: WASenderContact = {
         id: jid,
-        name: pushName,
+          name: pushName,
         notify: pushName
       }
 

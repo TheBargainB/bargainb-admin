@@ -54,9 +54,9 @@ export async function DELETE(
       console.log('🗑️ Deleting grocery lists...');
       const { error: groceryListsError, count: groceryListsCount } = await supabase
         .from('grocery_lists')
-        .delete()
+      .delete()
         .eq('crm_profile_id', crmProfile.id);
-      
+    
       if (groceryListsError) {
         console.error('❌ Error deleting grocery lists:', groceryListsError);
         throw groceryListsError;
