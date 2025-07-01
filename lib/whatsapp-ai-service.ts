@@ -217,7 +217,6 @@ export class WhatsAppAIService {
         .from('conversations')
         .select(`
           id,
-          remoteJid,
           whatsapp_contact_id
         `)
         .eq('id', chatId)
@@ -238,11 +237,11 @@ export class WhatsAppAIService {
           .single();
         
         phoneNumber = contact?.phone_number;
-      }
-
-      // Fallback to remoteJid if no contact found
-      if (!phoneNumber && conversation.remoteJid) {
-        phoneNumber = conversation.remoteJid.replace('@s.whatsapp.net', '');
+        
+        // Fallback to whatsapp_jid if phone_number is not available
+        if (!phoneNumber && contact?.whatsapp_jid) {
+          phoneNumber = contact.whatsapp_jid.replace('@s.whatsapp.net', '');
+        }
       }
 
       if (!phoneNumber) {
