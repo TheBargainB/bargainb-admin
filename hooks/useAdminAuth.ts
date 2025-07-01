@@ -77,7 +77,7 @@ export const useAdminAuth = () => {
     }
   }
 
-  const checkAdminAccess = async (user: User) => {
+  const checkAdminAccess = async (user: User, throwOnError: boolean = false) => {
     try {
       const { data: adminUser, error } = await supabase
         .from('admin_users')
@@ -88,19 +88,33 @@ export const useAdminAuth = () => {
 
       if (error || !adminUser) {
         console.error("User does not have admin access:", error)
-        handleSignOut()
-        return
+        if (throwOnError) {
+          throw new Error(`Admin access denied: ${error?.message || 'No admin user found'}`)
+        } else {
+          handleSignOut()
+          return
+        }
       }
 
       setAdminSession({ user, adminUser: adminUser as AdminUser })
       setIsAuthenticated(true)
     } catch (error) {
       console.error("Error checking admin access:", error)
-      handleSignOut()
+      if (throwOnError) {
+        throw error
+      } else {
+        handleSignOut()
+      }
     }
   }
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    // Set a timeout for the entire login process
+    const loginTimeoutId = setTimeout(() => {
+      console.error("Login process timed out")
+      setIsLoading(false)
+    }, 15000) // 15 seconds for login
+
     try {
       setIsLoading(true)
       
@@ -115,8 +129,16 @@ export const useAdminAuth = () => {
       }
 
       if (data.user) {
-        await checkAdminAccess(data.user)
-        return true
+        // Add timeout protection for admin access check during login
+        try {
+          await checkAdminAccess(data.user, true) // throwOnError = true for login
+          clearTimeout(loginTimeoutId)
+          return true
+        } catch (adminError) {
+          console.error("Admin access check failed during login:", adminError)
+          clearTimeout(loginTimeoutId)
+          return false
+        }
       }
 
       return false
@@ -124,6 +146,7 @@ export const useAdminAuth = () => {
       console.error("Login error:", error)
       return false
     } finally {
+      clearTimeout(loginTimeoutId)
       setIsLoading(false)
     }
   }
