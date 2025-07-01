@@ -1,4 +1,5 @@
 "use client"
+// FORCE CACHE INVALIDATION - Updated for comprehensive QA Test Center
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
