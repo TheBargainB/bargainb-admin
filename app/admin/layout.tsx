@@ -20,10 +20,11 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname()
   const { isAuthenticated, isLoading, adminUser, logout, requireAuth } = useAdminAuth()
-  const { unreadMessages, markAllAsRead, refreshUnreadCount } = useGlobalNotifications()
-
-
   
+  // Only initialize notifications after authentication is confirmed
+  const shouldUseNotifications = isAuthenticated && !isLoading
+  const { unreadMessages, markAllAsRead, refreshUnreadCount } = useGlobalNotifications(shouldUseNotifications)
+
   // Protect routes except login page
   useEffect(() => {
     if (!isLoading && pathname !== "/admin/login") {

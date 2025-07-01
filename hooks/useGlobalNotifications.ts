@@ -12,7 +12,7 @@ let globalUnreadCount = 0
 let globalRefreshFunction: (() => Promise<void>) | null = null
 const subscribers = new Set<(count: number) => void>()
 
-export const useGlobalNotifications = (): GlobalNotifications => {
+export const useGlobalNotifications = (enabled: boolean = true): GlobalNotifications => {
   const [unreadMessages, setUnreadMessages] = useState(globalUnreadCount)
   const [isLoading, setIsLoading] = useState(false)
   const subscribedRef = useRef(false)
@@ -31,6 +31,8 @@ export const useGlobalNotifications = (): GlobalNotifications => {
   }, [])
 
   const refreshUnreadCount = useCallback(async () => {
+    if (!enabled) return
+    
     try {
       setIsLoading(true)
       
@@ -58,9 +60,11 @@ export const useGlobalNotifications = (): GlobalNotifications => {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [enabled])
 
   const markAllAsRead = useCallback(async () => {
+    if (!enabled) return
+    
     try {
       // Get all conversations first
       const response = await fetch('/admin/chat/api/conversations')
@@ -80,15 +84,19 @@ export const useGlobalNotifications = (): GlobalNotifications => {
     } catch (error) {
       console.error('❌ Error marking all as read:', error)
     }
-  }, [refreshUnreadCount])
+  }, [refreshUnreadCount, enabled])
 
   // Set global refresh function reference
   useEffect(() => {
-    globalRefreshFunction = refreshUnreadCount
-  }, [refreshUnreadCount])
+    if (enabled) {
+      globalRefreshFunction = refreshUnreadCount
+    }
+  }, [refreshUnreadCount, enabled])
 
   // Set up real-time subscriptions at the global level
   useEffect(() => {
+    if (!enabled) return
+
     let messageSubscription: any = null
     let conversationSubscription: any = null
     let interval: NodeJS.Timeout | null = null
@@ -160,7 +168,7 @@ export const useGlobalNotifications = (): GlobalNotifications => {
         clearInterval(interval)
       }
     }
-  }, [refreshUnreadCount])
+  }, [refreshUnreadCount, enabled])
 
   return {
     unreadMessages,
