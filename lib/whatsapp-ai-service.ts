@@ -92,7 +92,7 @@ export class WhatsAppAIService {
       const processingTime = Date.now() - startTime;
 
       // 6. Save AI response as a message in the conversation
-      await this.saveAIResponseMessage(chatId, aiResponse);
+      await this.saveAIResponseMessage(chatId, aiResponse, threadId);
 
       // 7. Log the interaction
       await this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime);
@@ -181,30 +181,30 @@ export class WhatsAppAIService {
     return data.messages[data.messages.length - 1]?.content || 'No response available';
   }
 
-  private async saveAIResponseMessage(chatId: string, aiResponse: string) {
-    // Get conversation details to find the contact
-    const { data: conversation } = await this.supabase
-      .from('conversations')
-      .select('contact_phone_number')
-      .eq('id', chatId)
-      .single();
-
-    if (!conversation) {
-      throw new Error('Conversation not found');
-    }
+  private async saveAIResponseMessage(chatId: string, aiResponse: string, threadId?: string) {
+    // Generate a unique WhatsApp message ID for the AI response
+    const whatsappMessageId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Save AI response as a message in the conversation
-    await this.supabase
+    const { error } = await this.supabase
       .from('messages')
       .insert({
         conversation_id: chatId,
-        contact_phone_number: conversation.contact_phone_number,
-        message_content: aiResponse,
+        whatsapp_message_id: whatsappMessageId,
+        content: aiResponse,
         message_type: 'text',
-        is_from_contact: false, // AI message is not from contact
+        direction: 'outbound', // AI responses are outbound messages
+        from_me: true, // AI responses are sent by the system (from our perspective)
         sender_type: 'ai_agent', // Mark as AI agent message
-        timestamp: new Date().toISOString()
+        is_ai_triggered: true, // Mark as AI-triggered
+        ai_thread_id: threadId, // Include AI thread ID for tracking
+        // created_at is automatically set by the database
       });
+
+    if (error) {
+      console.error('Error saving AI response message:', error);
+      throw new Error(`Failed to save AI response: ${error.message}`);
+    }
   }
 
   private async logAIInteraction(
