@@ -42,16 +42,15 @@ export async function POST(request: NextRequest) {
     const testMessage = `[QA TEST - ${new Date().toLocaleString()}] ${message}`
 
     // Test WASender API endpoint
-    const wasenderResponse = await fetch('https://api.wasender.co.uk/api/v1/send-message', {
+    const wasenderResponse = await fetch('https://www.wasenderapi.com/api/send-message', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.WASENDER_API_KEY}`
       },
       body: JSON.stringify({
-        phone: phoneNumber,
-        message: testMessage,
-        type: 'text'
+        to: phoneNumber,
+        text: testMessage
       })
     })
 
@@ -107,7 +106,7 @@ export async function GET() {
       success: true,
       data: {
         apiKeyConfigured: hasApiKey,
-        endpoint: 'https://api.wasender.co.uk/api/v1',
+        endpoint: 'https://www.wasenderapi.com/api',
         lastChecked: new Date().toISOString()
       }
     })

@@ -276,7 +276,7 @@ export class WhatsAppAIService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          to: cleanPhoneNumber.replace('+', ''), // WASender expects number without + 
+          to: cleanPhoneNumber, // WASender expects E.164 format with + 
           text: aiResponse 
         }),
       });

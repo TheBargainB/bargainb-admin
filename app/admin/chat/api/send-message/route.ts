@@ -15,10 +15,13 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Clean the phone number for WhatsApp API
+    // Clean the phone number for WhatsApp API (E.164 format with +)
     let cleanPhoneNumber = to;
     if (to.includes('@s.whatsapp.net')) {
       cleanPhoneNumber = to.replace('@s.whatsapp.net', '');
+    }
+    if (!cleanPhoneNumber.startsWith('+')) {
+      cleanPhoneNumber = `+${cleanPhoneNumber}`;
     }
     
     console.log('🚀 Sending message to:', cleanPhoneNumber, 'Original:', to);
