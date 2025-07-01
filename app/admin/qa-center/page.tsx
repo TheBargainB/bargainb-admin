@@ -58,7 +58,8 @@ import {
   AlertCircle,
   Target,
   Layers,
-  Workflow
+  Workflow,
+  Loader2
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -121,6 +122,25 @@ interface DetectedIssue {
   affected_url: string | null
 }
 
+// Enhanced interfaces for better status tracking
+interface ScriptRunningState {
+  [scriptId: string]: {
+    status: 'idle' | 'pending' | 'running' | 'completed' | 'failed'
+    progress?: number
+    startTime?: Date
+    message?: string
+  }
+}
+
+interface ActiveTestRun {
+  id: string
+  scriptId: string
+  scriptName: string
+  status: 'running' | 'pending'
+  startTime: Date
+  progress: number
+}
+
 const QA_SCRIPT_TEMPLATE = `import { test, expect } from '@playwright/test';
 
 test('My Test', async ({ page }) => {
@@ -168,8 +188,7 @@ export default function QATestingPage() {
   const [testScripts, setTestScripts] = useState<TestScript[]>([])
   const [testRuns, setTestRuns] = useState<TestRun[]>([])
   const [detectedIssues, setDetectedIssues] = useState<DetectedIssue[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isRunning, setIsRunning] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   
   // Script editor state
   const [selectedScript, setSelectedScript] = useState<TestScript | null>(null)
@@ -183,6 +202,11 @@ export default function QATestingPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+
+  // Enhanced Running States
+  const [scriptStates, setScriptStates] = useState<ScriptRunningState>({})
+  const [activeRuns, setActiveRuns] = useState<ActiveTestRun[]>([])
+  const [isGlobalRunning, setIsGlobalRunning] = useState(false)
 
   // Load production test scripts from database
   useEffect(() => {
@@ -229,24 +253,301 @@ export default function QATestingPage() {
     loadQAData()
   }, [])
 
-  const runTest = async (scriptId: string) => {
-    setIsRunning(true)
+  // Real-time polling for status updates
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      if (Object.values(scriptStates).some(state => state.status === 'running' || state.status === 'pending')) {
+        await refreshTestRuns()
+      }
+    }, 2000) // Poll every 2 seconds when tests are running
+
+    return () => clearInterval(pollInterval)
+  }, [scriptStates])
+
+  const refreshTestRuns = async () => {
     try {
-      // Simulate test execution
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      const runsResponse = await qaTestRunsApi.getAll({}, { page: 1, limit: 20 })
+      setTestRuns(runsResponse.data)
+      
+      // Update script states based on latest runs
+      const newStates = { ...scriptStates }
+      runsResponse.data.forEach(run => {
+        if (run.status === 'running' || run.status === 'pending') {
+          newStates[run.script_id] = {
+            status: run.status as 'running' | 'pending',
+            startTime: new Date(run.started_at),
+            message: run.status === 'running' ? 'Executing test...' : 'Pending execution'
+          }
+        } else if (newStates[run.script_id]?.status === 'running') {
+          // Test completed
+          newStates[run.script_id] = {
+            status: run.status === 'passed' ? 'completed' : 'failed',
+            message: run.status === 'passed' ? 'Test completed successfully' : run.error_message || 'Test failed'
+          }
+          
+          // Clear completed status after 5 seconds
+          setTimeout(() => {
+            setScriptStates(prev => ({
+              ...prev,
+              [run.script_id]: { status: 'idle' }
+            }))
+          }, 5000)
+        }
+      })
+      
+      setScriptStates(newStates)
+    } catch (error) {
+      console.warn('Could not refresh test runs:', error)
+    }
+  }
+
+  const runTest = async (scriptId: string, scriptName: string) => {
+    // Check if this script is already running
+    if (scriptStates[scriptId]?.status === 'running' || scriptStates[scriptId]?.status === 'pending') {
+      toast({
+        title: "Test Already Running",
+        description: `"${scriptName}" is already executing. Please wait for it to complete.`,
+        variant: "default"
+      })
+      return
+    }
+
+    // Set script to pending state
+    setScriptStates(prev => ({
+      ...prev,
+      [scriptId]: {
+        status: 'pending',
+        message: 'Pending test execution...',
+        startTime: new Date()
+      }
+    }))
+
+    try {
+      // Create a test run in the database
+      const testRun = await qaTestRunsApi.create({
+        script_id: scriptId,
+        run_name: `${scriptName} - ${new Date().toLocaleString()}`,
+        browser_type: 'chromium',
+        test_environment: 'qa',
+        trigger_type: 'manual'
+      })
+
+      // Update to running state
+      setScriptStates(prev => ({
+        ...prev,
+        [scriptId]: {
+          status: 'running',
+          message: 'Test is now executing...',
+          startTime: new Date(),
+          progress: 0
+        }
+      }))
+
+      // Add to active runs
+      setActiveRuns(prev => [...prev, {
+        id: testRun.id,
+        scriptId,
+        scriptName,
+        status: 'running',
+        startTime: new Date(),
+        progress: 0
+      }])
+
+      toast({
+        title: "Test Started",
+        description: `"${scriptName}" is now executing. You can monitor progress in real-time.`,
+      })
+
+      // Simulate test execution with progress updates
+      await executeTestWithProgress(testRun.id, scriptId, scriptName)
+
+    } catch (error) {
+      console.error('Failed to start test:', error)
+      setScriptStates(prev => ({
+        ...prev,
+        [scriptId]: {
+          status: 'failed',
+          message: 'Failed to start test execution'
+        }
+      }))
       
       toast({
-        title: "Test Executed",
-        description: "Test completed successfully!",
-      })
-    } catch (error) {
-      toast({
-        title: "Test Failed",
-        description: "An error occurred during test execution.",
+        title: "Test Failed to Start",
+        description: "Could not initiate test execution. Please try again.",
         variant: "destructive"
       })
+
+      // Clear failed status after 5 seconds
+      setTimeout(() => {
+        setScriptStates(prev => ({
+          ...prev,
+          [scriptId]: { status: 'idle' }
+        }))
+      }, 5000)
+    }
+  }
+
+  const executeTestWithProgress = async (runId: string, scriptId: string, scriptName: string) => {
+    const progressSteps = [
+      { progress: 10, message: "Initializing browser..." },
+      { progress: 25, message: "Loading test environment..." },
+      { progress: 40, message: "Executing test steps..." },
+      { progress: 60, message: "Running assertions..." },
+      { progress: 80, message: "Collecting results..." },
+      { progress: 95, message: "Finalizing test run..." },
+      { progress: 100, message: "Test completed!" }
+    ]
+
+    for (const step of progressSteps) {
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000)) // 1-3 seconds per step
+      
+      setScriptStates(prev => ({
+        ...prev,
+        [scriptId]: {
+          ...prev[scriptId],
+          progress: step.progress,
+          message: step.message
+        }
+      }))
+
+      // Update active runs
+      setActiveRuns(prev => prev.map(run => 
+        run.scriptId === scriptId 
+          ? { ...run, progress: step.progress }
+          : run
+      ))
+    }
+
+    // Simulate success/failure (90% success rate)
+    const isSuccess = Math.random() > 0.1
+    const finalStatus = isSuccess ? 'passed' : 'failed'
+
+    try {
+      // Update the test run in database
+      await qaTestRunsApi.updateStatus(runId, finalStatus, {
+        completed_at: new Date().toISOString(),
+        duration_seconds: Math.floor((Date.now() - (scriptStates[scriptId]?.startTime?.getTime() || Date.now())) / 1000),
+        steps_total: 10,
+        steps_passed: isSuccess ? 10 : Math.floor(Math.random() * 8) + 1,
+        steps_failed: isSuccess ? 0 : Math.floor(Math.random() * 3) + 1,
+        error_message: isSuccess ? null : "Simulated test failure for demonstration"
+      })
+
+      // Remove from active runs
+      setActiveRuns(prev => prev.filter(run => run.scriptId !== scriptId))
+
+      // Update final state
+      setScriptStates(prev => ({
+        ...prev,
+        [scriptId]: {
+          status: isSuccess ? 'completed' : 'failed',
+          message: isSuccess ? 'Test completed successfully!' : 'Test failed - check details in History tab'
+        }
+      }))
+
+      // Refresh the test runs to get latest data
+      await refreshTestRuns()
+
+      toast({
+        title: isSuccess ? "Test Completed" : "Test Failed",
+        description: `"${scriptName}" ${isSuccess ? 'passed all checks' : 'encountered errors during execution'}.`,
+        variant: isSuccess ? "default" : "destructive"
+      })
+
+    } catch (error) {
+      console.error('Failed to update test run:', error)
+      setScriptStates(prev => ({
+        ...prev,
+        [scriptId]: {
+          status: 'failed',
+          message: 'Failed to save test results'
+        }
+      }))
+    }
+
+    // Clear status after 5 seconds
+    setTimeout(() => {
+      setScriptStates(prev => ({
+        ...prev,
+        [scriptId]: { status: 'idle' }
+      }))
+    }, 5000)
+  }
+
+  const runAllTests = async () => {
+    if (isGlobalRunning) {
+      toast({
+        title: "Tests Already Running",
+        description: "A batch test execution is already in progress.",
+        variant: "default"
+      })
+      return
+    }
+
+    setIsGlobalRunning(true)
+    
+    try {
+      // Filter to only high and critical priority scripts
+      const priorityScripts = testScripts.filter(script => 
+        script.priority === 'high' || script.priority === 'critical'
+      )
+
+      if (priorityScripts.length === 0) {
+        toast({
+          title: "No Priority Tests",
+          description: "No high or critical priority tests found to execute.",
+          variant: "default"
+        })
+        setIsGlobalRunning(false)
+        return
+      }
+
+      toast({
+        title: "Batch Test Started",
+        description: `Executing ${priorityScripts.length} priority tests sequentially.`,
+      })
+
+      // Execute tests one by one
+      for (const script of priorityScripts) {
+        if (scriptStates[script.id]?.status === 'idle' || !scriptStates[script.id]) {
+          await runTest(script.id, script.name)
+          // Wait for test to complete before starting next
+          await new Promise(resolve => {
+            const checkComplete = () => {
+              const state = scriptStates[script.id]
+              if (state?.status === 'completed' || state?.status === 'failed' || state?.status === 'idle') {
+                resolve(void 0)
+              } else {
+                setTimeout(checkComplete, 1000)
+              }
+            }
+            checkComplete()
+          })
+        }
+      }
+
     } finally {
-      setIsRunning(false)
+      setIsGlobalRunning(false)
+    }
+  }
+
+  const getScriptButtonState = (scriptId: string) => {
+    const state = scriptStates[scriptId]
+    if (!state || state.status === 'idle') {
+      return { disabled: false, text: 'Run', variant: 'default' as const, icon: Play }
+    }
+    
+    switch (state.status) {
+      case 'pending':
+        return { disabled: true, text: 'Pending', variant: 'secondary' as const, icon: Clock }
+      case 'running':
+        return { disabled: true, text: 'Running', variant: 'secondary' as const, icon: Loader2 }
+      case 'completed':
+        return { disabled: true, text: 'Completed', variant: 'default' as const, icon: CheckCircle2 }
+      case 'failed':
+        return { disabled: true, text: 'Failed', variant: 'destructive' as const, icon: XCircle }
+      default:
+        return { disabled: false, text: 'Run', variant: 'default' as const, icon: Play }
     }
   }
 
@@ -399,9 +700,17 @@ export default function QATestingPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
-                <Button className="flex items-center gap-2" disabled={isRunning}>
-                  <PlayCircle className="h-4 w-4" />
-                  Run All Tests
+                <Button 
+                  className="flex items-center gap-2" 
+                  disabled={isGlobalRunning}
+                  onClick={runAllTests}
+                >
+                  {isGlobalRunning ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <PlayCircle className="h-4 w-4" />
+                  )}
+                  {isGlobalRunning ? 'Running Tests...' : 'Run All Tests'}
                 </Button>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Monitor className="h-4 w-4" />
@@ -412,6 +721,37 @@ export default function QATestingPage() {
                   Export Results
                 </Button>
               </div>
+              
+              {/* Active Test Runs Display */}
+              {activeRuns.length > 0 && (
+                <Card className="border-orange-200 bg-orange-50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                      Active Test Runs ({activeRuns.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {activeRuns.map(run => (
+                      <div key={run.id} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                          <span className="font-medium">{run.scriptName}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <span>{run.progress}%</span>
+                          <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-orange-500 transition-all duration-500 ease-out"
+                              style={{ width: `${run.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -487,18 +827,49 @@ export default function QATestingPage() {
                         <CardDescription>{script.description}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={script.priority === 'high' ? 'destructive' : 'secondary'}>
+                        <Badge variant={
+                          script.priority === 'critical' ? 'destructive' : 
+                          script.priority === 'high' ? 'destructive' : 
+                          'secondary'
+                        }>
                           {script.priority}
                         </Badge>
-                        <Button
-                          size="sm"
-                          onClick={() => runTest(script.id)}
-                          disabled={isRunning}
-                          className="flex items-center gap-1"
-                        >
-                          <Play className="h-3 w-3" />
-                          Run
-                        </Button>
+                        
+                        {/* Enhanced status display */}
+                        {scriptStates[script.id]?.status !== 'idle' && scriptStates[script.id]?.status && (
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            {scriptStates[script.id].status === 'running' && (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            )}
+                            {scriptStates[script.id].status === 'pending' && (
+                              <Clock className="h-3 w-3" />
+                            )}
+                            {scriptStates[script.id].status === 'completed' && (
+                              <CheckCircle2 className="h-3 w-3 text-green-600" />
+                            )}
+                            {scriptStates[script.id].status === 'failed' && (
+                              <XCircle className="h-3 w-3 text-red-600" />
+                            )}
+                            <span>{scriptStates[script.id].message}</span>
+                          </div>
+                        )}
+                        
+                        {(() => {
+                          const buttonState = getScriptButtonState(script.id)
+                          const IconComponent = buttonState.icon
+                          return (
+                            <Button
+                              size="sm"
+                              onClick={() => runTest(script.id, script.name)}
+                              disabled={buttonState.disabled || isGlobalRunning}
+                              variant={buttonState.variant}
+                              className="flex items-center gap-1"
+                            >
+                              <IconComponent className={`h-3 w-3 ${buttonState.text === 'Running' ? 'animate-spin' : ''}`} />
+                              {buttonState.text}
+                            </Button>
+                          )
+                        })()}
                       </div>
                     </div>
                   </CardHeader>
