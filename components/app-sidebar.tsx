@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, MessageSquare, Package, Users, Settings, Home, Activity, Bug } from "lucide-react"
+import { BarChart3, MessageSquare, Package, Users, Settings, Home, Activity, Bug, Bot } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -42,6 +42,12 @@ const menuItems = [
     url: "/admin/chat",
     icon: MessageSquare,
     description: "AI assistant conversations",
+  },
+  {
+    title: "AI Management",
+    url: "/admin/ai-management",
+    icon: Bot,
+    description: "LangGraph agent configuration",
   },
   {
     title: "Analytics",

@@ -53,6 +53,7 @@ import { refreshGlobalUnreadCount } from '@/hooks/useGlobalNotifications'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
 
 import { ChatUserProfile } from './components/ChatUserProfile'
+import AIConfigTab from './components/AIConfigTab'
 
 // WhatsApp types
 interface WhatsAppMessage {
@@ -2115,78 +2116,23 @@ export default function ChatPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="ai" className="p-4 space-y-6">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Auto Response</Label>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">Enable automatic AI responses</p>
-                    <Switch
-                      checked={autoResponse}
-                      onCheckedChange={setAutoResponse}
-                    />
+              <TabsContent value="ai" className="p-0">
+                {selectedContact ? (
+                  <AIConfigTab 
+                    conversationId={selectedContact}
+                    userId={selectedContact}
+                    onConfigChange={(config) => {
+                      setAiEnabled(config.enabled);
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full p-8">
+                    <div className="text-center text-muted-foreground">
+                      <Bot className="h-12 w-12 mx-auto mb-4" />
+                      <p>Select a conversation to configure AI settings</p>
                     </div>
                   </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Response Delay (seconds)</Label>
-                    <Slider
-                      value={responseDelay}
-                      onValueChange={setResponseDelay}
-                      max={10}
-                      min={0}
-                    step={1}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-muted-foreground">Current: {responseDelay[0]}s</p>
-                  </div>
-
-                <Separator />
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Confidence Threshold (%)</Label>
-                    <Slider
-                      value={confidenceThreshold}
-                      onValueChange={setConfidenceThreshold}
-                      max={100}
-                      min={0}
-                      step={5}
-                      className="w-full"
-                    />
-                    <p className="text-xs text-muted-foreground">Current: {confidenceThreshold[0]}%</p>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">AI Model</Label>
-                    <Select defaultValue="gpt-4">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gpt-4">GPT-4</SelectItem>
-                        <SelectItem value="gpt-3.5">GPT-3.5 Turbo</SelectItem>
-                        <SelectItem value="claude">Claude 3</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Escalation Rules</Label>
-                    <Select defaultValue="low-confidence">
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low-confidence">Low Confidence</SelectItem>
-                        <SelectItem value="complex-query">Complex Queries</SelectItem>
-                        <SelectItem value="user-request">User Request</SelectItem>
-                        <SelectItem value="never">Never</SelectItem>
-                      </SelectContent>
-                    </Select>
-                </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
