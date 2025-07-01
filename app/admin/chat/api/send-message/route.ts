@@ -102,6 +102,38 @@ export async function POST(req: Request) {
           console.log('✅ Conversation stats updated: total_messages =', newTotalMessages);
         }
       }
+
+      // Check for @bb mention in sent messages and trigger AI processing
+      if (text && /@bb/i.test(text)) {
+        console.log('🤖 @bb mention detected in sent message, triggering AI processing...');
+        
+        try {
+          // Get the request URL to construct the AI API endpoint
+          const requestUrl = new URL(req.url);
+          
+          // Call the AI processing API
+          const aiResponse = await fetch(`${requestUrl.origin}/api/whatsapp/ai`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chatId: conversationId,
+              message: text,
+              userId: conversationId // Use conversation ID as fallback for user ID
+            })
+          });
+
+          if (aiResponse.ok) {
+            const aiResult = await aiResponse.json();
+            console.log('✅ AI processing successful from send-message:', aiResult.success);
+          } else {
+            console.error('❌ AI processing failed from send-message:', aiResponse.status, aiResponse.statusText);
+          }
+        } catch (error) {
+          console.error('❌ Error calling AI API from send-message:', error);
+        }
+      }
     }
 
     return NextResponse.json({ 
