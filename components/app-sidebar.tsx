@@ -51,7 +51,7 @@ const menuItems = [
   },
   {
     title: "QA Testing",
-    url: "/admin/testing",
+    url: "/admin/qa-center",
     icon: Bug,
     description: "QA tools & system monitoring",
   },
