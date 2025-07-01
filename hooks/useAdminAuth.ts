@@ -85,12 +85,19 @@ export const useAdminAuth = () => {
       console.log("🔧 checkAdminAccess: Querying admin_users table...")
       const startTime = performance.now()
       
-      const { data: adminUser, error } = await supabase
+      // Add timeout specifically for database query during session check
+      const queryPromise = supabase
         .from('admin_users')
         .select('*')
         .eq('auth_user_id', user.id)
         .eq('is_active', true)
         .single()
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 5000)
+      )
+      
+      const { data: adminUser, error } = await Promise.race([queryPromise, timeoutPromise])
       
       const endTime = performance.now()
       console.log(`🔧 checkAdminAccess: Database query took ${endTime - startTime}ms`)
@@ -119,6 +126,13 @@ export const useAdminAuth = () => {
       setIsLoading(false)
     } catch (error) {
       console.error("❌ checkAdminAccess: Unexpected error:", error)
+      // If database query times out during session check, redirect to login
+      if (error.message === 'Database query timeout') {
+        console.error("❌ Database query timed out during session check - redirecting to login")
+        setIsLoading(false)
+        router.push("/admin/login")
+        return
+      }
       handleSignOut()
     }
   }
@@ -189,18 +203,6 @@ export const useAdminAuth = () => {
     }
   }
 
-  const logout = async () => {
-    console.log("🔧 logout: Starting sign out process")
-    
-    try {
-      await supabase.auth.signOut()
-      handleSignOut()
-    } catch (error) {
-      console.error("❌ logout: Error:", error)
-      handleSignOut()
-    }
-  }
-
   const handleSignOut = async () => {
     console.log("🔧 handleSignOut: Starting sign out process")
     
@@ -217,40 +219,12 @@ export const useAdminAuth = () => {
     }
   }
 
-  const requireAuth = () => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/admin/login")
-    }
-  }
-
-  // Helper functions to check permissions
-  const hasPermission = (permission: string): boolean => {
-    if (!adminSession?.adminUser.permissions) return false
-    const permissions = adminSession.adminUser.permissions as Record<string, boolean>
-    return permissions[permission] === true
-  }
-
-  const isSuperAdmin = (): boolean => {
-    return adminSession?.adminUser.role === 'super_admin'
-  }
-
-  const isAdmin = (): boolean => {
-    return adminSession?.adminUser.role === 'admin' || isSuperAdmin()
-  }
-
   return {
     isAuthenticated,
     isLoading,
     adminSession,
-    user: adminSession?.user || null,
-    adminUser: adminSession?.adminUser || null,
     login,
     loginWithMagicLink,
-    logout,
-    requireAuth,
-    checkAuthSession,
-    hasPermission,
-    isSuperAdmin,
-    isAdmin
+    logout: handleSignOut
   }
 } 
