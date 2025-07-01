@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
+import { useToast } from "@/hooks/use-toast"
 import { 
   Activity, 
   Database, 
@@ -27,8 +30,36 @@ import {
   Download,
   Search,
   Send,
-  Trash2
+  Trash2,
+  CheckCircle,
+  Square,
+  Settings,
+  History,
+  GitBranch,
+  Plus,
+  RefreshCw,
+  Monitor,
+  FileText,
+  Eye,
+  BarChart3,
+  Terminal,
+  Code,
+  PlayCircle,
+  StopCircle,
+  Timer,
+  Shield,
+  Cpu,
+  MemoryStick,
+  Network,
+  Filter,
+  Calendar,
+  TrendingUp,
+  AlertCircle,
+  Target,
+  Layers,
+  Workflow
 } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface SystemStatus {
   endpoint: string
@@ -46,13 +77,114 @@ interface TestResult {
   timestamp: Date
 }
 
-export default function QATestingCenter() {
+interface TestScript {
+  id: string
+  name: string
+  description: string
+  category: string
+  script_content: string
+  priority: string
+  tags: string[]
+  status?: string
+  last_run_at?: string
+  created_at: string
+}
+
+interface TestRun {
+  id: string
+  script_id: string
+  script_name: string
+  run_number: number
+  status: string
+  started_at: string
+  completed_at?: string
+  duration_seconds?: number
+  steps_total: number
+  steps_passed: number
+  steps_failed: number
+  error_message?: string
+  browser_type: string
+  test_environment: string
+  trigger_type: string
+}
+
+interface DetectedIssue {
+  id: string
+  issue_type: string
+  severity: string
+  title: string
+  description: string
+  status: string
+  first_seen_at: string
+  occurrence_count: number
+  affected_url?: string
+}
+
+const QA_SCRIPT_TEMPLATE = `import { test, expect } from '@playwright/test';
+
+test('My Test', async ({ page }) => {
+  // Navigate to the page
+  await page.goto('/your-url');
+  
+  // Add your test steps here
+  await expect(page.locator('h1')).toBeVisible();
+  
+  // Example: Fill a form
+  // await page.fill('[data-testid="input"]', 'test value');
+  // await page.click('[data-testid="submit"]');
+  
+  // Example: Wait for navigation
+  // await page.waitForURL('/success');
+  
+  // Example: Check for text content
+  // await expect(page.locator('text=Success')).toBeVisible();
+});`
+
+const SEVERITY_COLORS = {
+  low: 'bg-blue-100 text-blue-800',
+  medium: 'bg-yellow-100 text-yellow-800', 
+  high: 'bg-orange-100 text-orange-800',
+  critical: 'bg-red-100 text-red-800'
+}
+
+const STATUS_COLORS = {
+  passed: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
+  running: 'bg-blue-100 text-blue-800',
+  pending: 'bg-gray-100 text-gray-800',
+  cancelled: 'bg-gray-100 text-gray-800'
+}
+
+export default function QATestingPage() {
+  const { toast } = useToast()
+  
   const [systemStatus, setSystemStatus] = useState<SystemStatus[]>([])
   const [testResults, setTestResults] = useState<TestResult[]>([])
   const [loading, setLoading] = useState(false)
   const [testMessage, setTestMessage] = useState("")
   const [testPhoneNumber, setTestPhoneNumber] = useState("")
   const [logs, setLogs] = useState<string[]>([])
+
+  // State management
+  const [activeTab, setActiveTab] = useState('overview')
+  const [testScripts, setTestScripts] = useState<TestScript[]>([])
+  const [testRuns, setTestRuns] = useState<TestRun[]>([])
+  const [detectedIssues, setDetectedIssues] = useState<DetectedIssue[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
+  
+  // Script editor state
+  const [selectedScript, setSelectedScript] = useState<TestScript | null>(null)
+  const [editorContent, setEditorContent] = useState(QA_SCRIPT_TEMPLATE)
+  const [scriptName, setScriptName] = useState('')
+  const [scriptDescription, setScriptDescription] = useState('')
+  const [scriptCategory, setScriptCategory] = useState('general')
+  const [scriptPriority, setScriptPriority] = useState('medium')
+  
+  // Filters and search
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
 
   // System Health Check
   const runSystemHealthCheck = async () => {

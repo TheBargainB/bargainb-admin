@@ -384,20 +384,20 @@ export default function CRMUsersPage() {
               <div className="text-muted-foreground">Loading customers...</div>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
+          <Table>
+            <TableHeader>
+              <TableRow>
                   <TableHead>Customer</TableHead>
                   <TableHead>Lifecycle</TableHead>
                   <TableHead>Shopping Persona</TableHead>
                   <TableHead>Engagement</TableHead>
                   <TableHead>Messages</TableHead>
-                  <TableHead>Last Active</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
+                <TableHead>Last Active</TableHead>
+                <TableHead className="w-[70px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredUsers.map((user) => (
                   <TableRow 
                     key={user.contact_id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -412,21 +412,21 @@ export default function CRMUsersPage() {
                     role="button"
                     aria-label={`View details for customer ${user.full_name || user.preferred_name || user.phone_number}`}
                   >
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
                           <AvatarImage 
                             src={user.profile_picture_url && user.profile_picture_url !== 'removed' 
                               ? user.profile_picture_url 
                               : "/placeholder-user.jpg"} 
                           />
-                          <AvatarFallback>
+                        <AvatarFallback>
                             {(user.full_name || user.preferred_name || user.phone_number)
                               .slice(0, 2)
                               .toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
                           <div className="font-medium">
                             {user.full_name || user.preferred_name || 'Unknown'}
                           </div>
@@ -439,14 +439,14 @@ export default function CRMUsersPage() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                       <Badge className={lifecycleColors[user.lifecycle_stage as keyof typeof lifecycleColors] || "bg-gray-100 text-gray-800"}>
                         {user.lifecycle_stage}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                       {user.shopping_persona ? (
                         <Badge variant="outline" className={personaColors[user.shopping_persona as keyof typeof personaColors] || "bg-gray-100 text-gray-800"}>
                           {user.shopping_persona.replace(/([A-Z])/g, ' $1').trim()}
@@ -459,7 +459,7 @@ export default function CRMUsersPage() {
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={engagementColors[user.engagement_status as keyof typeof engagementColors] || "bg-gray-100 text-gray-800"}>
                           {user.engagement_status.replace('_', ' ')}
-                        </Badge>
+                    </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -475,8 +475,8 @@ export default function CRMUsersPage() {
                           Customer since {formatDate(user.customer_since)}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
+                  </TableCell>
+                  <TableCell>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -496,12 +496,12 @@ export default function CRMUsersPage() {
                         ) : (
                           "View"
                         )}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
           )}
 
           {!loading && filteredUsers.length === 0 && (

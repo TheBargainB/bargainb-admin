@@ -5,655 +5,323 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { ChevronUp, ChevronDown } from 'lucide-react'
 import { BargainBLogo } from '@/components/bargainb-logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
-import { motion } from 'motion/react'
-import { cn } from '@/lib/utils'
-import Image from 'next/image'
 import { getTranslation, type LanguageCode } from '@/lib/translations'
 
-// Enhanced Background Lines with Mobile Optimization
-const BeeBackgroundLines = ({
-  className,
-  svgOptions,
-}: {
-  className?: string;
-  svgOptions?: {
-    duration?: number;
-  };
-}) => {
-  return (
-    <div
-      className={cn(
-        "absolute inset-0 w-full h-full overflow-hidden",
-        className
-      )}
-    >
-      <SVGBackground svgOptions={svgOptions} />
-    </div>
-  );
-};
+// Email form validation schema
+const earlyAccessSchema = z.object({
+  email: z.string()
+    .email('Voer een geldig e-mailadres in')
+    .min(1, 'E-mailadres is verplicht')
+})
 
-const pathVariants = {
-  initial: { strokeDashoffset: 1000, strokeDasharray: "30 1000" },
-  animate: {
-    strokeDashoffset: 0,
-    strokeDasharray: "15 1000",
-    opacity: [0, 0.4, 0.6, 0.3, 0],
-  },
-};
+type EarlyAccessFormData = z.infer<typeof earlyAccessSchema>
 
-const SVGBackground = ({
-  svgOptions,
-}: {
-  svgOptions?: {
-    duration?: number;
-  };
-}) => {
-  // Mobile-optimized elegant curved paths
-  const beePaths = [
-    "M-150 150 Q 200 120 400 160 Q 600 140 800 180 Q 1000 160 1200 200",
-    "M-120 280 Q 250 240 450 290 Q 650 250 850 300 Q 1050 280 1250 320",
-    "M-140 400 Q 220 370 420 410 Q 620 380 820 420 Q 1020 400 1220 440",
-    "M-160 520 Q 180 490 380 530 Q 580 500 780 540 Q 980 520 1180 560",
-    "M-100 640 Q 240 600 440 650 Q 640 620 840 660 Q 1040 640 1240 680",
-    "M-130 80 Q 210 50 410 90 Q 610 70 810 110 Q 1010 90 1210 130",
-    "M-170 350 Q 190 320 390 360 Q 590 340 790 380 Q 990 360 1190 400",
-    "M-110 580 Q 230 550 430 590 Q 630 570 830 610 Q 1030 590 1230 630",
-  ];
+// Countdown hook with target date
+const useCountdown = (targetDate: Date) => {
+  const [timeLeft, setTimeLeft] = useState({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0
+  })
 
-  // Responsive color palette
-  const colors = [
-    "rgba(var(--primary-rgb), 0.25)",
-    "rgba(var(--primary-rgb), 0.15)", 
-    "rgba(var(--primary-rgb), 0.3)",
-    "rgba(var(--primary-rgb), 0.2)",
-    "rgba(var(--primary-rgb), 0.25)",
-    "rgba(var(--primary-rgb), 0.12)",
-    "rgba(var(--primary-rgb), 0.22)",
-    "rgba(var(--primary-rgb), 0.18)",
-  ];
-
-  return (
-    <motion.svg
-      viewBox="0 0 1200 700"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 2 }}
-      className="absolute inset-0 w-full h-full"
-      preserveAspectRatio="xMidYMid slice"
-    >
-      {/* Primary flowing paths */}
-      {beePaths.map((path, idx) => (
-        <motion.path
-          key={`bee-path-${idx}`}
-          d={path}
-          stroke={colors[idx % colors.length]}
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          fill="none"
-          variants={pathVariants}
-          initial="initial"
-          animate="animate"
-          transition={{
-            duration: svgOptions?.duration || 14,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: idx * 1.8,
-            repeatDelay: 4,
-          }}
-        />
-      ))}
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = +targetDate - +new Date()
       
-      {/* Secondary mobile-friendly paths */}
-      {beePaths.slice(0, 4).map((path, idx) => (
-        <motion.path
-          key={`bee-path-secondary-${idx}`}
-          d={path}
-          stroke={colors[(idx + 4) % colors.length]}
-          strokeWidth="0.8"
-          strokeLinecap="round"
-          fill="none"
-          variants={pathVariants}
-          initial="initial"
-          animate="animate"
-          transition={{
-            duration: svgOptions?.duration || 18,
-            ease: "easeInOut",
-            repeat: Infinity,
-            repeatType: "loop",
-            delay: (idx * 3) + 7,
-            repeatDelay: 5,
-          }}
-        />
-      ))}
-    </motion.svg>
-  );
-};
+      if (difference > 0) {
+        setTimeLeft({
+          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((difference / 1000 / 60) % 60),
+          seconds: Math.floor((difference / 1000) % 60)
+        })
+      }
+    }
 
-// Mobile-Responsive Flying Bee Component
-const ElegantFlyingBee = ({ 
-  pathIndex,
-  delay,
-  size = 'medium',
-  duration = 20
-}: { 
-  pathIndex: number
-  delay: number
-  size?: 'small' | 'medium' | 'large'
-  duration?: number
-}) => {
-  const sizeClasses = {
-    small: 'w-4 h-4 sm:w-6 sm:h-6 md:w-8 md:h-8',
-    medium: 'w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-12 lg:h-12',
-    large: 'w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14'
-  }
+    calculateTimeLeft()
+    const timer = setInterval(calculateTimeLeft, 1000)
 
-  const sizeValues = {
-    small: { width: 24, height: 24 },
-    medium: { width: 32, height: 32 },
-    large: { width: 40, height: 40 }
-  }
+    return () => clearInterval(timer)
+  }, [targetDate])
 
-  // Mobile-optimized Y positions
-  const yPositions = [150, 280, 400, 520, 640, 80, 350, 580]
-  const yPos = yPositions[pathIndex % yPositions.length]
-
-  return (
-    <motion.div
-      className={`absolute pointer-events-none z-10 ${sizeClasses[size]}`}
-      initial={{ 
-        x: -80, 
-        y: yPos,
-        rotate: 0,
-        scale: 0.7,
-        opacity: 0
-      }}
-      animate={{ 
-        x: [
-          -80, 
-          200, 
-          400, 
-          600, 
-          800, 
-          1000, 
-          1200
-        ],
-        y: [
-          yPos,
-          yPos - 30 + Math.sin(pathIndex) * 20,
-          yPos + 20 + Math.cos(pathIndex) * 15,
-          yPos - 15 + Math.sin(pathIndex + 1) * 18,
-          yPos + 30 + Math.cos(pathIndex + 2) * 22,
-          yPos - 20 + Math.sin(pathIndex + 3) * 16,
-          yPos
-        ],
-        rotate: [0, 8, -12, 15, -8, 12, 0],
-        scale: [0.7, 1.0, 0.8, 1.1, 0.75, 0.95, 0.7],
-        opacity: [0, 0.7, 0.9, 0.8, 0.9, 0.6, 0]
-      }}
-      transition={{
-        duration: duration,
-        ease: "easeInOut",
-        repeat: Infinity,
-        delay: delay,
-        repeatDelay: Math.random() * 4 + 2
-      }}
-      style={{
-        filter: 'drop-shadow(0 1px 4px rgba(0, 178, 7, 0.2))',
-      }}
-    >
-      {/* Light mode bee */}
-      <Image
-        src="/bee.png"
-        alt="Flying bee"
-        width={sizeValues[size].width}
-        height={sizeValues[size].height}
-        className="w-full h-full object-contain dark:hidden"
-        style={{
-          animation: 'gentleBuzz 0.5s ease-in-out infinite alternate'
-        }}
-      />
-      {/* Dark mode bee */}
-      <Image
-        src="/bee-dark.png"
-        alt="Flying bee dark"
-        width={sizeValues[size].width}
-        height={sizeValues[size].height}
-        className="w-full h-full object-contain hidden dark:block"
-        style={{
-          filter: 'drop-shadow(0 1px 4px rgba(154, 137, 255, 0.25))',
-          animation: 'gentleBuzz 0.5s ease-in-out infinite alternate'
-        }}
-      />
-    </motion.div>
-  )
+  return timeLeft
 }
 
+// Social Media Icons Component
+const SocialIcon = ({ icon, href, ariaLabel }: { icon: React.ReactNode, href: string, ariaLabel: string }) => (
+  <a
+    href={href}
+    target="_blank" 
+    rel="noopener noreferrer"
+    aria-label={ariaLabel}
+    className="w-10 h-10 rounded-full bg-secondary hover:bg-accent transition-colors duration-200 flex items-center justify-center group"
+  >
+    <div className="text-primary group-hover:scale-110 transition-transform duration-200">
+      {icon}
+    </div>
+  </a>
+)
+
+// People Avatar Component
+const PeopleAvatars = () => (
+  <div className="flex -space-x-2">
+    {[...Array(5)].map((_, i) => (
+      <div 
+        key={i}
+        className="w-8 h-8 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-medium text-primary"
+      >
+        {String.fromCharCode(65 + i)}
+      </div>
+    ))}
+  </div>
+  )
+
 export default function EarlyAccessPage() {
-  const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('nl')
+  const [language, setLanguage] = useState<LanguageCode>('nl')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submittedPhoneNumber, setSubmittedPhoneNumber] = useState('')
-  const [earlyAccessCount, setEarlyAccessCount] = useState(127)
-  const [openFaq, setOpenFaq] = useState<number | null>(null)
-  const [isMobile, setIsMobile] = useState(false)
+  const [peopleCount, setPeopleCount] = useState(9847)
 
-  // Get current translations
-  const t = getTranslation(currentLanguage)
+  // Set target launch date (example: 30 days from now)
+  const targetDate = new Date()
+  targetDate.setDate(targetDate.getDate() + 30)
 
-  // Dynamic form validation schema for Dutch mobile numbers (+31 6XXXXXXXX)
-  const earlyAccessSchema = z.object({
-    phoneNumber: z.string()
-      .length(9, t.validation.phoneLength)
-      .regex(/^6[0-9]{8}$/, t.validation.phoneFormat)
-      .regex(/^[0-9]+$/, t.validation.phoneNumbers)
-  })
+  const timeLeft = useCountdown(targetDate)
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<z.infer<typeof earlyAccessSchema>>({
-    resolver: zodResolver(earlyAccessSchema)
-  })
-
-  // Mobile detection
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  // Language change listener
+  // Listen for language changes from LanguageToggle component
   useEffect(() => {
     const handleLanguageChange = (event: CustomEvent) => {
-      setCurrentLanguage(event.detail.language as LanguageCode)
+      setLanguage(event.detail.language as LanguageCode)
     }
     
     window.addEventListener('languageChange', handleLanguageChange as EventListener)
     return () => window.removeEventListener('languageChange', handleLanguageChange as EventListener)
   }, [])
 
-  // Fetch early access count
-  useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        const response = await fetch('/api/early-access')
-        const data = await response.json()
-        if (data.success) {
-          setEarlyAccessCount(data.count + 120)
-        }
-      } catch (error) {
-        console.log('Failed to fetch early access count')
-      }
-    }
-    fetchCount()
-  }, [])
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset
+  } = useForm<EarlyAccessFormData>({
+    resolver: zodResolver(earlyAccessSchema)
+  })
 
-  const onSubmit = async (data: z.infer<typeof earlyAccessSchema>) => {
+  const handleEarlyAccessSubmit = async (data: EarlyAccessFormData) => {
     setIsSubmitting(true)
     
     try {
       const response = await fetch('/api/early-access', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneNumber: `+31${data.phoneNumber}` })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          language: language
+        }),
       })
 
-      const result = await response.json()
-
-      if (result.success) {
-        setSubmittedPhoneNumber(`+31${data.phoneNumber}`)
-        setEarlyAccessCount(prev => prev + 1)
-        toast.success(t.toast.success.title, {
-          description: t.toast.success.description,
-          duration: 5000,
-        })
+      if (response.ok) {
+        toast.success('Bedankt! Je bent toegevoegd aan de wachtlijst.')
         reset()
+        setPeopleCount(prev => prev + 1)
       } else {
-        if (result.message?.includes('al op de early access lijst')) {
-          toast.info(t.toast.exists.title, {
-            description: t.toast.exists.description,
-            duration: 4000,
-          })
-        } else {
-          throw new Error(result.message || 'Er ging iets mis')
-        }
+        toast.error('Er ging iets mis. Probeer het opnieuw.')
       }
     } catch (error) {
-      toast.error(t.toast.error.title, {
-        description: error instanceof Error ? error.message : t.toast.error.description,
-        duration: 4000,
-      })
+      console.error('Error submitting early access form:', error)
+      toast.error('Er ging iets mis. Probeer het opnieuw.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <>
-      {/* Enhanced CSS for mobile-responsive animations */}
-      <style jsx global>{`
-        :root {
-          --primary-rgb: 0, 178, 7;
-        }
-        
-        .dark {
-          --primary-rgb: 154, 137, 255;
-        }
-        
-        @keyframes gentleBuzz {
-          0% { transform: scale(1) rotate(0deg); }
-          100% { transform: scale(1.05) rotate(1deg); }
-        }
-        
-        @keyframes floatGlow {
-          0%, 100% { 
-            transform: translateY(0px) scale(1);
-            opacity: 0.5;
-          }
-          50% { 
-            transform: translateY(-8px) scale(1.03);
-            opacity: 0.7;
-          }
-        }
-
-        @media (max-width: 768px) {
-          @keyframes gentleBuzz {
-            0% { transform: scale(1) rotate(0deg); }
-            100% { transform: scale(1.02) rotate(0.5deg); }
-          }
-          
-          @keyframes floatGlow {
-            0%, 100% { 
-              transform: translateY(0px) scale(1);
-              opacity: 0.3;
-            }
-            50% { 
-              transform: translateY(-4px) scale(1.02);
-              opacity: 0.5;
-            }
-          }
-        }
-      `}</style>
-
-      <div className="min-h-screen bg-custom-gradient dark:bg-dark-green-gradient relative overflow-hidden">
-        {/* Mobile-Optimized Animated Background Lines */}
-        <BeeBackgroundLines svgOptions={{ duration: isMobile ? 16 : 14 }} />
-        
-        {/* Responsive Flying Bees */}
-        <ElegantFlyingBee pathIndex={0} delay={0} size="large" duration={isMobile ? 25 : 22} />
-        <ElegantFlyingBee pathIndex={1} delay={3} size="medium" duration={isMobile ? 28 : 25} />
-        <ElegantFlyingBee pathIndex={2} delay={7} size="small" duration={isMobile ? 23 : 20} />
-        <ElegantFlyingBee pathIndex={3} delay={12} size="medium" duration={isMobile ? 31 : 28} />
-        <ElegantFlyingBee pathIndex={4} delay={6} size="large" duration={isMobile ? 27 : 24} />
-        <ElegantFlyingBee pathIndex={5} delay={15} size="small" duration={isMobile ? 24 : 21} />
-        {!isMobile && (
-          <>
-            <ElegantFlyingBee pathIndex={6} delay={9} size="medium" duration={26} />
-            <ElegantFlyingBee pathIndex={7} delay={18} size="large" duration={23} />
-          </>
-        )}
-
-        {/* Mobile-Responsive Header */}
-        <div className="absolute top-3 right-3 md:top-6 md:right-6 z-50 flex items-center gap-2 md:gap-3">
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="w-full px-4 py-6">
+        <div className="max-w-7xl mx-auto flex justify-end items-center gap-4">
           <LanguageToggle />
           <ThemeToggle />
         </div>
+      </header>
 
-        <div className="absolute top-3 left-3 md:top-6 md:left-6 z-50">
-          <BargainBLogo className="h-6 w-auto sm:h-8 md:h-10" />
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-12 text-center">
+        {/* Logo */}
+        <div className="mb-16">
+          <BargainBLogo className="mx-auto h-12 w-auto" />
         </div>
 
-        {/* Mobile-First Main Content */}
-        <div className="relative z-20 container mx-auto px-3 py-6 sm:px-4 md:px-6 lg:px-8 md:py-12 lg:py-16">
-          <div className="grid lg:grid-cols-2 gap-6 md:gap-8 lg:gap-16 xl:gap-24 items-center min-h-[calc(100vh-6rem)] md:min-h-[calc(100vh-8rem)]">
-            
-            {/* Mobile-Optimized Phone Mockup */}
-            <motion.div 
-              className="relative flex justify-center lg:justify-start order-2 lg:order-1"
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 1, delay: 0.5 }}
-            >
-              <div className="relative">
-                {/* Responsive Phone Container */}
-                <div className="relative w-[280px] h-[560px] sm:w-[320px] sm:h-[640px] md:w-[380px] md:h-[760px] lg:w-[420px] lg:h-[840px] xl:w-[480px] xl:h-[960px]">
-                  <Image
-                    src="/iPhone-13-Pro-Front.png"
-                    alt="iPhone 13 Pro with BargainB WhatsApp Demo"
-                    width={480}
-                    height={960}
-                    className="w-full h-full object-contain drop-shadow-xl md:drop-shadow-2xl"
-                    priority
-                  />
-                </div>
+        {/* Countdown Label */}
+        <div className="mb-8">
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            LANCERING OVER
+          </p>
+        </div>
 
-                {/* Responsive Floating Elements */}
-                <div 
-                  className="absolute -top-3 -right-3 w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 bg-primary/20 rounded-full blur-lg md:blur-xl"
-                  style={{ animation: 'floatGlow 4s ease-in-out infinite' }}
-                ></div>
-                <div 
-                  className="absolute -bottom-6 -left-4 w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 bg-primary/15 rounded-full blur-xl md:blur-2xl"
-                  style={{ animation: 'floatGlow 5s ease-in-out infinite', animationDelay: '1s' }}
-                ></div>
-                <div 
-                  className="absolute top-1/3 -right-2 w-10 h-10 sm:w-12 sm:h-12 lg:w-16 lg:h-16 bg-primary/10 rounded-full blur-md md:blur-lg"
-                  style={{ animation: 'floatGlow 3s ease-in-out infinite', animationDelay: '2s' }}
-                ></div>
-              </div>
-            </motion.div>
-
-            {/* Mobile-First Content */}
-            <motion.div 
-              className="space-y-6 md:space-y-8 order-1 lg:order-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.3 }}
-            >
-              {/* Mobile-Responsive Hero Section */}
-              <div className="text-center lg:text-left space-y-4 md:space-y-6">
-                <motion.div 
-                  className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-primary/10 border border-primary/20 rounded-full text-xs md:text-sm font-medium text-primary"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, delay: 0.8 }}
-                >
-                  <span className="w-1.5 h-1.5 md:w-2 md:h-2 bg-primary rounded-full animate-pulse"></span>
-                  {earlyAccessCount} {t.hero.peopleWaiting}
-                </motion.div>
-                
-                <motion.h1 
-                  className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black text-foreground leading-tight"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.5 }}
-                >
-                  <span className="bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-                    {t.hero.earlyAccess}
-                  </span>
-                  <br />
-                  <span className="text-foreground">{t.hero.bargainB}</span>
-                </motion.h1>
-                
-                <motion.p 
-                  className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-2xl"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.7 }}
-                >
-                  {t.hero.description.split('eerste toegang').map((part, index) => (
-                    index === 0 ? (
-                      <span key={index}>
-                        {part}<span className="font-semibold text-primary">{t.hero.firstAccess}</span>
-                      </span>
-                    ) : (
-                      <span key={index}>
-                        {part} <span className="text-foreground font-medium">{t.hero.exclusiveWhatsApp}</span>
-                      </span>
-                    )
-                  ))}
-                </motion.p>
-              </div>
-
-              {/* Mobile-Responsive Form */}
-              <motion.div 
-                className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl md:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl md:shadow-2xl"
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.9 }}
+        {/* Countdown Timer */}
+        <div className="mb-16">
+          <div className="grid grid-cols-4 gap-4 max-w-2xl mx-auto">
+            {[
+              { value: timeLeft.days, label: 'Dagen' },
+              { value: timeLeft.hours, label: 'Uren' },
+              { value: timeLeft.minutes, label: 'Minuten' },
+              { value: timeLeft.seconds, label: 'Seconden' }
+            ].map((item, index) => (
+              <div 
+                key={index}
+                className="bg-card rounded-xl p-6 shadow-lg dark:figma-countdown-shadow-dark figma-countdown-shadow-light"
               >
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-semibold text-foreground block">
-                      {t.form.phoneLabel}
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 md:gap-2 text-muted-foreground">
-                        <span className="text-base md:text-lg">🇳🇱</span>
-                        <span className="text-sm font-medium">+31</span>
-                      </div>
+                <div className="text-4xl font-bold text-primary mb-2 paytone-one">
+                  {item.value.toString().padStart(2, '0')}
+                </div>
+                <div className="text-sm text-muted-foreground font-medium">
+                  {item.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Heading */}
+        <div className="mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 paytone-one">
+            Word Lid Van Onze
+                  <br />
+            Lanceer Wachtlijst
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Wees de eerste die hoort wanneer BargainB live gaat. Krijg vroege toegang tot exclusieve deals en kortingen voordat anderen dat doen.
+          </p>
+              </div>
+
+        {/* Email Form */}
+        <div className="mb-12">
+          <form onSubmit={handleSubmit(handleEarlyAccessSubmit)} className="max-w-md mx-auto">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
                       <input
-                        {...register('phoneNumber')}
-                        type="tel"
-                        placeholder={t.form.phonePlaceholder}
-                        className="w-full pl-16 md:pl-20 pr-3 md:pr-4 py-3 md:py-4 bg-background border border-border rounded-xl md:rounded-2xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 text-base md:text-lg"
-                        disabled={isSubmitting}
+                  {...register('email')}
+                  type="email"
+                  placeholder="Voer je e-mailadres in"
+                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-transparent focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 text-foreground placeholder:text-muted-foreground"
                       />
-                    </div>
-                    {errors.phoneNumber && (
-                      <p className="text-destructive text-sm font-medium">{errors.phoneNumber.message}</p>
+                {errors.email && (
+                  <p className="text-destructive text-sm mt-1 text-left">
+                    {errors.email.message}
+                  </p>
                     )}
                   </div>
-
-                  <motion.button
+              <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-bold py-3 md:py-4 rounded-xl md:rounded-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none text-base md:text-lg"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? (
-                      <div className="flex items-center justify-center gap-2 md:gap-3">
-                        <div className="w-4 h-4 md:w-5 md:h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
-                        {t.form.submitting}
+                {isSubmitting ? 'Bezig...' : 'Ontvang Melding'}
+              </button>
                       </div>
-                    ) : (
-                      t.form.submitButton
-                    )}
-                  </motion.button>
                 </form>
+        </div>
 
-                {submittedPhoneNumber && (
-                  <motion.div 
-                    className="mt-4 md:mt-6 p-3 md:p-4 bg-primary/10 border border-primary/20 rounded-xl md:rounded-2xl"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <p className="text-primary font-medium text-center text-sm md:text-base">
-                      {t.form.successMessage} {submittedPhoneNumber}
-                    </p>
-                  </motion.div>
-                )}
-              </motion.div>
-
-              {/* Mobile-Responsive Social Proof */}
-              <motion.div 
-                className="flex items-center justify-center lg:justify-start gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 1.1 }}
-              >
-                <div className="flex -space-x-1 md:-space-x-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-primary to-primary/60 rounded-full border-2 border-background flex items-center justify-center text-xs font-bold text-primary-foreground">
-                      {String.fromCharCode(64 + i)}
+        {/* People Counter */}
+        <div className="mb-12">
+          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+            <PeopleAvatars />
+            <span className="font-medium">
+              {peopleCount.toLocaleString('nl-NL')}+ mensen op de wachtlijst
+            </span>
                     </div>
-                  ))}
                 </div>
-                <span className="font-medium">{t.socialProof.joinText} {earlyAccessCount}+ {t.socialProof.earlyAdopters}</span>
-              </motion.div>
-            </motion.div>
+
+        {/* Social Media Icons */}
+        <div className="mb-12">
+          <div className="flex justify-center gap-4">
+            <SocialIcon
+              icon={
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              }
+              href="https://facebook.com"
+              ariaLabel="Facebook"
+            />
+            <SocialIcon
+              icon={
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              }
+              href="https://instagram.com"
+              ariaLabel="Instagram"
+            />
+            <SocialIcon
+              icon={
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                </svg>
+              }
+              href="https://linkedin.com"
+              ariaLabel="LinkedIn"
+            />
+            <SocialIcon
+              icon={
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+                </svg>
+              }
+              href="https://tiktok.com"
+              ariaLabel="TikTok"
+            />
+            <SocialIcon
+              icon={
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                </svg>
+              }
+              href="https://twitter.com"
+              ariaLabel="Twitter"
+            />
+          </div>
           </div>
 
-          {/* Mobile-Responsive FAQ Section */}
-          <motion.div 
-            className="mt-16 md:mt-20 lg:mt-32 max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 1.3 }}
-          >
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-center text-foreground mb-8 md:mb-12">
-              {t.faq.title}
-            </h2>
-            
-            <div className="space-y-3 md:space-y-4">
-              {Object.values(t.faq.questions).map((faq, index) => (
-                <motion.div 
-                  key={index} 
-                  className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl md:rounded-2xl overflow-hidden shadow-lg"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 1.5 + (index * 0.1) }}
+        {/* Product Hunt Button */}
+        <div className="mb-16">
+          <a
+            href="https://www.producthunt.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-secondary hover:bg-accent text-foreground rounded-lg transition-all duration-200 font-medium"
                 >
-                  <button
-                    className="w-full px-4 py-4 sm:px-6 sm:py-6 text-left flex items-center justify-between hover:bg-muted/20 transition-colors duration-200"
-                    onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  >
-                    <h3 className="font-bold text-base md:text-lg text-foreground pr-3 md:pr-4">{faq.question}</h3>
-                    <div className="flex-shrink-0">
-                      {openFaq === index ? (
-                        <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
-                      )}
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M13.337 9h-2.838v3h2.838c.83 0 1.5-.67 1.5-1.5S14.167 9 13.337 9z"/>
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm1.337 14h-2.838v4H8.501V6h4.836C16.194 6 18 7.806 18 10.5S16.194 14 13.337 14z"/>
+            </svg>
+            Volg ons op Product Hunt
+          </a>
                     </div>
-                  </button>
+      </main>
                   
-                  {openFaq === index && (
-                    <motion.div 
-                      className="px-4 pb-4 sm:px-6 sm:pb-6 border-t border-border/30"
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <p className="text-muted-foreground leading-relaxed pt-3 md:pt-4 text-sm md:text-base">
-                        {faq.answer}
-                      </p>
-                    </motion.div>
-                  )}
-                </motion.div>
-              ))}
+      {/* Footer */}
+      <footer className="border-t border-border py-8">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 text-sm text-muted-foreground">
+            <span>© 2024 BargainB. Alle rechten voorbehouden.</span>
+            <div className="flex gap-6">
+              <a href="/privacy" className="hover:text-foreground transition-colors">
+                Privacybeleid
+              </a>
+              <a href="/terms" className="hover:text-foreground transition-colors">
+                Voorwaarden
+              </a>
             </div>
-          </motion.div>
-
-          {/* Mobile-Responsive Final CTA */}
-          <motion.div 
-            className="mt-16 md:mt-20 text-center"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 1.8 }}
-          >
-            <p className="text-base md:text-lg text-muted-foreground mb-3 md:mb-4">
-              {t.finalCta.question}
-            </p>
-            <motion.button
-              onClick={() => (document.querySelector('input[type="tel"]') as HTMLInputElement)?.focus()}
-              className="inline-flex items-center gap-2 px-6 py-2.5 md:px-8 md:py-3 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-full text-primary font-semibold transition-all duration-200 text-sm md:text-base"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span>👆</span>
-              {t.finalCta.action}
-            </motion.button>
-          </motion.div>
+          </div>
         </div>
+      </footer>
       </div>
-    </>
   )
 } 

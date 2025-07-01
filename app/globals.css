@@ -90,33 +90,34 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* ✅ White Background */
-    --foreground: 0 0% 3.9%;
+    /* Light Mode Colors - Based on Figma Design */
+    --background: 0 0% 100%; /* #ffffff White Background */
+    --foreground: 210 11% 15%; /* #1f1f1f Text */
 
-    --primary: 152 100% 40%; /* ✅ #00B207 Green */
-    --primary-foreground: 0 0% 98%; /* ✅ White for contrast */
+    --primary: 122 100% 35%; /* #00b207 Primary Green */
+    --primary-foreground: 0 0% 100%; /* #ffffff White for contrast */
 
-    --card: 0 0% 100%; /* ✅ White */
-    --card-foreground: 0 0% 3.9%;
+    --card: 0 0% 100%; /* #ffffff White Cards */
+    --card-foreground: 210 11% 15%; /* #1f1f1f */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
+    --popover-foreground: 210 11% 15%;
 
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 121 59% 96%; /* #f4fbf4 Light Green Background */
+    --secondary-foreground: 122 100% 35%; /* #00b207 */
 
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
+    --muted: 210 11% 48%; /* #7a7a7a Gray Text */
+    --muted-foreground: 210 11% 24%; /* #3d3d3d */
 
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
+    --accent: 121 59% 96%; /* #f4fbf4 */
+    --accent-foreground: 122 100% 35%; /* #00b207 */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 0 0% 84%; /* #d6d6d6 */
+    --input: 0 0% 84%; /* #d6d6d6 */
+    --ring: 122 100% 35%; /* #00b207 */
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -124,51 +125,47 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
 
-    --radius: 0.5rem;
-    --color-1: 0 100% 63%;
-    --color-2: 270 100% 63%;
-    --color-3: 210 100% 63%;
-    --color-4: 195 100% 63%;
-    --color-5: 90 100% 63%;
+    --radius: 0.75rem;
     
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 3.9%;
-    --sidebar-primary: 152 100% 40%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96.1%;
-    --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 89.8%;
-    --sidebar-ring: 0 0% 3.9%;
+    --sidebar-foreground: 210 11% 15%;
+    --sidebar-primary: 122 100% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 121 59% 96%;
+    --sidebar-accent-foreground: 122 100% 35%;
+    --sidebar-border: 0 0% 84%;
+    --sidebar-ring: 122 100% 35%;
   }
 
   .dark {
-    --background: 156 100% 2%; /* ✅ #040B04 Darker Green */
-    --foreground: 0 0% 98%;
+    /* Dark Mode Colors - Based on Figma Design */
+    --background: 210 11% 12%; /* #1f1f1f Dark Background */
+    --foreground: 0 0% 100%; /* #ffffff White Text */
 
-    --primary: 249 100% 80%; /* ✅ #9A89FF Soft Purple */
-    --primary-foreground: 0 0% 9%;
+    --primary: 122 51% 57%; /* #84d187 Light Green */
+    --primary-foreground: 210 11% 12%; /* #1f1f1f */
 
-    --card: 156 100% 2%; /* ✅ Dark Background */
-    --card-foreground: 0 0% 98%;
+    --card: 210 11% 12%; /* #1f1f1f Dark Cards */
+    --card-foreground: 0 0% 100%; /* #ffffff */
 
-    --popover: 156 100% 2%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 210 11% 12%;
+    --popover-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 0 0% 20%; /* #323232 Dark Gray Background */
+    --secondary-foreground: 0 0% 100%; /* #ffffff */
 
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
+    --muted: 0 0% 100%; /* #ffffff White Text in Dark Mode */
+    --muted-foreground: 0 0% 100%; /* #ffffff */
 
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 0 0% 20%; /* #323232 */
+    --accent-foreground: 0 0% 100%; /* #ffffff */
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --border: 0 0% 20%; /* #323232 */
+    --input: 0 0% 20%; /* #323232 */
+    --ring: 122 51% 57%; /* #84d187 */
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
@@ -176,20 +173,14 @@ body {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    --color-1: 0 100% 63%;
-    --color-2: 270 100% 63%;
-    --color-3: 210 100% 63%;
-    --color-4: 195 100% 63%;
-    --color-5: 90 100% 63%;
-    
-    --sidebar-background: 156 100% 2%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 249 100% 80%;
-    --sidebar-primary-foreground: 0 0% 9%;
-    --sidebar-accent: 0 0% 14.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 14.9%;
-    --sidebar-ring: 0 0% 83.1%;
+    --sidebar-background: 210 11% 12%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 122 51% 57%;
+    --sidebar-primary-foreground: 210 11% 12%;
+    --sidebar-accent: 0 0% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 122 51% 57%;
   }
 }
 
@@ -200,4 +191,60 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Custom Paytone One Font Import */
+@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+
+/* Custom CSS for Figma-exact styling */
+.figma-light-bg {
+  background-color: #ffffff;
+}
+
+.figma-dark-bg {
+  background-color: #1f1f1f;
+}
+
+.figma-primary-green {
+  color: #00b207;
+}
+
+.figma-light-green {
+  color: #84d187;
+}
+
+.figma-secondary-green-bg {
+  background-color: #f4fbf4;
+}
+
+.figma-dark-secondary-bg {
+  background-color: #323232;
+}
+
+.figma-gray-text {
+  color: #7a7a7a;
+}
+
+.figma-body-text {
+  color: #3d3d3d;
+}
+
+.figma-subtitle-text {
+  color: #1f1f1f;
+}
+
+.figma-white-text {
+  color: #ffffff;
+}
+
+.figma-countdown-shadow-light {
+  box-shadow: 0px 9.33809px 33.3503px 0px rgba(100, 100, 111, 0.15);
+}
+
+.figma-countdown-shadow-dark {
+  box-shadow: 0px 9.33809px 33.3503px 0px rgba(167, 167, 167, 0.15);
+}
+
+.paytone-one {
+  font-family: 'Paytone One', cursive;
 }
