@@ -1,6 +1,6 @@
 // QA Testing Center API Functions - Supabase Integration
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import type { 
   QATestScript, 
   QATestRun, 
@@ -21,8 +21,6 @@ import type {
   PaginationParams,
   PaginatedResponse
 } from '@/types/qa-testing'
-
-const supabase = createClientComponentClient()
 
 // Test Scripts API
 export const qaTestScriptsApi = {
