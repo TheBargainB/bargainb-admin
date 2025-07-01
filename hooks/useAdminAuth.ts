@@ -4,9 +4,17 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
-import type { Database } from "@/lib/database.types"
 
-type AdminUser = Database['public']['Tables']['admin_users']['Row']
+type AdminUser = {
+  id: string
+  auth_user_id: string
+  email: string
+  role: string
+  is_active: boolean
+  permissions: Record<string, boolean> | null
+  created_at: string
+  updated_at: string
+}
 
 interface AdminSession {
   user: User
@@ -38,8 +46,15 @@ export const useAdminAuth = () => {
   }, [])
 
   const checkAuthSession = async () => {
+    // Set a maximum timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error("Authentication check timed out")
+      handleSignOut()
+    }, 10000) // 10 seconds max
+
     try {
       setIsLoading(true)
+      
       const { data: { session }, error } = await supabase.auth.getSession()
       
       if (error) {
@@ -57,6 +72,7 @@ export const useAdminAuth = () => {
       console.error("Error checking auth session:", error)
       handleSignOut()
     } finally {
+      clearTimeout(timeoutId)
       setIsLoading(false)
     }
   }
@@ -76,7 +92,7 @@ export const useAdminAuth = () => {
         return
       }
 
-      setAdminSession({ user, adminUser })
+      setAdminSession({ user, adminUser: adminUser as AdminUser })
       setIsAuthenticated(true)
     } catch (error) {
       console.error("Error checking admin access:", error)
@@ -146,6 +162,7 @@ export const useAdminAuth = () => {
   const handleSignOut = () => {
     setAdminSession(null)
     setIsAuthenticated(false)
+    setIsLoading(false) // Ensure loading is false when signing out
     router.push("/admin/login")
   }
 
