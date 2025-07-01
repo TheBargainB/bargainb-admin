@@ -8,104 +8,111 @@ import { toast } from 'sonner'
 import { BargainBLogo } from '@/components/bargainb-logo'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { LanguageToggle } from '@/components/language-toggle'
+import { Button } from '@/components/ui/button'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import { OrbitingCircles } from '@/components/ui/orbiting-circles'
+import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { BeautifulPhoneInput } from '@/components/ui/phone-input'
+import { useTheme } from 'next-themes'
+import Image from 'next/image'
 import { getTranslation, type LanguageCode } from '@/lib/translations'
+import { Check } from 'lucide-react'
 
-// Email form validation schema
+// Dutch mobile phone validation schema
 const earlyAccessSchema = z.object({
-  email: z.string()
-    .email('Voer een geldig e-mailadres in')
-    .min(1, 'E-mailadres is verplicht')
+  phoneNumber: z.string()
+    .min(8, 'Mobiel nummer moet minimaal 8 cijfers bevatten')
+    .max(8, 'Mobiel nummer mag maximaal 8 cijfers bevatten')
+    .regex(/^6[0-9]{7}$/, 'Voer een geldig Nederlands mobiel nummer in (start met 6)')
 })
 
 type EarlyAccessFormData = z.infer<typeof earlyAccessSchema>
 
-// Countdown hook with target date
-const useCountdown = (targetDate: Date) => {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0
-  })
+// Beautiful Floating Bees Component using Magic UI Orbiting Circles
+const FloatingBees = () => {
+  const { theme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const difference = +targetDate - +new Date()
-      
-      if (difference > 0) {
-        setTimeLeft({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60)
-        })
-      }
-    }
+    setMounted(true)
+  }, [])
 
-    calculateTimeLeft()
-    const timer = setInterval(calculateTimeLeft, 1000)
+  if (!mounted) return null
 
-    return () => clearInterval(timer)
-  }, [targetDate])
+  const beeImage = theme === 'dark' ? '/bee-dark.png' : '/bee.png'
 
-  return timeLeft
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Main orbiting bees */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]">
+        <OrbitingCircles radius={200} duration={25} reverse={false} path={false} iconSize={32}>
+          <div className="opacity-70">
+            <Image src={beeImage} alt="" width={32} height={32} />
+          </div>
+        </OrbitingCircles>
+        <OrbitingCircles radius={120} duration={20} reverse={true} path={false} iconSize={28}>
+          <div className="opacity-60">
+            <Image src={beeImage} alt="" width={28} height={28} />
+          </div>
+        </OrbitingCircles>
+        <OrbitingCircles radius={320} duration={35} reverse={false} path={false} iconSize={24}>
+          <div className="opacity-50">
+            <Image src={beeImage} alt="" width={24} height={24} />
+          </div>
+        </OrbitingCircles>
+      </div>
+
+      {/* Additional scattered bees with different orbits */}
+      <div className="absolute top-[20%] right-[15%] w-[300px] h-[300px]">
+        <OrbitingCircles radius={80} duration={18} reverse={true} path={false} iconSize={20}>
+          <div className="opacity-40">
+            <Image src={beeImage} alt="" width={20} height={20} />
+          </div>
+        </OrbitingCircles>
+      </div>
+
+      <div className="absolute bottom-[25%] left-[10%] w-[200px] h-[200px]">
+        <OrbitingCircles radius={60} duration={22} reverse={false} path={false} iconSize={24}>
+          <div className="opacity-45">
+            <Image src={beeImage} alt="" width={24} height={24} />
+          </div>
+        </OrbitingCircles>
+      </div>
+    </div>
+  )
 }
 
-// Social Media Icons Component
-const SocialIcon = ({ icon, href, ariaLabel }: { icon: React.ReactNode, href: string, ariaLabel: string }) => (
-  <a
-    href={href}
-    target="_blank" 
-    rel="noopener noreferrer"
-    aria-label={ariaLabel}
-    className="w-10 h-10 rounded-full bg-secondary hover:bg-accent transition-colors duration-200 flex items-center justify-center group"
-  >
-    <div className="text-primary group-hover:scale-110 transition-transform duration-200">
-      {icon}
-    </div>
-  </a>
-)
-
-// People Avatar Component
-const PeopleAvatars = () => (
-  <div className="flex -space-x-2">
-    {[...Array(5)].map((_, i) => (
-      <div 
-        key={i}
-        className="w-8 h-8 rounded-full bg-primary/20 border-2 border-background flex items-center justify-center text-xs font-medium text-primary"
-      >
-        {String.fromCharCode(65 + i)}
-      </div>
-    ))}
-  </div>
-  )
-
 export default function EarlyAccessPage() {
-  const [language, setLanguage] = useState<LanguageCode>('nl')
+  const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('nl')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [peopleCount, setPeopleCount] = useState(9847)
+  const [mounted, setMounted] = useState(false)
+  const [phoneNumber, setPhoneNumber] = useState('')
 
-  // Set target launch date (example: 30 days from now)
-  const targetDate = new Date()
-  targetDate.setDate(targetDate.getDate() + 30)
+  const t = getTranslation(currentLanguage)
 
-  const timeLeft = useCountdown(targetDate)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
-  // Listen for language changes from LanguageToggle component
+  // Listen to language changes from LanguageToggle
   useEffect(() => {
     const handleLanguageChange = (event: CustomEvent) => {
-      setLanguage(event.detail.language as LanguageCode)
+      setCurrentLanguage(event.detail.language)
     }
-    
+
     window.addEventListener('languageChange', handleLanguageChange as EventListener)
-    return () => window.removeEventListener('languageChange', handleLanguageChange as EventListener)
+    return () => {
+      window.removeEventListener('languageChange', handleLanguageChange as EventListener)
+    }
   }, [])
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    reset
+    reset,
+    setValue,
+    trigger
   } = useForm<EarlyAccessFormData>({
     resolver: zodResolver(earlyAccessSchema)
   })
@@ -120,208 +127,218 @@ export default function EarlyAccessPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: data.email,
-          language: language
+          phoneNumber: `+316${data.phoneNumber}`,
         }),
       })
 
       if (response.ok) {
-        toast.success('Bedankt! Je bent toegevoegd aan de wachtlijst.')
+        toast.success(t.toast.success.title, {
+          description: t.toast.success.description
+        })
         reset()
-        setPeopleCount(prev => prev + 1)
+        setPhoneNumber('')
       } else {
-        toast.error('Er ging iets mis. Probeer het opnieuw.')
+        toast.error(t.toast.error.title, {
+          description: t.toast.error.description
+        })
       }
     } catch (error) {
       console.error('Error submitting early access form:', error)
-      toast.error('Er ging iets mis. Probeer het opnieuw.')
+      toast.error(t.toast.error.title, {
+        description: t.toast.error.description
+      })
     } finally {
       setIsSubmitting(false)
     }
   }
 
+
+
+  if (!mounted) {
+    return null
+  }
+
+  const placeholders = [
+    "Voer je mobiele nummer in...",
+    "61234567 (zonder +31)",
+    "8 cijfers beginnend met 6",
+    "Bijvoorbeeld: 61234567"
+  ]
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 relative overflow-hidden">
+      {/* Beautiful Floating Bees using Magic UI */}
+      <FloatingBees />
+      
       {/* Header */}
-      <header className="w-full px-4 py-6">
-        <div className="max-w-7xl mx-auto flex justify-end items-center gap-4">
-          <LanguageToggle />
-          <ThemeToggle />
+      <header className="relative z-20 w-full px-6 py-6">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <BargainBLogo className="h-8 w-auto" />
+          <div className="flex items-center gap-4">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12 text-center">
-        {/* Logo */}
-        <div className="mb-16">
-          <BargainBLogo className="mx-auto h-12 w-auto" />
-        </div>
-
-        {/* Countdown Label */}
-        <div className="mb-8">
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            LANCERING OVER
-          </p>
-        </div>
-
-        {/* Countdown Timer */}
-        <div className="mb-16">
-          <div className="grid grid-cols-4 gap-4 max-w-2xl mx-auto">
-            {[
-              { value: timeLeft.days, label: 'Dagen' },
-              { value: timeLeft.hours, label: 'Uren' },
-              { value: timeLeft.minutes, label: 'Minuten' },
-              { value: timeLeft.seconds, label: 'Seconden' }
-            ].map((item, index) => (
-              <div 
-                key={index}
-                className="bg-card rounded-xl p-6 shadow-lg dark:figma-countdown-shadow-dark figma-countdown-shadow-light"
-              >
-                <div className="text-4xl font-bold text-primary mb-2 paytone-one">
-                  {item.value.toString().padStart(2, '0')}
-                </div>
-                <div className="text-sm text-muted-foreground font-medium">
-                  {item.label}
-                </div>
+      <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+          
+          {/* Left side - iPhone Mockup */}
+          <div className="flex justify-center lg:justify-start order-2 lg:order-1">
+            <div className="relative">
+              <div className="relative w-[400px] lg:w-[480px] xl:w-[520px]">
+                <Image
+                  src="/iPhone-13-Pro-Front.png"
+                  alt="BargainB WhatsApp Interface"
+                  width={520}
+                  height={1050}
+                  className="w-full h-auto drop-shadow-2xl"
+                  priority
+                />
               </div>
-            ))}
+            </div>
           </div>
-        </div>
 
-        {/* Main Heading */}
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4 paytone-one">
-            Word Lid Van Onze
-                  <br />
-            Lanceer Wachtlijst
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Wees de eerste die hoort wanneer BargainB live gaat. Krijg vroege toegang tot exclusieve deals en kortingen voordat anderen dat doen.
-          </p>
+          {/* Right side - Content & Form */}
+          <div className="order-1 lg:order-2">
+            <div className="max-w-lg lg:max-w-none">
+              
+              {/* Title */}
+              <div className="space-y-6 mb-10">
+                <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-tight">
+                  Krijg gratis early access tot{' '}
+                  <span className="text-primary">BargainB!</span>
+                </h1>
               </div>
-
-        {/* Email Form */}
-        <div className="mb-12">
-          <form onSubmit={handleSubmit(handleEarlyAccessSubmit)} className="max-w-md mx-auto">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1">
-                      <input
-                  {...register('email')}
-                  type="email"
-                  placeholder="Voer je e-mailadres in"
-                  className="w-full px-4 py-3 rounded-lg bg-secondary border border-transparent focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 text-foreground placeholder:text-muted-foreground"
-                      />
-                {errors.email && (
-                  <p className="text-destructive text-sm mt-1 text-left">
-                    {errors.email.message}
-                  </p>
-                    )}
+              
+              {/* Benefits list */}
+              <div className="space-y-4 mb-8">
+                {[
+                  'Persoonlijke aanbiedingen op basis van jouw winkelgedrag',
+                  'Werkt met supermarkten bij jou in de buurt',
+                  'Automatische updates via WhatsApp',
+                  'Geen gedoe met folders of apps'
+                ].map((benefit, index) => (
+                  <div key={index} className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-5 h-5 bg-primary rounded-sm flex items-center justify-center mt-0.5">
+                      <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                    </div>
+                    <span className="text-muted-foreground leading-relaxed">{benefit}</span>
                   </div>
-              <button
-                    type="submit"
-                    disabled={isSubmitting}
-                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                {isSubmitting ? 'Bezig...' : 'Ontvang Melding'}
-              </button>
-                      </div>
-                </form>
-        </div>
+                ))}
+              </div>
 
-        {/* People Counter */}
-        <div className="mb-12">
-          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-            <PeopleAvatars />
-            <span className="font-medium">
-              {peopleCount.toLocaleString('nl-NL')}+ mensen op de wachtlijst
-            </span>
-                    </div>
-                </div>
-
-        {/* Social Media Icons */}
-        <div className="mb-12">
-          <div className="flex justify-center gap-4">
-            <SocialIcon
-              icon={
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              }
-              href="https://facebook.com"
-              ariaLabel="Facebook"
-            />
-            <SocialIcon
-              icon={
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                </svg>
-              }
-              href="https://instagram.com"
-              ariaLabel="Instagram"
-            />
-            <SocialIcon
-              icon={
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                </svg>
-              }
-              href="https://linkedin.com"
-              ariaLabel="LinkedIn"
-            />
-            <SocialIcon
-              icon={
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
-                </svg>
-              }
-              href="https://tiktok.com"
-              ariaLabel="TikTok"
-            />
-            <SocialIcon
-              icon={
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                </svg>
-              }
-              href="https://twitter.com"
-              ariaLabel="Twitter"
-            />
-          </div>
-          </div>
-
-        {/* Product Hunt Button */}
-        <div className="mb-16">
-          <a
-            href="https://www.producthunt.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-secondary hover:bg-accent text-foreground rounded-lg transition-all duration-200 font-medium"
-                >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M13.337 9h-2.838v3h2.838c.83 0 1.5-.67 1.5-1.5S14.167 9 13.337 9z"/>
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm1.337 14h-2.838v4H8.501V6h4.836C16.194 6 18 7.806 18 10.5S16.194 14 13.337 14z"/>
-            </svg>
-            Volg ons op Product Hunt
-          </a>
-                    </div>
-      </main>
+              {/* Beautiful Form using Aceternity UI */}
+              <div className="bg-background/80 backdrop-blur-sm border border-border rounded-xl p-8 shadow-lg dark:bg-card/50 dark:border-border/50">
+                <div className="space-y-6">
                   
+                  {/* Beautiful Phone Input */}
+                  <BeautifulPhoneInput
+                    value={phoneNumber}
+                    onChange={(value) => {
+                      setPhoneNumber(value)
+                      setValue('phoneNumber', value)
+                      if (value.length === 8) {
+                        trigger('phoneNumber')
+                      }
+                    }}
+                    onSubmit={() => {
+                      if (phoneNumber && /^6[0-9]{7}$/.test(phoneNumber)) {
+                        handleSubmit(handleEarlyAccessSubmit)()
+                      }
+                    }}
+                    disabled={isSubmitting}
+                  />
+                    
+                  <div className="text-xs text-muted-foreground text-right">
+                    Beperkte beschikbaarheid! Slechts 100 plekken over.
+                  </div>
+                  
+                  {/* Beautiful Shimmer Button */}
+                  <ShimmerButton
+                    onClick={() => handleSubmit(handleEarlyAccessSubmit)()}
+                    disabled={isSubmitting || !phoneNumber || phoneNumber.length !== 8}
+                    className="w-full py-4 text-lg rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50"
+                    shimmerColor="#ffffff40"
+                    background="hsl(var(--primary))"
+                  >
+                    {isSubmitting ? 'Even geduld...' : 'Vraag Early Access Aan'}
+                  </ShimmerButton>
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* FAQ Section */}
+      <section className="relative z-10 max-w-4xl mx-auto px-6 py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">
+            {t.faq.title}
+          </h2>
+        </div>
+        
+        <div className="max-w-3xl mx-auto">
+          <Accordion type="single" collapsible className="space-y-6">
+            <AccordionItem value="item-1" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
+              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+                {t.faq.questions.free.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+                {t.faq.questions.free.answer}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-2" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
+              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+                {t.faq.questions.whenAccess.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+                {t.faq.questions.whenAccess.answer}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-3" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
+              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+                {t.faq.questions.whatIs.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+                {t.faq.questions.whatIs.answer}
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="item-4" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
+              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+                {t.faq.questions.benefits.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+                {t.faq.questions.benefits.answer}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
+      <footer className="relative z-10 border-t border-border bg-background/80 backdrop-blur-sm dark:bg-card/20 py-8 mt-16">
+        <div className="max-w-7xl mx-auto px-6 text-center">
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6 text-sm text-muted-foreground">
-            <span>© 2024 BargainB. Alle rechten voorbehouden.</span>
-            <div className="flex gap-6">
-              <a href="/privacy" className="hover:text-foreground transition-colors">
+            <span>© 2024 BargainB - Alle rechten voorbehouden</span>
+            <div className="flex items-center gap-6">
+              <a href="/privacy" className="hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline">
                 Privacybeleid
               </a>
-              <a href="/terms" className="hover:text-foreground transition-colors">
-                Voorwaarden
+              <a href="/terms" className="hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline">
+                Algemene voorwaarden
               </a>
             </div>
           </div>
         </div>
       </footer>
-      </div>
+    </div>
   )
 } 
