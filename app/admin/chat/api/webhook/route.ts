@@ -427,6 +427,35 @@ export async function POST(request: NextRequest) {
       
       console.log('✅ Message stored in CRM system:', direction, messageText);
 
+      // Check for @bb mention in incoming messages and trigger AI processing
+      if (!fromMe && messageText && /@bb/i.test(messageText)) {
+        console.log('🤖 @bb mention detected, triggering AI processing...');
+        
+        try {
+          // Call the AI processing API
+          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chatId: conversation.id,
+              message: messageText,
+              userId: contact.id
+            })
+          });
+
+          if (aiResponse.ok) {
+            const aiResult = await aiResponse.json();
+            console.log('✅ AI processing successful:', aiResult.success);
+          } else {
+            console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText);
+          }
+        } catch (error) {
+          console.error('❌ Error calling AI API:', error);
+        }
+      }
+
       return NextResponse.json({ success: true });
     } else if (event === 'messages.update') {
       // Handle message status updates (delivered, read, etc.)
