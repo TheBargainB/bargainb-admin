@@ -19,18 +19,18 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname()
-  const { isAuthenticated, isLoading, adminUser, logout, requireAuth } = useAdminAuth()
+  
+  // Show login page without any auth checks to prevent concurrent hooks
+  if (pathname === "/admin/login") {
+    return <>{children}</>
+  }
+  
+  // Only use auth hook when NOT on login page
+  const { isAuthenticated, isLoading, adminSession, logout } = useAdminAuth()
   
   // Only initialize notifications after authentication is confirmed
   const shouldUseNotifications = isAuthenticated && !isLoading
   const { unreadMessages, markAllAsRead, refreshUnreadCount } = useGlobalNotifications(shouldUseNotifications)
-
-  // Protect routes except login page
-  useEffect(() => {
-    if (!isLoading && pathname !== "/admin/login") {
-      requireAuth()
-    }
-  }, [isLoading, isAuthenticated, pathname, requireAuth])
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -44,14 +44,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     )
   }
 
-  // Show login page if not authenticated
-  if (!isAuthenticated && pathname !== "/admin/login") {
-    return null // The requireAuth will redirect to login
-  }
-
-  // Show login page without sidebar
-  if (pathname === "/admin/login") {
-    return <>{children}</>
+  // Redirect to login if not authenticated (will be handled by auth hook)
+  if (!isAuthenticated) {
+    return null
   }
 
   // Show admin interface with sidebar for authenticated users
@@ -72,7 +67,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <User className="w-4 h-4" />
-                  <span>{adminUser?.email}</span>
+                  <span>{adminSession?.user.email}</span>
                 </div>
                 
                 {/* Notification Bell */}
