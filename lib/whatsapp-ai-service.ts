@@ -205,6 +205,106 @@ export class WhatsAppAIService {
       console.error('Error saving AI response message:', error);
       throw new Error(`Failed to save AI response: ${error.message}`);
     }
+
+    // Send the AI response back to the user via WhatsApp
+    await this.sendAIResponseToWhatsApp(chatId, aiResponse);
+  }
+
+  private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string) {
+    try {
+      // Get conversation details to find the contact phone number
+      const { data: conversation } = await this.supabase
+        .from('conversations')
+        .select(`
+          id,
+          remoteJid,
+          whatsapp_contact_id
+        `)
+        .eq('id', chatId)
+        .single();
+
+      if (!conversation) {
+        console.error('❌ Conversation not found for AI response sending');
+        return;
+      }
+
+      // Get the contact details
+      let phoneNumber = null;
+      if (conversation.whatsapp_contact_id) {
+        const { data: contact } = await this.supabase
+          .from('whatsapp_contacts')
+          .select('phone_number, whatsapp_jid')
+          .eq('id', conversation.whatsapp_contact_id)
+          .single();
+        
+        phoneNumber = contact?.phone_number;
+      }
+
+      // Fallback to remoteJid if no contact found
+      if (!phoneNumber && conversation.remoteJid) {
+        phoneNumber = conversation.remoteJid.replace('@s.whatsapp.net', '');
+      }
+
+      if (!phoneNumber) {
+        console.error('❌ No phone number found for conversation:', chatId);
+        return;
+      }
+
+      // Clean phone number for WhatsApp API
+      let cleanPhoneNumber = phoneNumber;
+      if (phoneNumber.includes('@s.whatsapp.net')) {
+        cleanPhoneNumber = phoneNumber.replace('@s.whatsapp.net', '');
+      }
+      if (!cleanPhoneNumber.startsWith('+')) {
+        cleanPhoneNumber = `+${cleanPhoneNumber}`;
+      }
+
+      console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber);
+
+      // Check if WASender API key is available
+      const apiKey = process.env.WASENDER_API_KEY;
+      if (!apiKey) {
+        console.error('❌ WASENDER_API_KEY not configured - cannot send AI response');
+        return;
+      }
+
+      // Send via WASender API
+      const apiResponse = await fetch('https://www.wasenderapi.com/api/send-message', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          to: cleanPhoneNumber.replace('+', ''), // WASender expects number without + 
+          text: aiResponse 
+        }),
+      });
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json();
+        console.error('❌ Failed to send AI response via WhatsApp:', errorData);
+        return;
+      }
+
+      const apiData = await apiResponse.json();
+      console.log('✅ AI response sent successfully via WhatsApp:', apiData);
+
+      // Update the message with the actual WhatsApp message ID from the API
+      if (apiData.data?.msgId) {
+        await this.supabase
+          .from('messages')
+          .update({ whatsapp_message_id: apiData.data.msgId.toString() })
+          .eq('conversation_id', chatId)
+          .eq('sender_type', 'ai_agent')
+          .order('created_at', { ascending: false })
+          .limit(1);
+      }
+
+    } catch (error) {
+      console.error('❌ Error sending AI response to WhatsApp:', error);
+      // Don't throw error - message was saved successfully, sending is optional
+    }
   }
 
   private async logAIInteraction(
