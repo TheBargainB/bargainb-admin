@@ -91,7 +91,10 @@ export class WhatsAppAIService {
       const aiResponse = await this.callAIAgent(threadId, cleanMessage, userId, userProfile, chatData.ai_config);
       const processingTime = Date.now() - startTime;
 
-      // 6. Log the interaction
+      // 6. Save AI response as a message in the conversation
+      await this.saveAIResponseMessage(chatId, aiResponse);
+
+      // 7. Log the interaction
       await this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime);
 
       return { success: true, aiResponse };
@@ -178,6 +181,32 @@ export class WhatsAppAIService {
     return data.messages[data.messages.length - 1]?.content || 'No response available';
   }
 
+  private async saveAIResponseMessage(chatId: string, aiResponse: string) {
+    // Get conversation details to find the contact
+    const { data: conversation } = await this.supabase
+      .from('conversations')
+      .select('contact_phone_number')
+      .eq('id', chatId)
+      .single();
+
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+
+    // Save AI response as a message in the conversation
+    await this.supabase
+      .from('messages')
+      .insert({
+        conversation_id: chatId,
+        contact_phone_number: conversation.contact_phone_number,
+        message_content: aiResponse,
+        message_type: 'text',
+        is_from_contact: false, // AI message is not from contact
+        sender_type: 'ai_agent', // Mark as AI agent message
+        timestamp: new Date().toISOString()
+      });
+  }
+
   private async logAIInteraction(
     chatId: string, 
     userId: string, 
@@ -186,10 +215,11 @@ export class WhatsAppAIService {
     threadId: string, 
     processingTime: number
   ) {
+    // Log in ai_interactions table (using conversation_id to match our database)
     await this.supabase
       .from('ai_interactions')
       .insert({
-        conversation_id: chatId,
+        conversation_id: chatId, // This should match our table schema
         user_id: userId,
         user_message: userMessage,
         ai_response: aiResponse,
