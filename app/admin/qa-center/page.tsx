@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { qaTestScriptsApi, qaTestRunsApi, qaDetectedIssuesApi } from "@/lib/qa-testing-api"
 import { 
   Activity, 
   Database, 
@@ -80,7 +81,7 @@ interface TestResult {
 interface TestScript {
   id: string
   name: string
-  description: string
+  description: string | null
   category: string
   script_content: string
   priority: string
@@ -97,12 +98,12 @@ interface TestRun {
   run_number: number
   status: string
   started_at: string
-  completed_at?: string
-  duration_seconds?: number
+  completed_at: string | null
+  duration_seconds: number | null
   steps_total: number
   steps_passed: number
   steps_failed: number
-  error_message?: string
+  error_message: string | null
   browser_type: string
   test_environment: string
   trigger_type: string
@@ -117,7 +118,7 @@ interface DetectedIssue {
   status: string
   first_seen_at: string
   occurrence_count: number
-  affected_url?: string
+  affected_url: string | null
 }
 
 const QA_SCRIPT_TEMPLATE = `import { test, expect } from '@playwright/test';
@@ -182,6 +183,51 @@ export default function QATestingPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
+
+  // Load production test scripts from database
+  useEffect(() => {
+    const loadQAData = async () => {
+      setIsLoading(true)
+      try {
+        console.log('🔧 Loading QA Test Scripts from database...')
+        
+        // Load test scripts
+        const scriptsResponse = await qaTestScriptsApi.getAll()
+        console.log('✅ Loaded test scripts:', scriptsResponse.data.length)
+        setTestScripts(scriptsResponse.data)
+        
+        // Load test runs
+        try {
+          const runsResponse = await qaTestRunsApi.getAll()
+          console.log('✅ Loaded test runs:', runsResponse.data.length)
+          setTestRuns(runsResponse.data)
+        } catch (runsError) {
+          console.warn('⚠️ Could not load test runs:', runsError)
+        }
+        
+        // Load detected issues
+        try {
+          const issuesResponse = await qaDetectedIssuesApi.getAll()
+          console.log('✅ Loaded detected issues:', issuesResponse.data.length)
+          setDetectedIssues(issuesResponse.data)
+        } catch (issuesError) {
+          console.warn('⚠️ Could not load detected issues:', issuesError)
+        }
+        
+      } catch (error) {
+        console.error('❌ Error loading QA data:', error)
+        toast({
+          title: "Error Loading QA Data",
+          description: "Could not load test scripts from database. Please refresh the page.",
+          variant: "destructive"
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadQAData()
+  }, [])
 
   const runTest = async (scriptId: string) => {
     setIsRunning(true)
