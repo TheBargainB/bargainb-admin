@@ -93,11 +93,12 @@ export const useAdminAuth = () => {
         .eq('is_active', true)
         .single()
       
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('Database query timeout')), 5000)
       )
       
-      const { data: adminUser, error } = await Promise.race([queryPromise, timeoutPromise])
+      const result = await Promise.race([queryPromise, timeoutPromise])
+      const { data: adminUser, error } = result as Awaited<typeof queryPromise>
       
       const endTime = performance.now()
       console.log(`🔧 checkAdminAccess: Database query took ${endTime - startTime}ms`)
@@ -127,7 +128,7 @@ export const useAdminAuth = () => {
     } catch (error) {
       console.error("❌ checkAdminAccess: Unexpected error:", error)
       // If database query times out during session check, redirect to login
-      if (error.message === 'Database query timeout') {
+      if (error instanceof Error && error.message === 'Database query timeout') {
         console.error("❌ Database query timed out during session check - redirecting to login")
         setIsLoading(false)
         router.push("/admin/login")
