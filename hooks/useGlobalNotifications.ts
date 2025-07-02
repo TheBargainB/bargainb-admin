@@ -12,6 +12,12 @@ let globalUnreadCount = 0
 let globalRefreshFunction: (() => Promise<void>) | null = null
 const subscribers = new Set<(count: number) => void>()
 
+// Global subscription state to prevent multiple subscriptions
+let globalMessageSubscription: any = null
+let globalConversationSubscription: any = null
+let globalPollingInterval: NodeJS.Timeout | null = null
+let isSubscriptionSetup = false
+
 export const useGlobalNotifications = (enabled: boolean = true): GlobalNotifications => {
   const [unreadMessages, setUnreadMessages] = useState(globalUnreadCount)
   const [isLoading, setIsLoading] = useState(false)
@@ -93,21 +99,28 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
     }
   }, [refreshUnreadCount, enabled])
 
-  // Set up real-time subscriptions at the global level
+  // Set up real-time subscriptions at the global level (only once)
   useEffect(() => {
-    if (!enabled) return
-
-    let messageSubscription: any = null
-    let conversationSubscription: any = null
-    let interval: NodeJS.Timeout | null = null
+    if (!enabled || isSubscriptionSetup) return
 
     const setupRealTimeSubscriptions = async () => {
       try {
         console.log('🔔 Setting up global notifications subscriptions...')
         
-        // Subscribe to new messages in the new 'messages' table
-        messageSubscription = supabase
-          .channel('global-chat-messages')
+        // Clean up existing subscriptions first
+        if (globalMessageSubscription) {
+          supabase.removeChannel(globalMessageSubscription)
+        }
+        if (globalConversationSubscription) {
+          supabase.removeChannel(globalConversationSubscription)
+        }
+        if (globalPollingInterval) {
+          clearInterval(globalPollingInterval)
+        }
+        
+        // Subscribe to new messages in the new 'messages' table with better error handling
+        globalMessageSubscription = supabase
+          .channel('global-chat-messages-notifications')
           .on(
             'postgres_changes',
             {
@@ -117,17 +130,22 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
             },
             (payload) => {
               console.log('🔔 New message detected, refreshing unread count')
-              // Refresh unread count when new messages arrive
-              setTimeout(() => refreshUnreadCount(), 500) // Small delay to ensure DB consistency
+              // Debounce refresh to prevent excessive calls
+              setTimeout(() => refreshUnreadCount(), 1000)
             }
           )
           .subscribe((status) => {
             console.log('🔔 Messages subscription status:', status)
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Global messages subscription active')
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.warn('⚠️ Messages subscription failed, will rely on polling')
+            }
           })
 
         // Subscribe to conversation updates (for read status changes)
-        conversationSubscription = supabase
-          .channel('global-chat-conversations')
+        globalConversationSubscription = supabase
+          .channel('global-chat-conversations-notifications')
           .on(
             'postgres_changes',
             {
@@ -137,19 +155,31 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
             },
             (payload) => {
               console.log('🔔 Conversation updated, refreshing unread count')
-              // Refresh when conversations are updated (like read status)
-              setTimeout(() => refreshUnreadCount(), 300)
+              // Debounce refresh to prevent excessive calls
+              setTimeout(() => refreshUnreadCount(), 800)
             }
           )
           .subscribe((status) => {
             console.log('🔔 Conversations subscription status:', status)
+            if (status === 'SUBSCRIBED') {
+              console.log('✅ Global conversations subscription active')
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              console.warn('⚠️ Conversations subscription failed, will rely on polling')
+            }
           })
 
         // Initial load
         await refreshUnreadCount()
 
-        // Refresh every 30 seconds as backup
-        interval = setInterval(() => refreshUnreadCount(), 30000)
+        // Reduced polling frequency - only refresh every 60 seconds as backup
+        globalPollingInterval = setInterval(() => {
+          console.log('🔄 Backup polling for unread count')
+          refreshUnreadCount()
+        }, 60000) // Increased from 30 seconds to 60 seconds
+
+        isSubscriptionSetup = true
+        console.log('✅ Global notifications setup complete')
+        
       } catch (error) {
         console.error('❌ Error setting up global real-time subscriptions:', error)
       }
@@ -158,14 +188,22 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
     setupRealTimeSubscriptions()
 
     return () => {
-      if (messageSubscription) {
-        supabase.removeChannel(messageSubscription)
-      }
-      if (conversationSubscription) {
-        supabase.removeChannel(conversationSubscription)
-      }
-      if (interval) {
-        clearInterval(interval)
+      // Only clean up if this is the last subscriber
+      if (subscribers.size <= 1) {
+        if (globalMessageSubscription) {
+          supabase.removeChannel(globalMessageSubscription)
+          globalMessageSubscription = null
+        }
+        if (globalConversationSubscription) {
+          supabase.removeChannel(globalConversationSubscription)
+          globalConversationSubscription = null
+        }
+        if (globalPollingInterval) {
+          clearInterval(globalPollingInterval)
+          globalPollingInterval = null
+        }
+        isSubscriptionSetup = false
+        console.log('🧹 Cleaned up global notifications subscriptions')
       }
     }
   }, [refreshUnreadCount, enabled])
