@@ -155,6 +155,9 @@ export default function ChatPage() {
   const [chartData, setChartData] = useState<any>(null)
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
   
+  // Contacts count for stats (separate from dialog contacts)
+  const [contactsCount, setContactsCount] = useState(0)
+  
   // Enhanced data viewing state
   const [mealPlanningData, setMealPlanningData] = useState<any[]>([])
   const [groceryListsData, setGroceryListsData] = useState<any[]>([])
@@ -441,6 +444,9 @@ export default function ChatPage() {
         
         // Refresh the contacts from database
         await loadAllContacts()
+        
+        // Also refresh the contacts count for stats
+        await loadContactsCount()
       } else {
         toast({
           title: "Sync failed",
@@ -1005,6 +1011,7 @@ export default function ChatPage() {
           await Promise.all([
             loadWhatsAppData(),
             loadConversationsFromDatabase(true), // Silent initial load
+            loadContactsCount(), // Load contacts count for stats
             loadAnalyticsData()
           ])
         }
@@ -1436,6 +1443,22 @@ export default function ChatPage() {
 
 
 
+  // Load contacts count for stats
+  const loadContactsCount = async () => {
+    try {
+      console.log('📋 Fetching contacts from database')
+      const response = await fetch('/admin/chat/api/contacts/db')
+      if (response.ok) {
+        const result = await response.json()
+        const contacts = result.data || []
+        console.log(`📱 Found ${contacts.length} total contacts in database`)
+        setContactsCount(contacts.length)
+      }
+    } catch (error) {
+      console.error('❌ Error loading contacts count:', error)
+    }
+  }
+
   // Load analytics data
   const loadAnalyticsData = async () => {
     try {
@@ -1748,7 +1771,7 @@ export default function ChatPage() {
 
                     {/* Contact count and source info */}
                     {!isLoadingContacts && allContacts.length > 0 && (
-                      <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                      <div className="text-xs text-muted-foreground bg-muted/30 dark:bg-muted/70 p-2 rounded border border-muted-foreground/20">
                         📱 {allContacts.length} contacts available {contactSearchTerm && `(${filteredAllContacts.length} filtered)`}
                       </div>
                     )}
@@ -1780,7 +1803,7 @@ export default function ChatPage() {
                               className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
                                 isCreatingConversation 
                                   ? "opacity-50 cursor-not-allowed" 
-                                  : "cursor-pointer hover:bg-muted/50"
+                                  : "cursor-pointer hover:bg-muted/30 dark:hover:bg-muted/60"
                               }`}
                               onClick={() => {
                                 console.log('🖱️ Contact clicked:', contact)
@@ -1861,7 +1884,7 @@ export default function ChatPage() {
                   {isLoading ? (
                     <div className="animate-pulse bg-muted h-6 w-8 rounded"></div>
                   ) : (
-                    allContacts.length || whatsappContacts.length || 0
+                    contactsCount
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">Active contacts</p>
@@ -1968,7 +1991,7 @@ export default function ChatPage() {
                   return (
                     <div
                       key={conversation.id}
-                      className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-all duration-200 min-h-[88px] ${
+                      className={`p-4 border-b cursor-pointer hover:bg-muted/30 dark:hover:bg-muted/60 transition-all duration-200 min-h-[88px] ${
                         selectedContact === conversation.id ? "bg-primary/5 border-l-4 border-l-primary" : ""
                       }`}
                       onClick={() => handleSelectConversation(conversation.id)}
@@ -2181,13 +2204,13 @@ export default function ChatPage() {
                         >
                           {/* Message Headers with improved styling */}
                           {message.sender === "ai" && (
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-indigo-200 dark:border-indigo-800">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-primary/20">
                               <div className="flex items-center gap-2">
-                                <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">AI Assistant</span>
+                                <Bot className="h-4 w-4 text-primary" />
+                                <span className="text-sm font-semibold text-primary">AI Assistant</span>
                               </div>
                               {message.confidence && (
-                                <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                                <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-primary/10 text-primary">
                                   {message.confidence}% confidence
                                 </Badge>
                               )}
@@ -2209,9 +2232,9 @@ export default function ChatPage() {
                           )}
                           
                           {message.sender === "user" && showAvatar && (
-                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">
-                              <User className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-muted-foreground/20">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-semibold text-foreground">
                                 {getDisplayName(selectedConversation)}
                               </span>
                             </div>
@@ -2219,20 +2242,20 @@ export default function ChatPage() {
                           
                           <p className={`text-sm leading-relaxed whitespace-pre-wrap ${
                             message.sender === "ai" 
-                              ? "text-slate-700 dark:text-slate-200" 
+                              ? "text-foreground" 
                               : message.sender === "admin"
                               ? "text-white"
-                              : "text-slate-600 dark:text-slate-300"
+                              : "text-foreground"
                           }`}>
                             {message.content}
                           </p>
                           
                           <div className={`flex items-center justify-between mt-3 pt-2 border-t ${
                             message.sender === "ai" 
-                              ? "border-indigo-200 dark:border-indigo-800" 
+                              ? "border-primary/20" 
                               : message.sender === "admin"
                               ? "border-emerald-400/30"
-                              : "border-slate-200 dark:border-slate-700"
+                              : "border-muted-foreground/20"
                           }`}>
                             <span className={`text-xs ${
                               message.sender === "admin" 
@@ -2288,7 +2311,7 @@ export default function ChatPage() {
               </div>
             </ScrollArea>
             <Separator className="flex-shrink-0" />
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-t flex-shrink-0">
+                          <div className="p-3 sm:p-4 bg-muted/30 dark:bg-muted/60 border-t flex-shrink-0">
               <div className="flex gap-3 items-end">
                 <div className="flex-1">
                   <div className="flex gap-2 sm:gap-3">
@@ -2298,7 +2321,7 @@ export default function ChatPage() {
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        className="min-h-[44px] max-h-32 resize-none border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-all duration-200 rounded-xl"
+                        className="min-h-[44px] max-h-32 resize-none border-2 border-border bg-background shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-200 rounded-xl"
                         disabled={!selectedContact || isSending}
                         rows={1}
                       />
@@ -2307,7 +2330,7 @@ export default function ChatPage() {
                       size="icon" 
                           onClick={handleSendMessageWithRefresh}
                       disabled={!newMessage.trim() || !selectedContact || isSending}
-                      className="h-11 w-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all duration-200 disabled:from-slate-400 disabled:to-slate-500"
+                      className="h-11 w-11 rounded-full bg-primary hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all duration-200 disabled:bg-muted disabled:text-muted-foreground disabled:to-slate-500"
                     >
                       {isSending ? (
                         <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
