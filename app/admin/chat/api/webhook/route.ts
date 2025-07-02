@@ -487,6 +487,24 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error('❌ Error calling AI API:', error);
         }
+      } else {
+        // Debug logging for @bb detection
+        console.log('🔍 @bb detection debug:');
+        console.log('  - fromMe:', fromMe);
+        console.log('  - messageText:', JSON.stringify(messageText));
+        console.log('  - messageText length:', messageText?.length);
+        console.log('  - @bb regex test result:', /@bb/i.test(messageText || ''));
+        console.log('  - Final condition result:', !fromMe && messageText && /@bb/i.test(messageText));
+        
+        if (fromMe) {
+          console.log('⚠️ Skipping AI processing: message is from us');
+        } else if (!messageText) {
+          console.log('⚠️ Skipping AI processing: no message text');
+        } else if (!/@bb/i.test(messageText)) {
+          console.log('⚠️ Skipping AI processing: no @bb mention found');
+        } else {
+          console.log('⚠️ Skipping AI processing: unknown reason');
+        }
       }
 
       return NextResponse.json({ success: true });
