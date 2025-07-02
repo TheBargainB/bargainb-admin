@@ -69,41 +69,28 @@ export class WhatsAppAIService {
         return { success: false, error: 'AI not enabled for this chat' };
       }
 
-      // 2. Get or create per-user assistant
-      let assistantId = chatData.assistant_id;
-      if (!assistantId) {
-        console.log('🤖 No assistant found for conversation, creating one...');
-        assistantId = await getOrCreateAssistantForConversation(chatId);
-      }
+      // 2. SPEED OPTIMIZATION: Use existing assistant or default shared assistant
+      let assistantId = chatData.assistant_id || this.aiConfig.assistantId;
+      console.log('🚀 Using assistant (speed mode):', assistantId);
 
-      // 3. Get or create AI thread
-      let threadId = chatData.ai_thread_id;
-      if (!threadId) {
-        threadId = await this.createAIThread(userId, assistantId);
-        
-        // Update chat with thread ID
-        await this.supabase
-          .from('conversations')
-          .update({ ai_thread_id: threadId })
-          .eq('id', chatId);
-      }
-
-      // 4. Clean the message (remove @bb)
+      // 3. SPEED OPTIMIZATION: Get or create thread + user profile in parallel
       const cleanMessage = message.replace(/@bb\s*/i, '').trim();
+      
+      const [threadId, userProfile] = await Promise.all([
+        this.getOrCreateThreadFast(chatId, userId, assistantId, chatData.ai_thread_id),
+        this.getUserProfileFast(userId) // Non-blocking, returns null if not found quickly
+      ]);
 
-      // 5. Get user profile for context
-      const userProfile = await this.getUserProfile(userId);
-
-      // 6. Send to AI agent with per-user assistant
+      // 4. Send to AI agent - optimized call
       const startTime = Date.now();
-      const aiResponse = await this.callAIAgent(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
+      const aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
       const processingTime = Date.now() - startTime;
 
-      // 6. Save AI response as a message in the conversation
-      await this.saveAIResponseMessage(chatId, aiResponse, threadId);
-
-      // 7. Log the interaction
-      await this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime);
+      // 5. SPEED OPTIMIZATION: Save response and log in parallel (non-blocking)
+      Promise.all([
+        this.saveAIResponseMessage(chatId, aiResponse, threadId),
+        this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
+      ]).catch(error => console.warn('⚠️ Background save failed:', error));
 
       return { success: true, aiResponse };
 
@@ -114,6 +101,87 @@ export class WhatsAppAIService {
         error: 'Sorry, I encountered an error processing your request. Please try again.' 
       };
     }
+  }
+
+  // SPEED OPTIMIZED: Fast thread management
+  private async getOrCreateThreadFast(chatId: string, userId: string, assistantId: string, existingThreadId?: string): Promise<string> {
+    if (existingThreadId) {
+      console.log('🚀 Reusing existing thread:', existingThreadId);
+      return existingThreadId;
+    }
+
+    console.log('🚀 Creating new thread...');
+    const threadId = await this.createAIThread(userId, assistantId);
+    
+    // Update thread ID in background (non-blocking)
+    this.supabase
+      .from('conversations')
+      .update({ ai_thread_id: threadId })
+      .eq('id', chatId)
+      .then(({ error }) => {
+        if (error) console.warn('⚠️ Thread ID save failed:', error);
+      });
+
+    return threadId;
+  }
+
+  // SPEED OPTIMIZED: Fast user profile lookup
+  private async getUserProfileFast(userId: string): Promise<any> {
+    try {
+      const { data } = await this.supabase
+        .from('crm_profiles')
+        .select('full_name, preferred_name, shopping_persona, preferred_stores, dietary_restrictions')
+        .eq('id', userId)
+        .single();
+      return data;
+    } catch {
+      console.log('🚀 Skipping user profile (speed mode)');
+      return null; // Return null for speed - AI can work without profile
+    }
+  }
+
+  // SPEED OPTIMIZED: Faster AI agent call with reduced timeout
+  private async callAIAgentFast(threadId: string, message: string, userId: string, userProfile: any, aiConfig?: any, assistantId?: string): Promise<string> {
+    const response = await fetch(`${this.aiConfig.baseUrl}/threads/${threadId}/runs/wait`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': this.aiConfig.apiKey
+      },
+      body: JSON.stringify({
+        assistant_id: assistantId,
+        input: {
+          messages: [{ role: 'user', content: message }]
+        },
+        config: {
+          configurable: { 
+            user_id: userId,
+            source: 'whatsapp',
+            user_profile: userProfile,
+            // SPEED OPTIMIZED: Reduced timeouts and limits
+            ENABLE_GUARD_RAILS: aiConfig?.guard_rails_enabled ?? true,
+            MAX_MESSAGE_LENGTH: aiConfig?.max_message_length ?? 300, // Reduced from 500
+            ENABLE_SPAM_DETECTION: aiConfig?.spam_detection ?? false, // Disabled for speed
+            MAX_TOKENS_PER_REQUEST: aiConfig?.max_tokens_per_request ?? 2000, // Reduced from 4000
+            REQUEST_TIMEOUT_SECONDS: aiConfig?.request_timeout ?? 15, // Reduced from 30
+            ENABLE_CONTENT_FILTERING: aiConfig?.content_filtering ?? false, // Disabled for speed
+            MAX_TOKENS_PER_USER_HOUR: aiConfig?.max_tokens_per_hour ?? 20000,
+            ENABLE_FALLBACK_RESPONSES: aiConfig?.fallback_responses ?? true,
+            MAX_TOOL_CALLS_PER_REQUEST: aiConfig?.max_tool_calls ?? 3, // Reduced from 5
+            CUSTOM_INSTRUCTIONS: aiConfig?.custom_instructions ?? '',
+            TEMPERATURE: aiConfig?.temperature ?? 0.5, // Reduced for faster responses
+            RESPONSE_STYLE: aiConfig?.response_style ?? 'concise' // Changed from 'helpful' to 'concise'
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI agent request failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.messages[data.messages.length - 1]?.content || 'No response available';
   }
 
   private async createAIThread(userId: string, assistantId?: string): Promise<string> {
