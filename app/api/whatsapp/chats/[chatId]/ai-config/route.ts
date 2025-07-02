@@ -15,7 +15,16 @@ export async function GET(
     
     const { data, error } = await supabase
       .from('conversations')
-      .select('ai_enabled, ai_config, ai_thread_id')
+      .select(`
+        ai_enabled, 
+        ai_config, 
+        ai_thread_id,
+        assistant_id,
+        assistant_name,
+        assistant_created_at,
+        assistant_config,
+        assistant_metadata
+      `)
       .eq('id', chatId)
       .single();
 
@@ -65,7 +74,16 @@ export async function PATCH(
         }
       })
       .eq('id', chatId)
-      .select();
+      .select(`
+        ai_enabled, 
+        ai_config, 
+        ai_thread_id,
+        assistant_id,
+        assistant_name,
+        assistant_created_at,
+        assistant_config,
+        assistant_metadata
+      `);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

@@ -199,13 +199,35 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
   const createPersonalAssistant = async () => {
     setCreatingAssistant(true);
     try {
+      // First get conversation details to get proper contact information
+      const conversationResponse = await fetch(`/api/whatsapp/chats/${conversationId}/ai-config`);
+      if (!conversationResponse.ok) {
+        throw new Error('Failed to fetch conversation details');
+      }
+      
+      const conversationData = await conversationResponse.json();
+      
+      // We need to get contact info from the conversation
+      // This might require an additional API call to get the contact details
+      const contactResponse = await fetch(`/admin/chat/api/conversations/${conversationId}/contact`);
+      let contactInfo = null;
+      
+      if (contactResponse.ok) {
+        const contactData = await contactResponse.json();
+        contactInfo = contactData.data;
+      }
+      
+      // Use contact info if available, otherwise use fallback values
+      const phoneNumber = contactInfo?.phone_number || userId;
+      const contactName = contactInfo?.display_name || contactInfo?.push_name || `User ${userId}`;
+      
       const response = await fetch('/app/admin/chat/api/assistants/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId: conversationId,
-          phoneNumber: userId, // Using userId as phone number placeholder
-          contactName: `User ${userId}`,
+          phoneNumber: phoneNumber,
+          contactName: contactName,
           userPreferences: {
             user_preferences: {
               budget_limit: 100,
@@ -228,7 +250,7 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
         await loadAssistantInfo();
         toast({
           title: "Personal Assistant Created",
-          description: `Created personalized assistant: ${result.data.assistant_id}`,
+          description: `Created personalized assistant for ${contactName}`,
         });
       } else {
         const errorData = await response.json();

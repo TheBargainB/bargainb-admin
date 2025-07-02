@@ -52,7 +52,6 @@ export interface AssistantResponse {
 // Environment variables
 const AI_API_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
 const AI_API_KEY = process.env.BARGAINB_AI_AGENT_API_KEY || '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'
-const SHARED_ASSISTANT_ID = '5fd12ecb-9268-51f0-8168-fc7952c7c8b8' // Fallback
 
 /**
  * Create a new assistant for a specific conversation/user
@@ -156,32 +155,17 @@ export const createUserAssistant = async (
     
   } catch (error) {
     console.error('❌ Error creating user assistant:', error)
-    
-    // Fallback to shared assistant
-    console.log('🔄 Falling back to shared assistant:', SHARED_ASSISTANT_ID)
-    
-    // Update database with shared assistant as fallback
-    await supabase
-      .from('conversations')
-      .update({
-        assistant_id: SHARED_ASSISTANT_ID,
-        assistant_name: 'Shared BargainB Assistant',
-        assistant_created_at: new Date().toISOString(),
-        assistant_config: { fallback: true },
-        assistant_metadata: { fallback_reason: 'creation_failed' }
-      })
-      .eq('id', conversationId)
-    
-    return SHARED_ASSISTANT_ID
+    throw new Error(`Failed to create personal assistant: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }
 
 /**
- * Get assistant for a conversation (create if doesn't exist)
+ * Get assistant for a conversation - NO SHARED ASSISTANT FALLBACK
+ * Returns null if no personal assistant exists
  */
-export const getOrCreateAssistantForConversation = async (
+export const getAssistantForConversation = async (
   conversationId: string
-): Promise<string> => {
+): Promise<string | null> => {
   try {
     // Check if conversation already has an assistant
     const { data: conversation, error } = await supabase
@@ -192,37 +176,72 @@ export const getOrCreateAssistantForConversation = async (
     
     if (error) {
       console.error('❌ Error fetching conversation:', error)
-      return SHARED_ASSISTANT_ID
+      return null
     }
     
-    // Return existing assistant if available
+    // Return existing assistant if available, otherwise null
     if (conversation.assistant_id) {
-      console.log('✅ Using existing assistant:', conversation.assistant_id)
+      console.log('✅ Found existing personal assistant:', conversation.assistant_id)
       return conversation.assistant_id
     }
     
-    // Get contact info for assistant creation
-    const { data: contact, error: contactError } = await supabase
-      .from('whatsapp_contacts')
-      .select('phone_number, display_name')
-      .eq('id', conversation.whatsapp_contact_id)
-      .single()
+    console.log('ℹ️ No personal assistant found for conversation:', conversationId)
+    return null
     
-    if (contactError) {
-      console.error('❌ Error fetching contact:', contactError)
-      return SHARED_ASSISTANT_ID
+  } catch (error) {
+    console.error('❌ Error in getAssistantForConversation:', error)
+    return null
+  }
+}
+
+/**
+ * Create assistant for conversation if it doesn't exist
+ * Will NOT fall back to shared assistant - creates a new one or returns null
+ */
+export const getOrCreateAssistantForConversation = async (
+  conversationId: string
+): Promise<string | null> => {
+  try {
+    // Check if conversation already has an assistant
+    const existingAssistant = await getAssistantForConversation(conversationId)
+    if (existingAssistant) {
+      return existingAssistant
     }
     
-    // Create new assistant
+    // Get contact info for assistant creation
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select(`
+        whatsapp_contact_id,
+        whatsapp_contacts (
+          phone_number,
+          display_name,
+          push_name
+        )
+      `)
+      .eq('id', conversationId)
+      .single()
+    
+    if (conversationError || !conversation?.whatsapp_contacts) {
+      console.error('❌ Error fetching conversation details:', conversationError)
+      return null
+    }
+    
+    const contact = conversation.whatsapp_contacts
+    const contactName = contact.display_name || contact.push_name || null
+    
+    console.log('🆕 Creating new personal assistant for conversation:', conversationId)
+    
+    // Create new personal assistant
     return await createUserAssistant(
       conversationId,
       contact.phone_number,
-      contact.display_name || null
+      contactName
     )
     
   } catch (error) {
     console.error('❌ Error in getOrCreateAssistantForConversation:', error)
-    return SHARED_ASSISTANT_ID
+    return null
   }
 }
 
@@ -283,12 +302,6 @@ export const updateAssistantConfig = async (
 export const deleteAssistant = async (assistantId: string): Promise<boolean> => {
   try {
     console.log('🗑️ Deleting assistant:', assistantId)
-    
-    // Don't delete the shared assistant
-    if (assistantId === SHARED_ASSISTANT_ID) {
-      console.log('⚠️ Cannot delete shared assistant')
-      return false
-    }
     
     const response = await fetch(`${AI_API_URL}/assistants/${assistantId}`, {
       method: 'DELETE',

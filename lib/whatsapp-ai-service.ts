@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { getOrCreateAssistantForConversation } from './assistant-service';
+import { getAssistantForConversation } from './assistant-service';
 
 export interface AIAgentConfig {
   baseUrl: string;
