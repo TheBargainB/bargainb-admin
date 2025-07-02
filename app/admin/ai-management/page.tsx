@@ -136,7 +136,7 @@ export default function AIManagementPage() {
 
   const checkMigrationStatus = async () => {
     try {
-      const response = await fetch('/app/admin/chat/api/assistants/migrate')
+      const response = await fetch('/admin/chat/api/assistants/migrate')
       if (response.ok) {
         const status = await response.json()
         setMigrationStatus(status)
@@ -149,7 +149,7 @@ export default function AIManagementPage() {
   const runMigration = async () => {
     setRunningMigration(true)
     try {
-      const response = await fetch('/app/admin/chat/api/assistants/migrate', {
+      const response = await fetch('/admin/chat/api/assistants/migrate', {
         method: 'POST'
       })
       

@@ -221,7 +221,7 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
       const phoneNumber = contactInfo?.phone_number || userId;
       const contactName = contactInfo?.display_name || contactInfo?.push_name || `User ${userId}`;
       
-      const response = await fetch('/app/admin/chat/api/assistants/create', {
+      const response = await fetch('/admin/chat/api/assistants/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -276,7 +276,7 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
     setDeletingAssistant(true);
     try {
       // Call delete assistant API (we'll need to create this endpoint)
-      const response = await fetch(`/app/admin/chat/api/assistants/${assistantInfo.assistant_id}`, {
+      const response = await fetch(`/admin/chat/api/assistants/${assistantInfo.assistant_id}`, {
         method: 'DELETE'
       });
 

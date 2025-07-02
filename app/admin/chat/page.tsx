@@ -1582,11 +1582,14 @@ export default function ChatPage() {
     try {
       console.log('🤖 Loading AI prompts and config for:', selectedConversation.remoteJid)
       
-      // Get AI thread and configuration data
+      // Get AI thread and configuration data by joining with whatsapp_contacts
       const { data: conversations, error } = await supabase
         .from('conversations')
-        .select('*')
-        .eq('whatsapp_jid', selectedConversation.remoteJid)
+        .select(`
+          *,
+          whatsapp_contacts!inner(whatsapp_jid)
+        `)
+        .eq('whatsapp_contacts.whatsapp_jid', selectedConversation.remoteJid)
         .single()
       
       if (error && error.code !== 'PGRST116') {
