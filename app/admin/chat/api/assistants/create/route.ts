@@ -1,79 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createUserAssistant, getOrCreateAssistantForConversation, AssistantConfig } from '@/lib/assistant-service'
+import { createUserAssistant, AssistantConfig } from '@/lib/assistant-service'
+import { supabase } from '@/lib/supabase'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { conversationId, phoneNumber, contactName, userPreferences } = body
     
-    if (!conversationId || !phoneNumber) {
+    console.log('🤖 Creating personal assistant:', {
+      conversationId: body.conversationId,
+      contactName: body.contactName,
+      phoneNumber: body.phoneNumber
+    })
+
+    // Validate required fields
+    if (!body.conversationId || !body.phoneNumber) {
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields: conversationId, phoneNumber'
+        error: 'Missing required fields: conversationId and phoneNumber'
       }, { status: 400 })
     }
-    
-    console.log('🤖 Creating assistant for conversation:', conversationId)
-    
+
+    // Create personal assistant using the service
     const assistantId = await createUserAssistant(
-      conversationId,
-      phoneNumber,
-      contactName,
-      userPreferences as AssistantConfig['configurable']
+      body.conversationId,
+      body.phoneNumber,
+      body.contactName || 'User',
+      body.preferences as AssistantConfig['configurable'] || {}
     )
-    
+
+    console.log('✅ Personal assistant created successfully:', assistantId)
+
     return NextResponse.json({
       success: true,
       data: {
         assistant_id: assistantId,
-        conversation_id: conversationId,
-        phone_number: phoneNumber,
-        contact_name: contactName
-      }
+        conversation_id: body.conversationId,
+        phone_number: body.phoneNumber,
+        contact_name: body.contactName || 'User'
+      },
+      message: 'Personal assistant created successfully'
     })
-    
+
   } catch (error) {
-    console.error('❌ Error creating assistant:', error)
-    
+    console.error('❌ Error creating personal assistant:', error)
     return NextResponse.json({
       success: false,
-      error: 'Failed to create assistant',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to create personal assistant'
     }, { status: 500 })
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const conversationId = searchParams.get('conversationId')
-    
-    if (!conversationId) {
-      return NextResponse.json({
-        success: false,
-        error: 'Missing conversationId parameter'
-      }, { status: 400 })
-    }
-    
-    console.log('🔍 Getting or creating assistant for conversation:', conversationId)
-    
-    const assistantId = await getOrCreateAssistantForConversation(conversationId)
-    
-    return NextResponse.json({
-      success: true,
-      data: {
-        assistant_id: assistantId,
-        conversation_id: conversationId
-      }
-    })
-    
-  } catch (error) {
-    console.error('❌ Error getting/creating assistant:', error)
-    
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to get/create assistant',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-} 
+ 
