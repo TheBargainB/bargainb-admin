@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
         console.log('⚠️ No message found in payload');
         return NextResponse.json({ success: true, skipped: 'no_message' });
       }
-
+      
       const { 
         key,
         message: messageContent, 
