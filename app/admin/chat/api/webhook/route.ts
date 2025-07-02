@@ -312,28 +312,34 @@ export async function POST(request: NextRequest) {
 
     if (event === 'messages.upsert') {
       // Handle new or updated messages
-      const message = data.messages;
+      const message = data.messages[0]; // Get first message from array
       console.log('🔍 Message object:', JSON.stringify(message, null, 2));
       
+      if (!message) {
+        console.log('⚠️ No message found in payload');
+        return NextResponse.json({ success: true, skipped: 'no_message' });
+      }
+
       const { 
-        remoteJid, 
-        id: messageId, 
+        key,
         message: messageContent, 
         messageTimestamp, 
-        pushName,
-        key 
+        pushName
       } = message;
+
+      // Extract from key object
+      const { remoteJid, id: messageId, fromMe } = key;
 
       console.log('🔍 Extracted values:');
       console.log('  - remoteJid:', remoteJid);
       console.log('  - messageId:', messageId);
       console.log('  - messageTimestamp:', messageTimestamp);
       console.log('  - pushName:', pushName);
+      console.log('  - fromMe:', fromMe);
       console.log('  - key object:', JSON.stringify(key, null, 2));
       console.log('  - messageContent object:', JSON.stringify(messageContent, null, 2));
 
       // Check if message is from us
-      const fromMe = key?.fromMe || false;
       console.log('🔍 fromMe:', fromMe);
       
       console.log('📨 Processing message from:', remoteJid, fromMe ? '(sent by us)' : '(incoming)');
