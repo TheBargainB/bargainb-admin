@@ -290,19 +290,46 @@ let messageStore = {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Webhook GET endpoint called');
-    return NextResponse.json({
-      messagesCount: messageStore.messages.size,
-      contactsCount: messageStore.contacts.size
+    console.log('📡 Webhook health check requested');
+    
+    return NextResponse.json({ 
+      status: 'healthy',
+      endpoint: '/admin/chat/api/webhook',
+      supportedEvents: ['messages.upsert', 'messages.update'],
+      timestamp: new Date().toISOString()
     });
+    
   } catch (error) {
-    console.error('Error in webhook GET:', error);
+    console.error('❌ Webhook health check error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify webhook signature for WASender
+    const signature = request.headers.get('x-webhook-signature');
+    const webhookSecret = process.env.WASENDER_WEBHOOK_SECRET;
+    
+    // For now, we'll log the signature and allow requests without verification
+    // TODO: Add proper signature verification once webhook secret is configured
+    console.log('🔐 Webhook signature:', signature ? 'present' : 'missing');
+    console.log('🔐 Webhook secret configured:', webhookSecret ? 'yes' : 'no');
+    
+    // If webhook secret is configured, verify signature
+    if (webhookSecret && signature) {
+      if (signature !== webhookSecret) {
+        console.error('❌ Invalid webhook signature');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      }
+      console.log('✅ Webhook signature verified');
+    } else if (webhookSecret && !signature) {
+      console.error('❌ Missing webhook signature');
+      return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+    } else {
+      console.log('⚠️ Webhook verification skipped (no secret configured)');
+    }
+
     const body = await request.json();
     console.log('📥 Webhook received:', JSON.stringify(body, null, 2));
 
