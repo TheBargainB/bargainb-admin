@@ -200,7 +200,13 @@ async function getOrCreateConversation(contactId: string, contactName: string, r
         conversation_type: 'customer_support',
         total_messages: 0,
         unread_count: 0,
-        last_message_at: new Date().toISOString()
+        last_message_at: new Date().toISOString(),
+        ai_enabled: true,
+        ai_config: {
+          enabled: true,
+          response_style: 'helpful',
+          auto_respond: false
+        }
       })
       .select()
       .single();
