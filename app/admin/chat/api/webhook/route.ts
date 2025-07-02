@@ -298,7 +298,8 @@ export async function GET(request: NextRequest) {
       supportedEvents: ['messages.upsert', 'messages.update'],
       timestamp: new Date().toISOString(),
       version: '2.0-with-ai-processing',
-      deployedAt: '2025-07-02T21:20:00Z'
+      deployedAt: '2025-07-02T21:20:00Z',
+      cacheBust: '2025-07-02T21:26:00Z'
     });
     
   } catch (error) {
