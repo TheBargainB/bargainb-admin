@@ -25,15 +25,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return <>{children}</>
   }
   
-  // Only use auth hook when NOT on login page
-  const { isAuthenticated, isLoading, adminSession, logout } = useAdminAuth()
+  // Only use auth hook when NOT on login page - IMPROVED with initialCheckComplete
+  const { isAuthenticated, isLoading, adminSession, initialCheckComplete, logout } = useAdminAuth()
   
   // Only initialize notifications after authentication is confirmed
-  const shouldUseNotifications = isAuthenticated && !isLoading
+  const shouldUseNotifications = isAuthenticated && !isLoading && initialCheckComplete
   const { unreadMessages, markAllAsRead, refreshUnreadCount } = useGlobalNotifications(shouldUseNotifications)
 
-  // Show loading spinner while checking authentication
-  if (isLoading) {
+  // IMPROVED: Show loading spinner while checking authentication - prevent flash
+  if (!initialCheckComplete || (isLoading && !adminSession)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -44,8 +44,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     )
   }
 
-  // Redirect to login if not authenticated (will be handled by auth hook)
-  if (!isAuthenticated) {
+  // IMPROVED: Only redirect after initial check is complete
+  if (initialCheckComplete && !isAuthenticated) {
+    // The useAdminAuth hook will handle the redirect, just return null to prevent rendering
     return null
   }
 
@@ -70,27 +71,29 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <span>{adminSession?.user.email}</span>
                 </div>
                 
-                {/* Notification Bell */}
-                <div className="relative">
-                  <Link href="/admin/chat">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="relative p-2"
-                      title={unreadMessages > 0 ? `${unreadMessages} unread messages` : 'No unread messages'}
-                    >
-                      <Bell className="w-4 h-4" />
-                      {unreadMessages > 0 && (
-                        <Badge 
-                          variant="destructive" 
-                          className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center rounded-full animate-pulse"
-                        >
-                          {unreadMessages > 99 ? '99+' : unreadMessages}
-                        </Badge>
-                      )}
-                    </Button>
-                  </Link>
-                </div>
+                {/* Notification Bell - IMPROVED: Only show when notifications are ready */}
+                {shouldUseNotifications && (
+                  <div className="relative">
+                    <Link href="/admin/chat">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="relative p-2"
+                        title={unreadMessages > 0 ? `${unreadMessages} unread messages` : 'No unread messages'}
+                      >
+                        <Bell className="w-4 h-4" />
+                        {unreadMessages > 0 && (
+                          <Badge 
+                            variant="destructive" 
+                            className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center rounded-full animate-pulse"
+                          >
+                            {unreadMessages > 99 ? '99+' : unreadMessages}
+                          </Badge>
+                        )}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
 
                 <ThemeToggle />
                 <Button 

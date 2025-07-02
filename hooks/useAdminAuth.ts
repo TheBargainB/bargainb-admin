@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import type { User } from "@supabase/supabase-js"
@@ -25,18 +25,29 @@ export const useAdminAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [adminSession, setAdminSession] = useState<AdminSession | null>(null)
+  const [initialCheckComplete, setInitialCheckComplete] = useState<boolean>(false)
   const router = useRouter()
+  const hasCheckedSession = useRef(false)
 
   console.log("🔧 useAdminAuth: Hook initialized")
 
-  // Check for existing session on mount
+  // Check for existing session on mount - IMPROVED to prevent flash
   useEffect(() => {
+    // Prevent duplicate session checks
+    if (hasCheckedSession.current) {
+      return
+    }
+    
     console.log("🔧 useAdminAuth: useEffect triggered - checking session")
+    hasCheckedSession.current = true
+    
+    // Check session immediately without delay
     checkAuthSession()
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("🔧 Auth state changed:", event)
         if (event === 'SIGNED_IN' && session?.user) {
           await checkAdminAccess(session.user)
         } else if (event === 'SIGNED_OUT') {
@@ -45,12 +56,14 @@ export const useAdminAuth = () => {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      subscription.unsubscribe()
+      hasCheckedSession.current = false
+    }
   }, [])
 
   const checkAuthSession = async () => {
     console.log("🔧 checkAuthSession: Starting session check")
-    setIsLoading(true)
     
     try {
       console.log("🔧 checkAuthSession: Getting current session from Supabase")
@@ -58,15 +71,13 @@ export const useAdminAuth = () => {
       
       if (sessionError) {
         console.error("❌ checkAuthSession: Session error:", sessionError)
-        handleSignOut()
+        handleAuthFailure()
         return
       }
 
       if (!session?.user) {
-        console.log("🔧 checkAuthSession: No session found, redirecting to login")
-        setIsAuthenticated(false)
-        setIsLoading(false)
-        router.push("/admin/login")
+        console.log("🔧 checkAuthSession: No session found")
+        handleAuthFailure()
         return
       }
 
@@ -74,7 +85,7 @@ export const useAdminAuth = () => {
       await checkAdminAccess(session.user)
     } catch (error) {
       console.error("❌ checkAuthSession: Unexpected error:", error)
-      handleSignOut()
+      handleAuthFailure()
     }
   }
 
@@ -111,13 +122,13 @@ export const useAdminAuth = () => {
           details: error.details,
           hint: error.hint
         })
-        handleSignOut()
+        handleAuthFailure()
         return
       }
 
       if (!adminUser) {
         console.error("❌ checkAdminAccess: No admin user found for:", user.email)
-        handleSignOut()
+        handleAuthFailure()
         return
       }
 
@@ -125,16 +136,28 @@ export const useAdminAuth = () => {
       setAdminSession({ user, adminUser: adminUser as AdminUser })
       setIsAuthenticated(true)
       setIsLoading(false)
+      setInitialCheckComplete(true)
     } catch (error) {
       console.error("❌ checkAdminAccess: Unexpected error:", error)
-      // If database query times out during session check, redirect to login
+      // If database query times out during session check, handle gracefully
       if (error instanceof Error && error.message === 'Database query timeout') {
-        console.error("❌ Database query timed out during session check - redirecting to login")
-        setIsLoading(false)
-        router.push("/admin/login")
-        return
+        console.error("❌ Database query timed out during session check")
       }
-      handleSignOut()
+      handleAuthFailure()
+    }
+  }
+
+  // IMPROVED auth failure handling to prevent flash
+  const handleAuthFailure = () => {
+    setIsAuthenticated(false)
+    setAdminSession(null)
+    setIsLoading(false)
+    setInitialCheckComplete(true)
+    
+    // Only redirect to login if we're not already there
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
+      // Use replace instead of push to prevent back button issues
+      router.replace("/admin/login")
     }
   }
 
@@ -172,6 +195,12 @@ export const useAdminAuth = () => {
 
       console.log("✅ login: Authentication successful for:", data.user.email)
       await checkAdminAccess(data.user)
+      
+      // Redirect to admin dashboard after successful login
+      if (typeof window !== 'undefined') {
+        router.replace("/admin")
+      }
+      
       return true
     } catch (error) {
       console.error("❌ login: Unexpected error:", error)
@@ -212,7 +241,10 @@ export const useAdminAuth = () => {
       setIsAuthenticated(false)
       setAdminSession(null)
       setIsLoading(false)
-      router.push("/admin/login")
+      setInitialCheckComplete(true)
+      
+      // Use replace to prevent back button issues
+      router.replace("/admin/login")
       console.log("✅ handleSignOut: Sign out completed")
     } catch (error) {
       console.error("❌ handleSignOut: Error:", error)
@@ -224,6 +256,7 @@ export const useAdminAuth = () => {
     isAuthenticated,
     isLoading,
     adminSession,
+    initialCheckComplete, // Add this to help with rendering decisions
     login,
     loginWithMagicLink,
     logout: handleSignOut

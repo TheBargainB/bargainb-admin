@@ -166,10 +166,11 @@ export default function ChatPage() {
   const [selectedGroceryList, setSelectedGroceryList] = useState<any>(null)
   const [isGroceryListModalOpen, setIsGroceryListModalOpen] = useState(false)
   
-  // Real-time subscriptions state
+  // Real-time subscriptions state - Optimized to prevent excessive re-renders
   const [messageSubscription, setMessageSubscription] = useState<any>(null)
   const [conversationSubscription, setConversationSubscription] = useState<any>(null)
   const [isRealTimeConnected, setIsRealTimeConnected] = useState(false)
+  const [connectionRetryCount, setConnectionRetryCount] = useState(0)
   
   // Refs to avoid stale closures in real-time subscriptions
   const selectedContactRef = useRef(selectedContact)
@@ -185,6 +186,11 @@ export default function ChatPage() {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false)
   const lastMessageCountRef = useRef(0)
+  
+  // Polling control refs to prevent multiple intervals
+  const conversationPollingRef = useRef<NodeJS.Timeout | null>(null)
+  const messagePollingRef = useRef<NodeJS.Timeout | null>(null)
+  const refreshPollingRef = useRef<NodeJS.Timeout | null>(null)
   
   const { toast } = useToast()
   
@@ -897,8 +903,16 @@ export default function ChatPage() {
     // Load messages from database when conversation is selected
     loadMessagesFromDatabase(remoteJid)
     
-          // Refresh global unread count after marking as read
-      setTimeout(() => refreshGlobalUnreadCount(), 500)
+    // Auto-scroll to bottom when selecting a conversation
+    setTimeout(() => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+        console.log('📍 Auto-scrolled to bottom after conversation selection')
+      }
+    }, 300) // Small delay to ensure messages are loaded
+    
+    // Refresh global unread count after marking as read
+    setTimeout(() => refreshGlobalUnreadCount(), 500)
   }
 
   // Mark conversation as read
@@ -974,21 +988,37 @@ export default function ChatPage() {
     })
   }
 
-  // Load data on mount
+  // Load data on mount - OPTIMIZED to prevent constant loading
   useEffect(() => {
-    // Clear cache on first load to ensure fresh data
-    localStorage.removeItem('chat-storage')
-    setDatabaseConversations([])
-    setDatabaseMessages([])
-    setSelectedContact(null)
+    let isMounted = true
     
-    loadWhatsAppData()
-    loadConversationsFromDatabase()
-    loadAnalyticsData()
+    const initializeData = async () => {
+      try {
+        // Clear cache on first load to ensure fresh data
+        localStorage.removeItem('chat-storage')
+        setDatabaseConversations([])
+        setDatabaseMessages([])
+        setSelectedContact(null)
+        
+        // Load initial data only once
+        if (isMounted) {
+          await Promise.all([
+            loadWhatsAppData(),
+            loadConversationsFromDatabase(true), // Silent initial load
+            loadAnalyticsData()
+          ])
+        }
+      } catch (error) {
+        console.error('❌ Error initializing chat data:', error)
+      }
+    }
     
-    // Note: Real-time subscriptions are now handled globally in useGlobalNotifications
-    // This prevents duplicate subscriptions and allows notifications to persist across pages
-  }, []) // No dependencies to avoid unnecessary re-creation
+    initializeData()
+    
+    return () => {
+      isMounted = false
+    }
+  }, []) // Empty dependency array - only run once on mount
 
   // Load messages when conversation is selected
   useEffect(() => {
@@ -1103,8 +1133,8 @@ export default function ChatPage() {
     selectedConversationRef.current = selectedConversation
   }, [selectedContact, selectedConversation])
 
-  // ✨ REAL-TIME CHAT FUNCTIONALITY ✨
-  // Set up real-time subscriptions for current conversation messages
+  // ✨ OPTIMIZED REAL-TIME FUNCTIONALITY ✨
+  // Set up real-time subscriptions for current conversation messages - FIXED connection issues
   useEffect(() => {
     if (!selectedConversation?.remoteJid && !selectedConversation?.conversationId) {
       // Clean up existing subscriptions when no conversation is selected
@@ -1127,7 +1157,7 @@ export default function ChatPage() {
       supabase.removeChannel(messageSubscription)
     }
 
-    // Create new subscription for current conversation's messages
+    // Create new subscription for current conversation's messages with retry logic
     const newMessageSubscription = supabase
       .channel(`chat-messages-${conversationId}`)
       .on(
@@ -1141,10 +1171,10 @@ export default function ChatPage() {
         async (payload) => {
           console.log('🔔 New message detected in current conversation:', payload)
           
-          // Refresh messages for current conversation
+          // Refresh messages for current conversation with debouncing
           if (selectedConversationRef.current?.remoteJid) {
             console.log('🔄 Auto-refreshing messages due to real-time update')
-            await loadMessagesFromDatabase(selectedConversationRef.current.remoteJid)
+            await loadMessagesFromDatabase(selectedConversationRef.current.remoteJid, true) // Silent real-time update
             
             // Show toast notification for new incoming messages (not from admin/AI)
             const newMessage = payload.new
@@ -1185,16 +1215,25 @@ export default function ChatPage() {
           // Refresh messages for current conversation (for status updates)
           if (selectedConversationRef.current?.remoteJid) {
             console.log('🔄 Auto-refreshing messages due to message update')
-            await loadMessagesFromDatabase(selectedConversationRef.current.remoteJid)
-            
-            // For message status updates, we don't need to show toasts or scroll
-            // Just refresh the messages to show updated status icons
+            await loadMessagesFromDatabase(selectedConversationRef.current.remoteJid, true) // Silent real-time update
           }
         }
       )
       .subscribe((status) => {
         console.log('📡 Message subscription status:', status)
-        setIsRealTimeConnected(status === 'SUBSCRIBED')
+        if (status === 'SUBSCRIBED') {
+          setIsRealTimeConnected(true)
+          setConnectionRetryCount(0) // Reset retry count on successful connection
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setIsRealTimeConnected(false)
+          // Implement retry logic
+          if (connectionRetryCount < 3) {
+            setConnectionRetryCount(prev => prev + 1)
+            console.log(`📡 Retrying connection (attempt ${connectionRetryCount + 1}/3)`)
+          }
+        } else {
+          setIsRealTimeConnected(false)
+        }
       })
 
     setMessageSubscription(newMessageSubscription)
@@ -1205,9 +1244,9 @@ export default function ChatPage() {
         supabase.removeChannel(newMessageSubscription)
       }
     }
-  }, [selectedConversation?.conversationId, selectedConversation?.id, selectedConversation?.remoteJid, selectedConversation?.email])
+  }, [selectedConversation?.conversationId, selectedConversation?.id, selectedConversation?.remoteJid, selectedConversation?.email, connectionRetryCount])
 
-  // Set up real-time subscription for conversation list updates
+  // Set up real-time subscription for conversation list updates - OPTIMIZED
   useEffect(() => {
     console.log('📡 Setting up real-time conversation list subscription')
 
@@ -1229,9 +1268,11 @@ export default function ChatPage() {
         async (payload) => {
           console.log('🔔 New conversation detected:', payload)
           
-          // Refresh conversation list
-          console.log('🔄 Auto-refreshing conversation list due to new conversation')
-          await loadConversationsFromDatabase()
+          // Debounced refresh to prevent excessive updates
+          setTimeout(async () => {
+            console.log('🔄 Auto-refreshing conversation list due to new conversation')
+            await loadConversationsFromDatabase(true) // Silent real-time update
+          }, 500)
         }
       )
       .on(
@@ -1244,9 +1285,11 @@ export default function ChatPage() {
         async (payload) => {
           console.log('🔔 Conversation updated:', payload)
           
-          // Refresh conversation list (for unread counts, last message updates, etc.)
-          console.log('🔄 Auto-refreshing conversation list due to conversation update')
-          await loadConversationsFromDatabase()
+          // Debounced refresh to prevent excessive updates
+          setTimeout(async () => {
+            console.log('🔄 Auto-refreshing conversation list due to conversation update')
+            await loadConversationsFromDatabase(true) // Silent real-time update
+          }, 500)
         }
       )
       .on(
@@ -1259,9 +1302,11 @@ export default function ChatPage() {
         async (payload) => {
           console.log('🔔 New message detected globally (updating conversation list):', payload)
           
-          // Refresh conversation list to update last message and unread counts
-          console.log('🔄 Auto-refreshing conversation list due to new message')
-          await loadConversationsFromDatabase()
+          // Debounced refresh to prevent excessive updates
+          setTimeout(async () => {
+            console.log('🔄 Auto-refreshing conversation list due to new message')
+            await loadConversationsFromDatabase(true) // Silent real-time update
+          }, 1000)
         }
       )
       .subscribe((status) => {
@@ -1278,36 +1323,62 @@ export default function ChatPage() {
     }
   }, []) // Only set up once on mount
 
-  // Enhanced polling as backup for real-time subscriptions
+  // OPTIMIZED polling as backup for real-time subscriptions - Reduced frequency
   useEffect(() => {
-    // More frequent polling for better responsiveness
-    const conversationPollingInterval = setInterval(() => {
-      console.log('⏰ Polling conversation list (backup)')
-      loadConversationsFromDatabase()
-    }, 10000) // Every 10 seconds
-
-    const messagePollingInterval = setInterval(() => {
-      if (selectedConversationRef.current?.remoteJid) {
-        console.log('⏰ Polling current conversation messages (backup)')
-        loadMessagesFromDatabase(selectedConversationRef.current.remoteJid)
+    // Clear any existing polling intervals
+    if (conversationPollingRef.current) {
+      clearInterval(conversationPollingRef.current)
+    }
+    if (messagePollingRef.current) {
+      clearInterval(messagePollingRef.current)
+    }
+    
+    // Less frequent polling for better performance - only when real-time is not connected
+    conversationPollingRef.current = setInterval(() => {
+      if (!isRealTimeConnected) {
+        console.log('⏰ Polling conversation list (backup - real-time disconnected)')
+        loadConversationsFromDatabase(true) // Silent polling
       }
-    }, 5000) // Every 5 seconds for current conversation
+    }, 30000) // Every 30 seconds instead of 10
+
+    messagePollingRef.current = setInterval(() => {
+      if (!isRealTimeConnected && selectedConversationRef.current?.remoteJid) {
+        console.log('⏰ Polling current conversation messages (backup - real-time disconnected)')
+        loadMessagesFromDatabase(selectedConversationRef.current.remoteJid, true) // Silent polling
+      }
+    }, 15000) // Every 15 seconds instead of 5
 
     return () => {
-      clearInterval(conversationPollingInterval)
-      clearInterval(messagePollingInterval)
+      if (conversationPollingRef.current) {
+        clearInterval(conversationPollingRef.current)
+      }
+      if (messagePollingRef.current) {
+        clearInterval(messagePollingRef.current)
+      }
     }
-  }, [])
+  }, [isRealTimeConnected])
 
-  // Auto-refresh conversation list periodically to catch any missed updates
+  // REMOVED excessive auto-refresh - Only refresh on user action or real-time events
   useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      console.log('🔄 Periodic conversation list refresh')
-      loadConversationsFromDatabase()
-    }, 30000) // Every 30 seconds
+    // Clear any existing refresh polling
+    if (refreshPollingRef.current) {
+      clearInterval(refreshPollingRef.current)
+    }
+    
+    // Only refresh every 2 minutes when real-time is connected and working
+    if (isRealTimeConnected) {
+      refreshPollingRef.current = setInterval(() => {
+        console.log('🔄 Periodic conversation list refresh (real-time connected)')
+        loadConversationsFromDatabase(true) // Silent refresh
+      }, 120000) // Every 2 minutes instead of 30 seconds
+    }
 
-    return () => clearInterval(refreshInterval)
-  }, [])
+    return () => {
+      if (refreshPollingRef.current) {
+        clearInterval(refreshPollingRef.current)
+      }
+    }
+  }, [isRealTimeConnected])
 
   // Handle Enter key for sending messages
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -1318,11 +1389,13 @@ export default function ChatPage() {
   }
 
   // Load messages for selected conversation from database
-  const loadMessagesFromDatabase = async (remoteJid: string) => {
+  const loadMessagesFromDatabase = async (remoteJid: string, silent: boolean = false) => {
     if (!remoteJid) return
 
     try {
-      setIsLoadingMessages(true)
+      if (!silent) {
+        setIsLoadingMessages(true)
+      }
       console.log('📨 Loading messages from database for:', remoteJid)
       
       const url = `/admin/chat/api/messages?remoteJid=${encodeURIComponent(remoteJid)}`
@@ -1348,18 +1421,22 @@ export default function ChatPage() {
     } catch (error) {
       console.error('❌ Error loading messages from database:', error)
       setDatabaseMessages([])
-      toast({
-        title: "Error loading messages",
-        description: "Failed to load conversation messages from database.",
-        variant: "destructive"
-      })
+      if (!silent) {
+        toast({
+          title: "Error loading messages",
+          description: "Failed to load conversation messages from database.",
+          variant: "destructive"
+        })
+      }
     } finally {
-      setIsLoadingMessages(false)
+      if (!silent) {
+        setIsLoadingMessages(false)
+      }
     }
   }
 
   // Load conversations from database
-  const loadConversationsFromDatabase = async () => {
+  const loadConversationsFromDatabase = async (silent: boolean = false) => {
     try {
       console.log('💬 Loading conversations from database...')
       
@@ -1385,11 +1462,13 @@ export default function ChatPage() {
     } catch (error) {
       console.error('❌ Error loading conversations from database:', error)
       setDatabaseConversations([])
-      toast({
-        title: "Error loading conversations",
-        description: "Failed to load conversations from database.",
-        variant: "destructive"
-      })
+      if (!silent) {
+        toast({
+          title: "Error loading conversations",
+          description: "Failed to load conversations from database.",
+          variant: "destructive"
+        })
+      }
     }
   }
 
@@ -1801,23 +1880,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="chat" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="chat" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Chat Interface
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Analytics & Stats
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          {/* Stats Overview */}
-          <div className="grid gap-4 md:grid-cols-4">
+      {/* Stats Overview - Always Visible */}
+      <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -1827,10 +1891,10 @@ export default function ChatPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {isLoadingAnalytics ? (
+                  {isLoading ? (
                     <div className="animate-pulse bg-muted h-6 w-8 rounded"></div>
                   ) : (
-                    analyticsData?.totalContacts || 0
+                    allContacts.length || whatsappContacts.length || 0
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">Active contacts</p>
@@ -1839,201 +1903,66 @@ export default function ChatPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Zap className="h-4 w-4" />
-                  Avg Response Time
+                  <MessageSquare className="h-4 w-4" />
+                  Active Conversations
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {isLoadingAnalytics ? (
+                  {isLoading ? (
                     <div className="animate-pulse bg-muted h-6 w-12 rounded"></div>
                   ) : (
-                    analyticsData?.avgResponseTime || '< 1s'
+                    databaseConversations.length || 0
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">AI response time</p>
+                <p className="text-xs text-muted-foreground">Total conversations</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Target className="h-4 w-4" />
-                  Success Rate
+                  <Zap className="h-4 w-4" />
+                  Unread Messages
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {isLoadingAnalytics ? (
+                  {isLoading ? (
                     <div className="animate-pulse bg-muted h-6 w-10 rounded"></div>
                   ) : (
-                    `${analyticsData?.successRate || 100}%`
+                    databaseConversations.reduce((total, conv) => total + (conv.unread_count || 0), 0)
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Resolved without escalation</p>
+                <p className="text-xs text-muted-foreground">Need attention</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Total Messages
+                  <Bot className="h-4 w-4" />
+                  AI Enabled
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {isLoadingAnalytics ? (
+                  {isLoading ? (
                     <div className="animate-pulse bg-muted h-6 w-8 rounded"></div>
                   ) : (
-                    analyticsData?.totalMessages || 0
+                    databaseConversations.filter(conv => conv.aiConfidence > 0).length || 0
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">All CRM messages</p>
+                <p className="text-xs text-muted-foreground">AI active chats</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Analytics Charts */}
-          {chartData && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    Message Activity (Last 7 Days)
-                  </CardTitle>
-                  <CardDescription>Daily message volumes and trends</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData.daily}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis 
-                          fontSize={12}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(value) => `${value}`}
-                        />
-                        <Tooltip 
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="rounded-lg border bg-background p-2 shadow-md">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="flex flex-col">
-                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                        Date
-                                      </span>
-                                      <span className="font-bold text-muted-foreground">
-                                        {label}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                        Total
-                                      </span>
-                                      <span className="font-bold">
-                                        {payload[0].value} messages
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="messages" 
-                          strokeWidth={2} 
-                          stroke="#8884d8"
-                          dot={{ fill: '#8884d8' }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5" />
-                    Message Types
-                  </CardTitle>
-                  <CardDescription>Inbound vs outbound message distribution</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={chartData.messageTypes}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {chartData.messageTypes.map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip 
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                              const data = payload[0].payload
-                              return (
-                                <div className="rounded-lg border bg-background p-2 shadow-md">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="flex flex-col">
-                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                        Type
-                                      </span>
-                                      <span className="font-bold text-muted-foreground">
-                                        {data.name}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                        Count
-                                      </span>
-                                      <span className="font-bold">
-                                        {data.value}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            }
-                            return null
-                          }}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Chat Tab */}
-        <TabsContent value="chat" className="space-y-6">
-          {/* 3-Panel Chat Interface */}
-          <div className="grid gap-3 sm:gap-4 grid-cols-12 h-[600px] sm:h-[700px]">
+          {/* Chat Interface */}
+          {/* 3-Panel Chat Interface - FIXED HEIGHT TO FIT SCREEN */}
+          <div className="grid gap-3 sm:gap-4 grid-cols-12 h-[calc(100vh-200px)] max-h-[800px]">
             {/* Left Panel - Chat List */}
-            <Card className="col-span-12 lg:col-span-3">
-              <CardHeader className="pb-3">
+            <Card className="col-span-12 lg:col-span-3 flex flex-col">
+              <CardHeader className="pb-3 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">WhatsApp Conversations</CardTitle>
             </div>
@@ -2047,8 +1976,8 @@ export default function ChatPage() {
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px] lg:h-[580px]" ref={scrollAreaRef}>
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            <ScrollArea className="flex-1 min-h-0" ref={scrollAreaRef}>
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
@@ -2072,7 +2001,7 @@ export default function ChatPage() {
                   return (
                     <div
                       key={conversation.id}
-                      className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-all duration-200 ${
+                      className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-all duration-200 min-h-[88px] ${
                         selectedContact === conversation.id ? "bg-primary/5 border-l-4 border-l-primary" : ""
                       }`}
                       onClick={() => handleSelectConversation(conversation.id)}
@@ -2104,7 +2033,7 @@ export default function ChatPage() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground truncate mt-0.5">{subtitle}</p>
-                          <p className="text-xs text-foreground/80 truncate mt-1 font-medium">{conversation.lastMessage}</p>
+                          <p className="text-xs text-foreground/80 mt-1 font-medium line-clamp-2 leading-relaxed">{conversation.lastMessage}</p>
                           <div className="flex items-center justify-between mt-2">
                             <span className="text-xs text-muted-foreground">{conversation.timestamp}</span>
                             <div className="flex items-center gap-1">
@@ -2124,9 +2053,9 @@ export default function ChatPage() {
           </CardContent>
         </Card>
 
-        {/* Middle Panel - Chat Window */}
-        <Card className="col-span-12 lg:col-span-6">
-          <CardHeader className="pb-3 border-b">
+        {/* Middle Panel - Chat Window - FIXED HEIGHT ISSUES */}
+        <Card className="col-span-12 lg:col-span-6 flex flex-col">
+          <CardHeader className="pb-3 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 ring-2 ring-background">
@@ -2187,8 +2116,8 @@ export default function ChatPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-                <ScrollArea className="h-[480px] p-4" ref={scrollAreaRef} onScrollCapture={handleScroll}>
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                <ScrollArea className="flex-1 p-4 min-h-0 max-h-[calc(100vh-400px)]" ref={scrollAreaRef} onScrollCapture={handleScroll}>
                   {/* New messages indicator */}
                   {unreadMessagesCount > 0 && isUserScrolledUp && (
                     <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-10">
@@ -2391,8 +2320,8 @@ export default function ChatPage() {
                 <div ref={messagesEndRef} className="h-1" />
               </div>
             </ScrollArea>
-            <Separator />
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-t">
+            <Separator className="flex-shrink-0" />
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-t flex-shrink-0">
               <div className="flex gap-3 items-end">
                 <div className="flex-1">
                   <div className="flex gap-2 sm:gap-3">
@@ -2426,12 +2355,28 @@ export default function ChatPage() {
               {/* Enhanced status indicators */}
               <div className="flex items-center justify-between mt-3 px-1">
                 <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground">
-                  {/* Real-time connection status */}
+                  {/* Real-time connection status - IMPROVED */}
                   <div className="flex items-center gap-1.5">
-                    <div className={`w-2 h-2 rounded-full ${isRealTimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-orange-500 animate-pulse'}`}></div>
+                    <div className={`w-2 h-2 rounded-full ${
+                      isRealTimeConnected 
+                        ? 'bg-emerald-500 animate-pulse' 
+                        : connectionRetryCount > 0 
+                          ? 'bg-yellow-500 animate-pulse' 
+                          : 'bg-red-500 animate-pulse'
+                    }`}></div>
                     <span className="hidden sm:inline">Real-time</span>
-                    <span className={`font-medium ${isRealTimeConnected ? 'text-emerald-600' : 'text-orange-600'}`}>
-                      {isRealTimeConnected ? 'Connected' : 'Connecting...'}
+                    <span className={`font-medium ${
+                      isRealTimeConnected 
+                        ? 'text-emerald-600' 
+                        : connectionRetryCount > 0 
+                          ? 'text-yellow-600' 
+                          : 'text-red-600'
+                    }`}>
+                      {isRealTimeConnected 
+                        ? 'Connected' 
+                        : connectionRetryCount > 0 
+                          ? `Retrying... (${connectionRetryCount}/3)` 
+                          : 'Disconnected'}
                     </span>
                 </div>
                   
@@ -2461,18 +2406,18 @@ export default function ChatPage() {
           </CardContent>
         </Card>
 
-        {/* Right Panel - Enhanced User Details & AI Management */}
-        <Card className="col-span-12 lg:col-span-3">
-          <CardContent className="p-0">
-            <Tabs defaultValue="user" className="h-full">
-              <TabsList className="grid w-full grid-cols-4 text-xs">
+        {/* Right Panel - Enhanced User Details & AI Management - FIXED HEIGHT ISSUES */}
+        <Card className="col-span-12 lg:col-span-3 flex flex-col">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            <Tabs defaultValue="user" className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-4 text-xs flex-shrink-0">
                 <TabsTrigger value="user" className="text-xs">Contact</TabsTrigger>
                 <TabsTrigger value="ai" className="text-xs">AI Config</TabsTrigger>
                 <TabsTrigger value="meals" className="text-xs">Meals</TabsTrigger>
                 <TabsTrigger value="data" className="text-xs">Data</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="user" className="p-4 space-y-4">
+              <TabsContent value="user" className="p-4 space-y-4 flex-1 min-h-0">
                     {selectedContact && selectedConversation ? (() => {
                       // Find the actual WhatsApp contact using the conversation's remoteJid or email
                       const remoteJid = selectedConversation.remoteJid || selectedConversation.email
@@ -2524,7 +2469,7 @@ export default function ChatPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="ai" className="p-4 space-y-4">
+              <TabsContent value="ai" className="p-4 space-y-4 flex-1 min-h-0">
                 {selectedContact ? (
                   <div className="space-y-4">
                     <AIConfigTab 
@@ -2608,7 +2553,7 @@ export default function ChatPage() {
               </TabsContent>
 
               {/* Meals Planning Tab */}
-              <TabsContent value="meals" className="p-4 space-y-4">
+              <TabsContent value="meals" className="p-4 space-y-4 flex-1 min-h-0">
                 {selectedContact ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -2684,7 +2629,7 @@ export default function ChatPage() {
               </TabsContent>
 
               {/* Data Verification Tab */}
-              <TabsContent value="data" className="p-4 space-y-4">
+              <TabsContent value="data" className="p-4 space-y-4 flex-1 min-h-0">
                 {selectedContact ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -2797,8 +2742,6 @@ export default function ChatPage() {
           </CardContent>
         </Card>
       </div>
-        </TabsContent>
-      </Tabs>
 
       {/* Delete Conversation Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
