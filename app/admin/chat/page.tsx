@@ -587,7 +587,7 @@ export default function ChatPage() {
       case "escalated":
         return "bg-red-500"
       case "resolved":
-        return "bg-gray-500"
+        return "bg-muted-foreground"
       default:
         return "bg-blue-500"
     }
@@ -617,11 +617,11 @@ export default function ChatPage() {
       case '1': // WhatsApp status code for pending
       case '2': // WhatsApp status code for sent
         console.log('🔍 Returning sent status icon')
-        return { icon: '✓', color: 'text-gray-500 dark:text-gray-400', tooltip: 'Sent' }
+        return { icon: '✓', color: 'text-muted-foreground', tooltip: 'Sent' }
       case 'delivered':
       case '3': // WhatsApp status code for delivered
         console.log('🔍 Returning delivered status icon')
-        return { icon: '✓✓', color: 'text-gray-500 dark:text-gray-400', tooltip: 'Delivered' }
+        return { icon: '✓✓', color: 'text-muted-foreground', tooltip: 'Delivered' }
       case 'read':
       case '4': // WhatsApp status code for read
         console.log('🔍 Returning read status icon')
@@ -2181,7 +2181,7 @@ export default function ChatPage() {
                                 ) : (
                                   <>
                                 <AvatarImage src={selectedConversation?.avatar || undefined} />
-                                    <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                    <AvatarFallback className="bg-muted text-muted-foreground">
                                   {getInitials(getDisplayName(selectedConversation))}
                                 </AvatarFallback>
                                   </>
@@ -2196,7 +2196,7 @@ export default function ChatPage() {
                         <div
                           className={`max-w-[85%] sm:max-w-[75%] md:max-w-[65%] rounded-2xl px-4 py-3 shadow-sm border ${
                             message.sender === "user" 
-                              ? "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" 
+                              ? "bg-muted/30 dark:bg-muted/60 border-muted" 
                               : message.sender === "ai"
                               ? "bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-200 dark:border-indigo-800"
                               : "bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400"
@@ -2480,30 +2480,30 @@ export default function ChatPage() {
                             Technical Details
                           </h4>
                           <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
-                              <div className="font-medium text-slate-600 dark:text-slate-400">Assistant ID</div>
-                              <div className="font-mono text-slate-800 dark:text-slate-200 break-all">
+                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
+                              <div className="font-medium text-muted-foreground">Assistant ID</div>
+                              <div className="font-mono text-foreground break-all">
                                 {aiPromptsData.assistantId?.slice(0, 8)}...
                               </div>
                             </div>
-                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
-                              <div className="font-medium text-slate-600 dark:text-slate-400">Thread ID</div>
-                              <div className="font-mono text-slate-800 dark:text-slate-200 break-all">
+                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
+                              <div className="font-medium text-muted-foreground">Thread ID</div>
+                              <div className="font-mono text-foreground break-all">
                                 {aiPromptsData.aiThreadId ? `${aiPromptsData.aiThreadId.slice(0, 8)}...` : 'None'}
                               </div>
                             </div>
-                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
-                              <div className="font-medium text-slate-600 dark:text-slate-400">Last AI Response</div>
-                              <div className="text-slate-800 dark:text-slate-200">
+                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
+                              <div className="font-medium text-muted-foreground">Last AI Response</div>
+                              <div className="text-foreground">
                                 {aiPromptsData.lastAiInteraction ? 
                                   new Date(aiPromptsData.lastAiInteraction).toLocaleString() : 
                                   'No interactions yet'
                                 }
                               </div>
                             </div>
-                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
-                              <div className="font-medium text-slate-600 dark:text-slate-400">AI Messages</div>
-                              <div className="text-slate-800 dark:text-slate-200">
+                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
+                              <div className="font-medium text-muted-foreground">AI Messages</div>
+                              <div className="text-foreground">
                                 {aiPromptsData.totalAiMessages} sent
                               </div>
                             </div>
@@ -2516,16 +2516,16 @@ export default function ChatPage() {
                             <Settings className="h-4 w-4" />
                             API Configuration
                           </h4>
-                          <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-xs space-y-2">
+                          <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg text-xs space-y-2">
                             <div>
-                              <span className="font-medium text-slate-600 dark:text-slate-400">Endpoint:</span>
-                              <div className="font-mono text-slate-800 dark:text-slate-200 break-all">
+                              <span className="font-medium text-muted-foreground">Endpoint:</span>
+                              <div className="font-mono text-foreground break-all">
                                 {aiPromptsData.apiUrl}
                               </div>
                             </div>
                             <div>
-                              <span className="font-medium text-slate-600 dark:text-slate-400">Graph ID:</span>
-                              <span className="ml-2 text-slate-800 dark:text-slate-200">product_retrieval_agent</span>
+                              <span className="font-medium text-muted-foreground">Graph ID:</span>
+                              <span className="ml-2 text-foreground">product_retrieval_agent</span>
                             </div>
                           </div>
                         </div>
@@ -2575,7 +2575,7 @@ export default function ChatPage() {
                     ) : mealPlanningData.length > 0 ? (
                       <ScrollArea className="h-[400px] space-y-2">
                         {mealPlanningData.map((meal, index) => (
-                          <div key={meal.id} className="border rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+                          <div key={meal.id} className="border rounded-lg p-3 hover:bg-muted/30 dark:hover:bg-muted/60 cursor-pointer transition-colors"
                                onClick={() => {
                                  setSelectedMealPlan(meal)
                                  setIsMealPlanModalOpen(true)
@@ -2588,7 +2588,7 @@ export default function ChatPage() {
                                 AI Generated
                               </Badge>
                             </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3">
+                            <p className="text-sm text-muted-foreground line-clamp-3">
                               {meal.content.slice(0, 150)}...
                             </p>
                           </div>
@@ -2648,7 +2648,7 @@ export default function ChatPage() {
                     ) : groceryListsData.length > 0 ? (
                       <ScrollArea className="h-[400px] space-y-2">
                         {groceryListsData.map((list, index) => (
-                          <div key={list.id} className="border rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+                          <div key={list.id} className="border rounded-lg p-3 hover:bg-muted/30 dark:hover:bg-muted/60 cursor-pointer transition-colors"
                                onClick={() => {
                                  setSelectedGroceryList(list)
                                  setIsGroceryListModalOpen(true)
@@ -2668,7 +2668,7 @@ export default function ChatPage() {
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3">
+                            <p className="text-sm text-muted-foreground line-clamp-3">
                               {list.content.slice(0, 150)}...
                             </p>
                             {/* Extract pricing info if available */}
@@ -2792,7 +2792,7 @@ export default function ChatPage() {
             <ScrollArea className="h-[60vh] mt-4">
               <div className="space-y-4">
                 {/* Parse and display meal content in a structured way */}
-                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+                <div className="bg-muted/30 dark:bg-muted/60 p-4 rounded-lg">
                   <h4 className="font-semibold mb-3 text-lg">Complete AI Response</h4>
                   <div className="whitespace-pre-wrap text-sm leading-relaxed">
                     {selectedMealPlan.content}
@@ -2830,23 +2830,23 @@ export default function ChatPage() {
                 </div>
                 
                 {/* Metadata */}
-                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                <div className="bg-muted/30 dark:bg-muted/60 p-4 rounded-lg">
                   <h4 className="font-semibold mb-3">Technical Metadata</h4>
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Message ID:</span>
+                      <span className="font-medium text-muted-foreground">Message ID:</span>
                       <div className="font-mono">{selectedMealPlan.id}</div>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Conversation ID:</span>
+                      <span className="font-medium text-muted-foreground">Conversation ID:</span>
                       <div className="font-mono break-all">{selectedMealPlan.conversation_id}</div>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Character Count:</span>
+                      <span className="font-medium text-muted-foreground">Character Count:</span>
                       <div>{selectedMealPlan.content.length} characters</div>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Word Count:</span>
+                      <span className="font-medium text-muted-foreground">Word Count:</span>
                       <div>{selectedMealPlan.content.split(/\s+/).length} words</div>
                     </div>
                   </div>
@@ -2884,7 +2884,7 @@ export default function ChatPage() {
             <ScrollArea className="h-[60vh] mt-4">
               <div className="space-y-4">
                 {/* Complete AI Response */}
-                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+                <div className="bg-muted/30 dark:bg-muted/60 p-4 rounded-lg">
                   <h4 className="font-semibold mb-3 text-lg">Complete AI Response</h4>
                   <div className="whitespace-pre-wrap text-sm leading-relaxed">
                     {selectedGroceryList.content}
@@ -2951,23 +2951,23 @@ export default function ChatPage() {
                 )}
                 
                 {/* Database Verification */}
-                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                <div className="bg-muted/30 dark:bg-muted/60 p-4 rounded-lg">
                   <h4 className="font-semibold mb-3">Database Storage Verification</h4>
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Stored in Table:</span>
+                      <span className="font-medium text-muted-foreground">Stored in Table:</span>
                       <div className="font-mono">messages</div>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Sender Type:</span>
+                      <span className="font-medium text-muted-foreground">Sender Type:</span>
                       <div className="font-mono">{selectedGroceryList.sender_type}</div>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Message ID:</span>
+                      <span className="font-medium text-muted-foreground">Message ID:</span>
                       <div className="font-mono">{selectedGroceryList.id}</div>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-600 dark:text-slate-400">Thread Status:</span>
+                      <span className="font-medium text-muted-foreground">Thread Status:</span>
                       <div className={selectedGroceryList.ai_thread_id ? "text-green-600" : "text-orange-600"}>
                         {selectedGroceryList.ai_thread_id ? "Linked to AI Thread" : "No Thread Link"}
                       </div>

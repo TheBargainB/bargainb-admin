@@ -575,39 +575,7 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
             </CardContent>
           </Card>
 
-          {/* AI Capabilities */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5" />
-                AI Capabilities
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  Product search across Dutch supermarkets
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  Price comparison (Albert Heijn, Jumbo, Dirk)
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  Meal planning and recipe suggestions
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  Budget tracking and recommendations
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                  Personalized shopping lists
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+
         </TabsContent>
 
         {/* Assistant Management */}

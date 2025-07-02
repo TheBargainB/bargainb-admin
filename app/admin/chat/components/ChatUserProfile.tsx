@@ -81,13 +81,13 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
     switch (status?.toLowerCase()) {
       case "online":
       case "active":
-        return "bg-green-500"
+        return "bg-green-500 dark:bg-green-400"
       case "away":
-        return "bg-yellow-500"
+        return "bg-yellow-500 dark:bg-yellow-400"
       case "busy":
-        return "bg-red-500"
+        return "bg-red-500 dark:bg-red-400"
       default:
-        return "bg-gray-500"
+        return "bg-muted-foreground"
     }
   }
 
@@ -108,18 +108,18 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
   return (
     <div className="space-y-4">
       {/* Contact Header */}
-      <Card>
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+            <Avatar className="h-16 w-16 border-2 border-muted">
               <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName} />
-              <AvatarFallback className="text-lg">
+              <AvatarFallback className="text-lg bg-muted text-muted-foreground">
                 {getInitials(user.displayName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <CardTitle className="text-lg">{user.displayName}</CardTitle>
-              <CardDescription className="flex items-center gap-2 mt-1">
+              <CardTitle className="text-lg text-foreground">{user.displayName}</CardTitle>
+              <CardDescription className="flex items-center gap-2 mt-1 text-muted-foreground">
                 <Phone className="h-3 w-3" />
                 {formatPhoneNumber(phoneNumber)}
               </CardDescription>
@@ -135,9 +135,9 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
       </Card>
 
       {/* Contact Details */}
-      <Card>
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="text-base flex items-center gap-2 text-foreground">
             <User className="h-4 w-4" />
             Contact Information
           </CardTitle>
@@ -146,17 +146,17 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
           <div className="grid grid-cols-1 gap-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Name:</span>
-              <span className="font-medium">{user.displayName}</span>
+              <span className="font-medium text-foreground">{user.displayName}</span>
             </div>
             
             <div className="flex justify-between">
               <span className="text-muted-foreground">Phone:</span>
-              <span className="font-medium">{formatPhoneNumber(phoneNumber)}</span>
+              <span className="font-medium text-foreground">{formatPhoneNumber(phoneNumber)}</span>
             </div>
             
             <div className="flex justify-between">
               <span className="text-muted-foreground">Platform:</span>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs border-border">
                 <MessageCircle className="h-3 w-3 mr-1" />
                 WhatsApp
               </Badge>
@@ -170,11 +170,11 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
               </Badge>
             </div>
             
-            <Separator />
+            <Separator className="bg-border" />
             
             <div className="flex justify-between">
               <span className="text-muted-foreground">Last Seen:</span>
-              <span className="text-xs flex items-center gap-1">
+              <span className="text-xs flex items-center gap-1 text-foreground">
                 <Clock className="h-3 w-3" />
                 {formatLastSeen(user.lastSeen)}
               </span>
@@ -182,7 +182,7 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
             
             <div className="flex justify-between">
               <span className="text-muted-foreground">First Contact:</span>
-              <span className="text-xs">
+              <span className="text-xs text-foreground">
                 {new Date(user.createdAt).toLocaleDateString()}
               </span>
             </div>
@@ -190,10 +190,10 @@ export const ChatUserProfile = ({ user, onClose }: ContactProfileProps) => {
         </CardContent>
       </Card>
 
-      {/* Additional Info */}
-      <Card>
+      {/* Quick Actions */}
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Quick Actions</CardTitle>
+          <CardTitle className="text-base text-foreground">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-sm text-muted-foreground text-center py-4">
