@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { getAssistantForConversation } from './assistant-service';
+import { getOrCreateAssistantForConversation } from './assistant-service';
 
 export interface AIAgentConfig {
   baseUrl: string;
@@ -219,7 +219,12 @@ export class WhatsAppAIService {
     }
 
     // Send the AI response back to the user via WhatsApp
-    await this.sendAIResponseToWhatsApp(chatId, aiResponse);
+    // Use setTimeout to ensure this doesn't block the main response
+    setTimeout(() => {
+      this.sendAIResponseToWhatsApp(chatId, aiResponse).catch(error => {
+        console.error('Failed to send AI response to WhatsApp:', error);
+      });
+    }, 100);
   }
 
   private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string) {
@@ -305,7 +310,10 @@ export class WhatsAppAIService {
       if (apiData.data?.msgId) {
         await this.supabase
           .from('messages')
-          .update({ whatsapp_message_id: apiData.data.msgId.toString() })
+          .update({ 
+            whatsapp_message_id: apiData.data.msgId.toString(),
+            whatsapp_status: 'sent'
+          })
           .eq('conversation_id', chatId)
           .eq('sender_type', 'ai_agent')
           .order('created_at', { ascending: false })
