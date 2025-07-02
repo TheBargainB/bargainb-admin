@@ -348,7 +348,8 @@ export async function POST(request: NextRequest) {
 
     if (event === 'messages.upsert') {
       // Handle new or updated messages
-      const message = data.messages[0]; // Get first message from array
+      // Support both array format (data.messages[0]) and object format (data.messages)
+      const message = Array.isArray(data.messages) ? data.messages[0] : data.messages;
       console.log('🔍 Message object:', JSON.stringify(message, null, 2));
       
       if (!message) {
