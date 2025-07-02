@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
         const { error: crmProfileError } = await supabaseAdmin
           .from('crm_profiles')
           .insert({
-            id: whatsappContact.id, // Link to whatsapp_contacts
+            whatsapp_contact_id: whatsappContact.id, // Link to whatsapp_contacts
             full_name: contact.name,
             preferred_name: contact.notify || contact.name,
             lifecycle_stage: 'prospect',
@@ -248,10 +248,14 @@ export async function POST(request: NextRequest) {
     // Create new conversation
     const conversationTitle = title || whatsappContact.display_name || whatsappContact.push_name || whatsappContact.phone_number;
     
+    // Generate a unique conversation ID for WhatsApp
+    const whatsappConversationId = `${whatsappContact.id}_${Date.now()}`;
+    
     const { data: newConversation, error: conversationError } = await supabaseAdmin
       .from('conversations')
       .insert({
         whatsapp_contact_id: whatsappContact.id,
+        whatsapp_conversation_id: whatsappConversationId,
         title: conversationTitle,
         description: description || `WhatsApp conversation with ${conversationTitle}`,
         status: 'active',

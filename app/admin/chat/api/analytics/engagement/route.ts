@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📈 Fetching engagement analytics...')
+    console.log('📈 Fetching engagement data...')
 
-    // Get messages with conversation data for the last 7 days
-    const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    // Get messages for the last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     
     const { data: messages, error: messagesError } = await supabase
       .from('messages')
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
           status
         )
       `)
-      .gte('created_at', last7Days.toISOString())
+      .gte('created_at', thirtyDaysAgo.toISOString())
       .order('created_at', { ascending: true })
 
     if (messagesError) {
@@ -32,86 +32,121 @@ export async function GET(request: NextRequest) {
     // Get active contacts
     const { data: contacts, error: contactsError } = await supabase
       .from('whatsapp_contacts')
-      .select('id, created_at, last_seen_at')
+      .select('id, phone_number, display_name, last_seen_at')
+      .eq('is_active', true)
 
     if (contactsError) {
       console.error('❌ Error fetching contacts:', contactsError)
       throw contactsError
     }
 
-    // Calculate daily message counts
-    const dailyMessages: Record<string, number> = {}
-    const dailyInbound: Record<string, number> = {}
-    const dailyOutbound: Record<string, number> = {}
-    
-    // Initialize last 7 days
-    for (let i = 6; i >= 0; i--) {
+    // Process daily engagement
+    const dailyEngagement: Record<string, any> = {}
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      dailyMessages[date] = 0
-      dailyInbound[date] = 0
-      dailyOutbound[date] = 0
-    }
+      dailyEngagement[date] = {
+        date,
+        totalMessages: 0,
+        inboundMessages: 0,
+        outboundMessages: 0,
+        activeUsers: new Set(),
+        responseRate: 0
+      }
+      return date
+    }).reverse()
 
     messages?.forEach(message => {
+      if (!message.created_at) return // Skip messages without created_at
+      
       const date = message.created_at.split('T')[0]
-      if (dailyMessages[date] !== undefined) {
-        dailyMessages[date]++
+      if (dailyEngagement[date]) {
+        dailyEngagement[date].totalMessages++
+        
         if (message.direction === 'inbound') {
-          dailyInbound[date]++
+          dailyEngagement[date].inboundMessages++
         } else {
-          dailyOutbound[date]++
+          dailyEngagement[date].outboundMessages++
+        }
+
+        // Check if conversations exists and has whatsapp_contact_id
+        if (message.direction === 'inbound' && message.conversations && typeof message.conversations === 'object' && 'whatsapp_contact_id' in message.conversations) {
+          const conversation = message.conversations as { whatsapp_contact_id?: string }
+          if (conversation.whatsapp_contact_id) {
+            dailyEngagement[date].activeUsers.add(conversation.whatsapp_contact_id)
+          }
         }
       }
     })
 
-    // Calculate active users (users who sent messages in last 7 days)
-    const activeUsers = new Set()
-    messages?.forEach(message => {
-      if (message.direction === 'inbound' && message.conversations?.whatsapp_contact_id) {
-        activeUsers.add(message.conversations.whatsapp_contact_id)
+    // Calculate response rates and convert sets to numbers
+    const engagementChart = last7Days.map(date => {
+      const data = dailyEngagement[date]
+      const responseRate = data.inboundMessages > 0 
+        ? Math.round((data.outboundMessages / data.inboundMessages) * 100)
+        : 0
+      
+      return {
+        date,
+        name: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        totalMessages: data.totalMessages,
+        inboundMessages: data.inboundMessages,
+        outboundMessages: data.outboundMessages,
+        activeUsers: data.activeUsers.size,
+        responseRate
       }
     })
 
-    // Calculate response rate (% of inbound messages that got a response)
-    const inboundCount = messages?.filter(m => m.direction === 'inbound').length || 0
-    const outboundCount = messages?.filter(m => m.direction === 'outbound').length || 0
-    const responseRate = inboundCount > 0 ? Math.round((outboundCount / inboundCount) * 100) : 100
-
-    // Calculate peak hours (hour of day with most messages)
-    const hourlyActivity: Record<number, number> = {}
+    // Calculate hourly engagement for today
+    const today = new Date().toISOString().split('T')[0]
+    const todayMessages = messages?.filter(m => m.created_at && m.created_at.startsWith(today)) || []
+    
+    const hourlyEngagement: Record<number, number> = {}
     for (let i = 0; i < 24; i++) {
-      hourlyActivity[i] = 0
+      hourlyEngagement[i] = 0
     }
 
-    messages?.forEach(message => {
+    todayMessages.forEach(message => {
+      if (!message.created_at) return // Skip messages without created_at
+      
       const hour = new Date(message.created_at).getHours()
-      hourlyActivity[hour]++
+      hourlyEngagement[hour]++
     })
 
-    const peakHour = Object.entries(hourlyActivity).reduce((a, b) => 
-      hourlyActivity[parseInt(a[0])] > hourlyActivity[parseInt(b[0])] ? a : b
-    )[0]
+    const hourlyChart = Object.entries(hourlyEngagement).map(([hour, count]) => ({
+      hour: parseInt(hour),
+      time: `${hour.padStart(2, '0')}:00`,
+      messages: count
+    }))
+
+    // Calculate overall metrics
+    const totalMessages = messages?.length || 0
+    const totalInbound = messages?.filter(m => m.direction === 'inbound').length || 0
+    const totalOutbound = messages?.filter(m => m.direction === 'outbound').length || 0
+    const totalActiveUsers = new Set(
+      messages
+        ?.filter(m => m.direction === 'inbound' && m.conversations && typeof m.conversations === 'object' && 'whatsapp_contact_id' in m.conversations)
+        ?.map(m => {
+          const conversation = m.conversations as { whatsapp_contact_id?: string }
+          return conversation.whatsapp_contact_id
+        })
+        ?.filter(Boolean)
+    ).size
 
     const engagement = {
-      totalMessages7Days: messages?.length || 0,
-      inboundMessages7Days: inboundCount,
-      outboundMessages7Days: outboundCount,
-      activeUsers: activeUsers.size,
-      responseRate,
-      peakHour: parseInt(peakHour),
-      dailyMessages: Object.entries(dailyMessages).map(([date, count]) => ({
-        date,
-        total: count,
-        inbound: dailyInbound[date],
-        outbound: dailyOutbound[date]
-      })),
-      hourlyActivity: Object.entries(hourlyActivity).map(([hour, count]) => ({
-        hour: parseInt(hour),
-        count
-      }))
+      daily: engagementChart,
+      hourly: hourlyChart,
+      summary: {
+        totalMessages,
+        totalInbound,
+        totalOutbound,
+        totalActiveUsers,
+        avgResponseRate: totalInbound > 0 ? Math.round((totalOutbound / totalInbound) * 100) : 0,
+        peakHour: hourlyChart.reduce((max, current) => 
+          current.messages > max.messages ? current : max, hourlyChart[0])?.hour || 0
+      }
     }
 
-    console.log('✅ Engagement analytics calculated:', engagement)
+    console.log('✅ Engagement data calculated:', engagement.summary)
 
     return NextResponse.json({
       success: true,
@@ -119,11 +154,11 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Error in engagement analytics API:', error)
+    console.error('❌ Error in engagement API:', error)
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to fetch engagement analytics',
+        error: 'Failed to fetch engagement data',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }

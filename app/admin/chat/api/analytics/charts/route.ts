@@ -59,13 +59,19 @@ export async function GET(request: NextRequest) {
 
     // Process messages
     messages?.forEach(message => {
+      if (!message.created_at) return // Skip messages without created_at
+      
       const date = message.created_at.split('T')[0]
       if (dailyData[date]) {
         dailyData[date].messages++
         if (message.direction === 'inbound') {
           dailyData[date].inbound++
-          if (message.conversations?.whatsapp_contact_id) {
-            dailyData[date].activeUsers.add(message.conversations.whatsapp_contact_id)
+          // Check if conversations exists and has whatsapp_contact_id
+          if (message.conversations && typeof message.conversations === 'object' && 'whatsapp_contact_id' in message.conversations) {
+            const conversation = message.conversations as { whatsapp_contact_id?: string }
+            if (conversation.whatsapp_contact_id) {
+              dailyData[date].activeUsers.add(conversation.whatsapp_contact_id)
+            }
           }
         } else {
           dailyData[date].outbound++
@@ -75,6 +81,8 @@ export async function GET(request: NextRequest) {
 
     // Process conversations
     conversations?.forEach(conversation => {
+      if (!conversation.created_at) return // Skip conversations without created_at
+      
       const date = conversation.created_at.split('T')[0]
       if (dailyData[date]) {
         dailyData[date].conversations++
@@ -94,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate hourly distribution for today
     const today = new Date().toISOString().split('T')[0]
-    const todayMessages = messages?.filter(m => m.created_at.startsWith(today)) || []
+    const todayMessages = messages?.filter(m => m.created_at && m.created_at.startsWith(today)) || []
     
     const hourlyData: Record<number, number> = {}
     for (let i = 0; i < 24; i++) {
@@ -102,6 +110,8 @@ export async function GET(request: NextRequest) {
     }
 
     todayMessages.forEach(message => {
+      if (!message.created_at) return // Skip messages without created_at
+      
       const hour = new Date(message.created_at).getHours()
       hourlyData[hour]++
     })
@@ -127,6 +137,9 @@ export async function GET(request: NextRequest) {
       for (let i = 1; i < messages.length; i++) {
         const current = messages[i]
         const previous = messages[i - 1]
+        
+        // Skip if either message doesn't have created_at
+        if (!current.created_at || !previous.created_at) continue
         
         if (previous.direction === 'inbound' && current.direction === 'outbound') {
           const responseTime = new Date(current.created_at).getTime() - new Date(previous.created_at).getTime()

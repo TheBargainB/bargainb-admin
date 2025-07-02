@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
-export type Message = {
+type Message = {
   id: string;
   fromMe: boolean;
   remoteJid: string;
@@ -10,7 +10,7 @@ export type Message = {
   status?: number;
 };
 
-export type Contact = {
+type Contact = {
   jid: string;
   name?: string;
   notify?: string;
@@ -37,7 +37,7 @@ type WhatsAppMessage = {
 };
 
 // Message status codes
-export enum MessageStatus {
+enum MessageStatus {
   ERROR = 0,
   PENDING = 1,
   SENT = 2,

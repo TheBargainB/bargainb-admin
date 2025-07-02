@@ -994,17 +994,95 @@ export default function QATestingPage() {
             </p>
           </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center space-y-2">
-                <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
-                <h3 className="text-lg font-semibold">No test runs yet</h3>
-                <p className="text-sm text-muted-foreground">
-                  Execute some tests to see their history here
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {testRuns.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center space-y-2">
+                  <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">No test runs yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Execute some tests to see their history here
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {testRuns.map((run) => (
+                <Card key={run.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{run.script_name}</CardTitle>
+                        <CardDescription>
+                          Run #{run.run_number} • {new Date(run.started_at).toLocaleString()}
+                        </CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={run.status === 'passed' ? 'default' : 
+                                  run.status === 'failed' ? 'destructive' : 
+                                  run.status === 'running' ? 'secondary' : 'outline'}
+                          className={run.status === 'passed' ? 'bg-green-100 text-green-800' : 
+                                    run.status === 'failed' ? 'bg-red-100 text-red-800' : 
+                                    run.status === 'running' ? 'bg-blue-100 text-blue-800' : ''}
+                        >
+                          {run.status === 'running' && <Loader2 className="h-3 w-3 mr-1 animate-spin" />}
+                          {run.status === 'passed' && <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          {run.status === 'failed' && <XCircle className="h-3 w-3 mr-1" />}
+                          {run.status}
+                        </Badge>
+                        
+                        {run.duration_seconds && (
+                          <span className="text-sm text-muted-foreground">
+                            {run.duration_seconds}s
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Browser</p>
+                        <p className="font-medium">{run.browser_type}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Environment</p>
+                        <p className="font-medium">{run.test_environment}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Steps Passed</p>
+                        <p className="font-medium text-green-600">{run.steps_passed || 0}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Steps Failed</p>
+                        <p className="font-medium text-red-600">{run.steps_failed || 0}</p>
+                      </div>
+                    </div>
+                    
+                    {run.error_message && (
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-sm text-red-800">
+                          <strong>Error:</strong> {run.error_message}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {run.completed_at && (
+                      <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          Started: {new Date(run.started_at).toLocaleString()} • 
+                          Completed: {new Date(run.completed_at).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="issues" className="space-y-6">

@@ -28,7 +28,10 @@ import {
   RefreshCw,
   Eye,
   TrendingUp,
-  Database
+  Database,
+  User,
+  UserPlus,
+  Info
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -56,6 +59,14 @@ export default function AIManagementPage() {
   const [connectionError, setConnectionError] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  
+  // Per-user assistant management state
+  const [migrationStatus, setMigrationStatus] = useState<{
+    migrated: boolean;
+    conversations_with_assistants: number;
+    ready_for_per_user_assistants: boolean;
+  } | null>(null)
+  const [runningMigration, setRunningMigration] = useState(false)
 
   const [globalConfig, setGlobalConfig] = useState({
     enabled: true,
@@ -68,6 +79,7 @@ export default function AIManagementPage() {
 
   useEffect(() => {
     loadAIData()
+    checkMigrationStatus()
   }, [])
 
   const loadAIData = async () => {
@@ -117,8 +129,44 @@ export default function AIManagementPage() {
   const refreshData = async () => {
     setRefreshing(true)
     await loadAIData()
+    await checkMigrationStatus()
     setRefreshing(false)
     toast.success('AI data refreshed')
+  }
+
+  const checkMigrationStatus = async () => {
+    try {
+      const response = await fetch('/app/admin/chat/api/assistants/migrate')
+      if (response.ok) {
+        const status = await response.json()
+        setMigrationStatus(status)
+      }
+    } catch (error) {
+      console.error('Error checking migration status:', error)
+    }
+  }
+
+  const runMigration = async () => {
+    setRunningMigration(true)
+    try {
+      const response = await fetch('/app/admin/chat/api/assistants/migrate', {
+        method: 'POST'
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        toast.success('Migration completed successfully')
+        await checkMigrationStatus()
+      } else {
+        toast.error(result.error || 'Migration failed')
+      }
+    } catch (error) {
+      console.error('Error running migration:', error)
+      toast.error('Failed to run migration')
+    } finally {
+      setRunningMigration(false)
+    }
   }
 
   const formatTime = (ms: number) => {
@@ -224,10 +272,14 @@ export default function AIManagementPage() {
       </Card>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Overview
+          </TabsTrigger>
+          <TabsTrigger value="assistants" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Assistants
           </TabsTrigger>
           <TabsTrigger value="configuration" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -396,6 +448,262 @@ export default function AIManagementPage() {
                   )}
                 </div>
               </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Per-User Assistants Tab */}
+        <TabsContent value="assistants" className="space-y-6">
+          {/* Migration Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Per-User Assistants Status
+              </CardTitle>
+              <CardDescription>
+                Database migration and per-user assistant system status
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {migrationStatus ? (
+                <>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {migrationStatus.migrated ? (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-orange-500" />
+                      )}
+                      <div>
+                        <p className="font-medium">
+                          {migrationStatus.migrated ? 'Migration Complete' : 'Migration Required'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {migrationStatus.migrated 
+                            ? 'Database schema is ready for per-user assistants'
+                            : 'Database needs to be updated for per-user assistant support'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    {!migrationStatus.migrated && (
+                      <Button
+                        onClick={runMigration}
+                        disabled={runningMigration}
+                        size="sm"
+                      >
+                        {runningMigration ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                        ) : (
+                          <Database className="h-4 w-4 mr-2" />
+                        )}
+                        Run Migration
+                      </Button>
+                    )}
+                  </div>
+
+                  {migrationStatus.migrated && (
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Conversations with Assistants</p>
+                              <p className="text-2xl font-bold">{migrationStatus.conversations_with_assistants}</p>
+                            </div>
+                            <User className="h-8 w-8 text-blue-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground">System Status</p>
+                              <p className="text-lg font-bold text-green-600">Ready</p>
+                            </div>
+                            <CheckCircle className="h-8 w-8 text-green-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Auto-Creation</p>
+                              <p className="text-lg font-bold text-blue-600">Active</p>
+                            </div>
+                            <UserPlus className="h-8 w-8 text-blue-500" />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mr-3" />
+                  <span className="text-muted-foreground">Checking migration status...</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Assistant Management Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Assistant Management Features
+              </CardTitle>
+              <CardDescription>
+                What the per-user assistant system provides
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Personalized Configuration</p>
+                      <p className="text-sm text-muted-foreground">
+                        Budget limits, dietary restrictions, preferred stores per user
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Individual Memory</p>
+                      <p className="text-sm text-muted-foreground">
+                        Separate conversation context and learning per user
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Custom Behavior</p>
+                      <p className="text-sm text-muted-foreground">
+                        Response style, price sensitivity, health focus per user
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Automatic Creation</p>
+                      <p className="text-sm text-muted-foreground">
+                        Assistants are created automatically when needed
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Fallback Support</p>
+                      <p className="text-sm text-muted-foreground">
+                        Falls back to shared assistant if creation fails
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <p className="font-medium">Management Interface</p>
+                      <p className="text-sm text-muted-foreground">
+                        Full assistant management in chat interface
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Implementation Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Implementation Status</CardTitle>
+              <CardDescription>
+                Per-user assistants implementation phases
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-green-800">Phase 1: Database Schema</p>
+                    <p className="text-sm text-green-600">Added assistant columns to conversations table</p>
+                  </div>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Complete</Badge>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-green-800">Phase 2: Assistant Service</p>
+                    <p className="text-sm text-green-600">Create, manage, and configure per-user assistants</p>
+                  </div>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Complete</Badge>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-green-800">Phase 3: AI Service Update</p>
+                    <p className="text-sm text-green-600">Updated WhatsApp AI service to use per-user assistants</p>
+                  </div>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Complete</Badge>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 border rounded-lg bg-green-50 border-green-200">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-green-800">Phase 4: UI Enhancement</p>
+                    <p className="text-sm text-green-600">Enhanced chat interface with assistant management</p>
+                  </div>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Complete</Badge>
+                </div>
+              </div>
+              
+              <Alert className="mt-4">
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  All phases are implemented! The system now automatically creates per-user assistants when users first interact with AI, with seamless fallback to the shared assistant.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>
+                Common assistant management tasks
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 md:grid-cols-2">
+                <Button variant="outline" asChild>
+                  <a href="/admin/chat">
+                    <User className="h-4 w-4 mr-2" />
+                    Manage Individual Assistants
+                  </a>
+                </Button>
+                <Button variant="outline" onClick={checkMigrationStatus}>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Status
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

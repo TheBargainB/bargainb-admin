@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getOrCreateAssistantForConversation } from './assistant-service';
 
 export interface AIAgentConfig {
   baseUrl: string;
@@ -60,7 +61,7 @@ export class WhatsAppAIService {
       // 1. Check if AI is enabled for this chat
       const { data: chatData } = await this.supabase
         .from('conversations')
-        .select('ai_enabled, ai_thread_id, ai_config')
+        .select('ai_enabled, ai_thread_id, ai_config, assistant_id')
         .eq('id', chatId)
         .single();
 
@@ -68,10 +69,17 @@ export class WhatsAppAIService {
         return { success: false, error: 'AI not enabled for this chat' };
       }
 
-      // 2. Get or create AI thread
+      // 2. Get or create per-user assistant
+      let assistantId = chatData.assistant_id;
+      if (!assistantId) {
+        console.log('🤖 No assistant found for conversation, creating one...');
+        assistantId = await getOrCreateAssistantForConversation(chatId);
+      }
+
+      // 3. Get or create AI thread
       let threadId = chatData.ai_thread_id;
       if (!threadId) {
-        threadId = await this.createAIThread(userId);
+        threadId = await this.createAIThread(userId, assistantId);
         
         // Update chat with thread ID
         await this.supabase
@@ -80,15 +88,15 @@ export class WhatsAppAIService {
           .eq('id', chatId);
       }
 
-      // 3. Clean the message (remove @bb)
+      // 4. Clean the message (remove @bb)
       const cleanMessage = message.replace(/@bb\s*/i, '').trim();
 
-      // 4. Get user profile for context
+      // 5. Get user profile for context
       const userProfile = await this.getUserProfile(userId);
 
-      // 5. Send to AI agent
+      // 6. Send to AI agent with per-user assistant
       const startTime = Date.now();
-      const aiResponse = await this.callAIAgent(threadId, cleanMessage, userId, userProfile, chatData.ai_config);
+      const aiResponse = await this.callAIAgent(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
       const processingTime = Date.now() - startTime;
 
       // 6. Save AI response as a message in the conversation
@@ -108,7 +116,7 @@ export class WhatsAppAIService {
     }
   }
 
-  private async createAIThread(userId: string): Promise<string> {
+  private async createAIThread(userId: string, assistantId?: string): Promise<string> {
     const response = await fetch(`${this.aiConfig.baseUrl}/threads`, {
       method: 'POST',
       headers: {
@@ -116,7 +124,11 @@ export class WhatsAppAIService {
         'X-Api-Key': this.aiConfig.apiKey
       },
       body: JSON.stringify({
-        metadata: { user_id: userId, source: 'whatsapp' }
+        metadata: { 
+          user_id: userId, 
+          source: 'whatsapp',
+          assistant_id: assistantId || this.aiConfig.assistantId
+        }
       })
     });
 
@@ -138,7 +150,7 @@ export class WhatsAppAIService {
     return data;
   }
 
-  private async callAIAgent(threadId: string, message: string, userId: string, userProfile: any, aiConfig?: any): Promise<string> {
+  private async callAIAgent(threadId: string, message: string, userId: string, userProfile: any, aiConfig?: any, assistantId?: string): Promise<string> {
     const response = await fetch(`${this.aiConfig.baseUrl}/threads/${threadId}/runs/wait`, {
       method: 'POST',
       headers: {
@@ -146,7 +158,7 @@ export class WhatsAppAIService {
         'X-Api-Key': this.aiConfig.apiKey
       },
       body: JSON.stringify({
-        assistant_id: this.aiConfig.assistantId,
+        assistant_id: assistantId || this.aiConfig.assistantId,
         input: {
           messages: [{ role: 'user', content: message }]
         },

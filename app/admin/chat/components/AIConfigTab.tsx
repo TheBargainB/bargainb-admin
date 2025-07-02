@@ -31,7 +31,11 @@ import {
   Gauge,
   Filter,
   User,
-  Save
+  Save,
+  UserPlus,
+  Trash2,
+  RefreshCw,
+  Info
 } from 'lucide-react';
 
 interface AIConfigTabProps {
@@ -88,12 +92,33 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'error' | 'testing' | null>(null);
   const [usage, setUsage] = useState<any[]>([]);
+  
+  // Assistant Management State
+  const [assistantInfo, setAssistantInfo] = useState<{
+    assistant_id: string | null;
+    assistant_name: string | null;
+    assistant_created_at: string | null;
+    assistant_config: any | null;
+    assistant_metadata: any | null;
+    is_shared: boolean;
+  }>({
+    assistant_id: null,
+    assistant_name: null,
+    assistant_created_at: null,
+    assistant_config: null,
+    assistant_metadata: null,
+    is_shared: false
+  });
+  const [creatingAssistant, setCreatingAssistant] = useState(false);
+  const [deletingAssistant, setDeletingAssistant] = useState(false);
+  
   const { toast } = useToast();
 
   useEffect(() => {
     if (conversationId) {
       loadConfig();
       loadUsageStats();
+      loadAssistantInfo();
     }
   }, [conversationId]);
 
@@ -147,6 +172,110 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
       }
     } catch (error) {
       console.error('Error loading usage stats:', error);
+    }
+  };
+
+  const loadAssistantInfo = async () => {
+    try {
+      const response = await fetch(`/api/whatsapp/chats/${conversationId}/ai-config`);
+      if (response.ok) {
+        const data = await response.json();
+        const sharedAssistantId = '5fd12ecb-9268-51f0-8168-fc7952c7c8b8';
+        
+        setAssistantInfo({
+          assistant_id: data.assistant_id || null,
+          assistant_name: data.assistant_name || null,
+          assistant_created_at: data.assistant_created_at || null,
+          assistant_config: data.assistant_config || null,
+          assistant_metadata: data.assistant_metadata || null,
+          is_shared: data.assistant_id === sharedAssistantId || !data.assistant_id
+        });
+      }
+    } catch (error) {
+      console.error('Error loading assistant info:', error);
+    }
+  };
+
+  const createPersonalAssistant = async () => {
+    setCreatingAssistant(true);
+    try {
+      const response = await fetch('/app/admin/chat/api/assistants/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId: conversationId,
+          phoneNumber: userId, // Using userId as phone number placeholder
+          contactName: `User ${userId}`,
+          userPreferences: {
+            user_preferences: {
+              budget_limit: 100,
+              dietary_restrictions: [],
+              preferred_stores: ['Albert Heijn', 'Jumbo', 'Dirk'],
+              language: 'dutch',
+              region: 'netherlands'
+            },
+            ai_behavior: {
+              response_style: config.response_style,
+              price_sensitivity: 'balanced',
+              health_focus: true
+            }
+          }
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        await loadAssistantInfo();
+        toast({
+          title: "Personal Assistant Created",
+          description: `Created personalized assistant: ${result.data.assistant_id}`,
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create assistant');
+      }
+    } catch (error) {
+      console.error('Error creating personal assistant:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create personal assistant",
+      });
+    } finally {
+      setCreatingAssistant(false);
+    }
+  };
+
+  const deletePersonalAssistant = async () => {
+    if (!assistantInfo.assistant_id || assistantInfo.is_shared) {
+      return;
+    }
+
+    setDeletingAssistant(true);
+    try {
+      // Call delete assistant API (we'll need to create this endpoint)
+      const response = await fetch(`/app/admin/chat/api/assistants/${assistantInfo.assistant_id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await loadAssistantInfo();
+        toast({
+          title: "Assistant Deleted",
+          description: "Personal assistant has been deleted. Using shared assistant.",
+        });
+      } else {
+        throw new Error('Failed to delete assistant');
+      }
+    } catch (error) {
+      console.error('Error deleting assistant:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete personal assistant",
+      });
+    } finally {
+      setDeletingAssistant(false);
     }
   };
 
@@ -342,8 +471,9 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
       </Card>
 
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="basic">Basic</TabsTrigger>
+          <TabsTrigger value="assistant">Assistant</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
@@ -454,6 +584,193 @@ export default function AIConfigTab({ conversationId, userId, onConfigChange }: 
                   Personalized shopping lists
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Assistant Management */}
+        <TabsContent value="assistant" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Assistant Management
+              </CardTitle>
+              <CardDescription>
+                Manage personalized AI assistants for enhanced user experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Current Assistant Status */}
+              <div className="p-4 border rounded-lg bg-muted/20">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium">Current Assistant</h4>
+                  <Badge variant={assistantInfo.is_shared ? "secondary" : "default"}>
+                    {assistantInfo.is_shared ? "Shared" : "Personal"}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Assistant ID:</span>
+                    <span className="font-mono text-xs">
+                      {assistantInfo.assistant_id || "Not assigned"}
+                    </span>
+                  </div>
+                  
+                  {assistantInfo.assistant_name && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Name:</span>
+                      <span>{assistantInfo.assistant_name}</span>
+                    </div>
+                  )}
+                  
+                  {assistantInfo.assistant_created_at && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Created:</span>
+                      <span>{new Date(assistantInfo.assistant_created_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Assistant Actions */}
+              <div className="space-y-3">
+                {assistantInfo.is_shared ? (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      This conversation is using the shared assistant. Create a personal assistant for customized behavior and preferences.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <Alert className="border-green-200 bg-green-50">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertDescription className="text-green-800">
+                      Personal assistant active with customized configuration.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex gap-2">
+                  {assistantInfo.is_shared ? (
+                    <Button
+                      onClick={createPersonalAssistant}
+                      disabled={creatingAssistant}
+                      className="flex-1"
+                    >
+                      {creatingAssistant ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                      ) : (
+                        <UserPlus className="h-4 w-4 mr-2" />
+                      )}
+                      Create Personal Assistant
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={loadAssistantInfo}
+                        className="flex-1"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh Info
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={deletePersonalAssistant}
+                        disabled={deletingAssistant}
+                        className="flex-1"
+                      >
+                        {deletingAssistant ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-2" />
+                        )}
+                        Delete Assistant
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Assistant Configuration Preview */}
+              {assistantInfo.assistant_config && !assistantInfo.is_shared && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Assistant Configuration</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {assistantInfo.assistant_config.configurable?.user_preferences && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Budget Limit:</span>
+                            <span>€{assistantInfo.assistant_config.configurable.user_preferences.budget_limit}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Language:</span>
+                            <span className="capitalize">{assistantInfo.assistant_config.configurable.user_preferences.language}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Region:</span>
+                            <span className="capitalize">{assistantInfo.assistant_config.configurable.user_preferences.region}</span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {assistantInfo.assistant_config.configurable?.ai_behavior && (
+                        <>
+                          <Separator className="my-2" />
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Response Style:</span>
+                            <span className="capitalize">{assistantInfo.assistant_config.configurable.ai_behavior.response_style}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Price Sensitivity:</span>
+                            <span className="capitalize">{assistantInfo.assistant_config.configurable.ai_behavior.price_sensitivity}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Health Focus:</span>
+                            <span>{assistantInfo.assistant_config.configurable.ai_behavior.health_focus ? 'Enabled' : 'Disabled'}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Benefits of Personal Assistant */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Personal Assistant Benefits</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Personalized budget recommendations
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Custom dietary restrictions handling
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Preferred store selection
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Individual conversation memory
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      Tailored response style and tone
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </CardContent>
           </Card>
         </TabsContent>

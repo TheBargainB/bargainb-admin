@@ -179,8 +179,8 @@ export class ContactService {
       const contactFormat: Contact = {
         id: contactData.id,
         phone_number: contactData.phone_number,
-        name: contactData.push_name || profileData?.full_name,
-        notify: contactData.display_name || profileData?.preferred_name,
+        name: contactData.push_name || profileData?.full_name || null,
+        notify: contactData.display_name || profileData?.preferred_name || null,
         verified_name: contactData.verified_name,
         img_url: contactData.profile_picture_url,
         status: contactData.whatsapp_status,

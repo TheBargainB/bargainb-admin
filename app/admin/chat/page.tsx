@@ -155,9 +155,26 @@ export default function ChatPage() {
   const [chartData, setChartData] = useState<any>(null)
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
   
+  // Enhanced data viewing state
+  const [mealPlanningData, setMealPlanningData] = useState<any[]>([])
+  const [groceryListsData, setGroceryListsData] = useState<any[]>([])
+  const [aiPromptsData, setAiPromptsData] = useState<any>(null)
+  const [isLoadingMealData, setIsLoadingMealData] = useState(false)
+  const [isLoadingGroceryData, setIsLoadingGroceryData] = useState(false)
+  const [selectedMealPlan, setSelectedMealPlan] = useState<any>(null)
+  const [isMealPlanModalOpen, setIsMealPlanModalOpen] = useState(false)
+  const [selectedGroceryList, setSelectedGroceryList] = useState<any>(null)
+  const [isGroceryListModalOpen, setIsGroceryListModalOpen] = useState(false)
+  
+  // Real-time subscriptions state
+  const [messageSubscription, setMessageSubscription] = useState<any>(null)
+  const [conversationSubscription, setConversationSubscription] = useState<any>(null)
+  const [isRealTimeConnected, setIsRealTimeConnected] = useState(false)
+  
   // Refs to avoid stale closures in real-time subscriptions
   const selectedContactRef = useRef(selectedContact)
   const databaseConversationsRef = useRef(databaseConversations)
+  const selectedConversationRef = useRef<ChatConversation | undefined>(undefined)
   
   // Refs for smooth scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -978,7 +995,11 @@ export default function ChatPage() {
     if (selectedContact && selectedConversation?.remoteJid) {
       console.log('🔄 Loading messages for selected conversation:', selectedConversation.remoteJid)
       loadMessagesFromDatabase(selectedConversation.remoteJid)
-          } else {
+      // Load additional data for the new enhanced panels
+      loadMealPlanningData()
+      loadGroceryListsData()
+      loadAiPromptsData()
+    } else {
       setDatabaseMessages([])
     }
   }, [selectedContact, selectedConversation?.remoteJid])
@@ -1076,7 +1097,217 @@ export default function ChatPage() {
     lastMessageCountRef.current = 0
   }, [selectedContact])
 
+  // Update refs when values change to avoid stale closures in subscriptions
+  useEffect(() => {
+    selectedContactRef.current = selectedContact
+    selectedConversationRef.current = selectedConversation
+  }, [selectedContact, selectedConversation])
 
+  // ✨ REAL-TIME CHAT FUNCTIONALITY ✨
+  // Set up real-time subscriptions for current conversation messages
+  useEffect(() => {
+    if (!selectedConversation?.remoteJid && !selectedConversation?.conversationId) {
+      // Clean up existing subscriptions when no conversation is selected
+      if (messageSubscription) {
+        console.log('🧹 Cleaning up message subscription (no conversation selected)')
+        supabase.removeChannel(messageSubscription)
+        setMessageSubscription(null)
+      }
+      return
+    }
+
+    const conversationId = selectedConversation.conversationId || selectedConversation.id
+    const remoteJid = selectedConversation.remoteJid || selectedConversation.email
+
+    console.log('📡 Setting up real-time message subscription for conversation:', conversationId, 'remoteJid:', remoteJid)
+
+    // Clean up existing subscription first
+    if (messageSubscription) {
+      console.log('🧹 Cleaning up previous message subscription')
+      supabase.removeChannel(messageSubscription)
+    }
+
+    // Create new subscription for current conversation's messages
+    const newMessageSubscription = supabase
+      .channel(`chat-messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        async (payload) => {
+          console.log('🔔 New message detected in current conversation:', payload)
+          
+          // Refresh messages for current conversation
+          if (selectedConversationRef.current?.remoteJid) {
+            console.log('🔄 Auto-refreshing messages due to real-time update')
+            await loadMessagesFromDatabase(selectedConversationRef.current.remoteJid)
+            
+            // Show toast notification for new incoming messages (not from admin/AI)
+            const newMessage = payload.new
+            if (newMessage && newMessage.sender_type !== 'admin' && newMessage.sender_type !== 'ai_agent') {
+              toast({
+                title: "New message received",
+                description: `Real-time update from ${getDisplayName(selectedConversationRef.current)}`,
+                duration: 2000,
+              })
+              
+              // Trigger auto-scroll for incoming messages if user is near bottom
+              setTimeout(() => {
+                if (messagesEndRef.current) {
+                  const atBottom = isAtBottom()
+                  if (atBottom) {
+                    messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+                  } else {
+                    // User is scrolled up, increment unread counter
+                    setUnreadMessagesCount(prev => prev + 1)
+                  }
+                }
+              }, 100) // Small delay to ensure DOM has updated
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        },
+        async (payload) => {
+          console.log('🔔 Message updated in current conversation:', payload)
+          
+          // Refresh messages for current conversation (for status updates)
+          if (selectedConversationRef.current?.remoteJid) {
+            console.log('🔄 Auto-refreshing messages due to message update')
+            await loadMessagesFromDatabase(selectedConversationRef.current.remoteJid)
+            
+            // For message status updates, we don't need to show toasts or scroll
+            // Just refresh the messages to show updated status icons
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Message subscription status:', status)
+        setIsRealTimeConnected(status === 'SUBSCRIBED')
+      })
+
+    setMessageSubscription(newMessageSubscription)
+
+    return () => {
+      if (newMessageSubscription) {
+        console.log('🧹 Cleaning up message subscription on unmount/change')
+        supabase.removeChannel(newMessageSubscription)
+      }
+    }
+  }, [selectedConversation?.conversationId, selectedConversation?.id, selectedConversation?.remoteJid, selectedConversation?.email])
+
+  // Set up real-time subscription for conversation list updates
+  useEffect(() => {
+    console.log('📡 Setting up real-time conversation list subscription')
+
+    // Clean up existing subscription first
+    if (conversationSubscription) {
+      console.log('🧹 Cleaning up previous conversation subscription')
+      supabase.removeChannel(conversationSubscription)
+    }
+
+    const newConversationSubscription = supabase
+      .channel('chat-conversations-list')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'conversations'
+        },
+        async (payload) => {
+          console.log('🔔 New conversation detected:', payload)
+          
+          // Refresh conversation list
+          console.log('🔄 Auto-refreshing conversation list due to new conversation')
+          await loadConversationsFromDatabase()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations'
+        },
+        async (payload) => {
+          console.log('🔔 Conversation updated:', payload)
+          
+          // Refresh conversation list (for unread counts, last message updates, etc.)
+          console.log('🔄 Auto-refreshing conversation list due to conversation update')
+          await loadConversationsFromDatabase()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        },
+        async (payload) => {
+          console.log('🔔 New message detected globally (updating conversation list):', payload)
+          
+          // Refresh conversation list to update last message and unread counts
+          console.log('🔄 Auto-refreshing conversation list due to new message')
+          await loadConversationsFromDatabase()
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Conversation list subscription status:', status)
+      })
+
+    setConversationSubscription(newConversationSubscription)
+
+    return () => {
+      if (newConversationSubscription) {
+        console.log('🧹 Cleaning up conversation subscription on unmount')
+        supabase.removeChannel(newConversationSubscription)
+      }
+    }
+  }, []) // Only set up once on mount
+
+  // Enhanced polling as backup for real-time subscriptions
+  useEffect(() => {
+    // More frequent polling for better responsiveness
+    const conversationPollingInterval = setInterval(() => {
+      console.log('⏰ Polling conversation list (backup)')
+      loadConversationsFromDatabase()
+    }, 10000) // Every 10 seconds
+
+    const messagePollingInterval = setInterval(() => {
+      if (selectedConversationRef.current?.remoteJid) {
+        console.log('⏰ Polling current conversation messages (backup)')
+        loadMessagesFromDatabase(selectedConversationRef.current.remoteJid)
+      }
+    }, 5000) // Every 5 seconds for current conversation
+
+    return () => {
+      clearInterval(conversationPollingInterval)
+      clearInterval(messagePollingInterval)
+    }
+  }, [])
+
+  // Auto-refresh conversation list periodically to catch any missed updates
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log('🔄 Periodic conversation list refresh')
+      loadConversationsFromDatabase()
+    }, 30000) // Every 30 seconds
+
+    return () => clearInterval(refreshInterval)
+  }, [])
 
   // Handle Enter key for sending messages
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -1195,6 +1426,117 @@ export default function ChatPage() {
       // Don't show toast for analytics errors - not critical for chat functionality
     } finally {
       setIsLoadingAnalytics(false)
+    }
+  }
+
+  // Load meal planning data for current conversation
+  const loadMealPlanningData = async () => {
+    if (!selectedConversation?.remoteJid) return
+    
+    setIsLoadingMealData(true)
+    try {
+      console.log('🍽️ Loading meal planning data for:', selectedConversation.remoteJid)
+      
+      // Query messages that contain meal planning AI responses
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', selectedConversation.conversationId || selectedConversation.remoteJid)
+        .eq('sender_type', 'ai_agent')
+        .ilike('content', '%meal%')
+        .or('content.ilike.%recipe%,content.ilike.%dinner%,content.ilike.%breakfast%,content.ilike.%lunch%')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      if (error) {
+        console.error('❌ Error loading meal planning data:', error)
+        return
+      }
+      
+      console.log('✅ Loaded meal planning data:', messages?.length || 0, 'messages')
+      setMealPlanningData(messages || [])
+      
+    } catch (error) {
+      console.error('❌ Failed to load meal planning data:', error)
+    } finally {
+      setIsLoadingMealData(false)
+    }
+  }
+
+  // Load grocery lists data for current conversation
+  const loadGroceryListsData = async () => {
+    if (!selectedConversation?.remoteJid) return
+    
+    setIsLoadingGroceryData(true)
+    try {
+      console.log('🛒 Loading grocery lists data for:', selectedConversation.remoteJid)
+      
+      // Query messages that contain grocery list AI responses
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', selectedConversation.conversationId || selectedConversation.remoteJid)
+        .eq('sender_type', 'ai_agent')
+        .or('content.ilike.%grocery%,content.ilike.%shopping list%,content.ilike.%€%,content.ilike.%budget%')
+        .order('created_at', { ascending: false })
+        .limit(20)
+      
+      if (error) {
+        console.error('❌ Error loading grocery lists data:', error)
+        return
+      }
+      
+      console.log('✅ Loaded grocery lists data:', messages?.length || 0, 'messages')
+      setGroceryListsData(messages || [])
+      
+    } catch (error) {
+      console.error('❌ Failed to load grocery lists data:', error)
+    } finally {
+      setIsLoadingGroceryData(false)
+    }
+  }
+
+  // Load AI prompts and configuration
+  const loadAiPromptsData = async () => {
+    if (!selectedConversation?.remoteJid) return
+    
+    try {
+      console.log('🤖 Loading AI prompts and config for:', selectedConversation.remoteJid)
+      
+      // Get AI thread and configuration data
+      const { data: conversations, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('whatsapp_jid', selectedConversation.remoteJid)
+        .single()
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Error loading AI config:', error)
+        return
+      }
+      
+      const { data: messages, error: messagesError } = await supabase
+        .from('messages')
+        .select('ai_thread_id, created_at')
+        .eq('conversation_id', selectedConversation.conversationId || selectedConversation.remoteJid)
+        .eq('sender_type', 'ai_agent')
+        .not('ai_thread_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      setAiPromptsData({
+        conversation: conversations,
+        aiThreadId: messages?.[0]?.ai_thread_id,
+        lastAiInteraction: messages?.[0]?.created_at,
+        totalAiMessages: messages?.length || 0,
+        assistantId: '5fd12ecb-9268-51f0-8168-fc7952c7c8b8',
+        apiUrl: 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
+      })
+      
+      console.log('✅ Loaded AI config data')
+      
+    } catch (error) {
+      console.error('❌ Failed to load AI prompts data:', error)
     }
   }
 
@@ -1688,9 +2030,9 @@ export default function ChatPage() {
         {/* Chat Tab */}
         <TabsContent value="chat" className="space-y-6">
           {/* 3-Panel Chat Interface */}
-          <div className="grid gap-4 grid-cols-12 h-[700px]">
+          <div className="grid gap-3 sm:gap-4 grid-cols-12 h-[600px] sm:h-[700px]">
             {/* Left Panel - Chat List */}
-            <Card className="col-span-3">
+            <Card className="col-span-12 lg:col-span-3">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">WhatsApp Conversations</CardTitle>
@@ -1706,7 +2048,7 @@ export default function ChatPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[580px]" ref={scrollAreaRef}>
+            <ScrollArea className="h-[400px] lg:h-[580px]" ref={scrollAreaRef}>
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
@@ -1783,7 +2125,7 @@ export default function ChatPage() {
         </Card>
 
         {/* Middle Panel - Chat Window */}
-        <Card className="col-span-6">
+        <Card className="col-span-12 lg:col-span-6">
           <CardHeader className="pb-3 border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1900,57 +2242,107 @@ export default function ChatPage() {
                     return (
                       <div
                         key={message.id}
-                        className={`flex gap-3 ${message.sender === "user" ? "justify-start" : "justify-end"}`}
+                        className={`flex gap-3 mb-4 px-2 sm:px-4 ${
+                          message.sender === "user" 
+                            ? "justify-start" 
+                            : message.sender === "ai"
+                            ? "justify-start" // AI messages on left for distinction
+                            : "justify-end"   // Business admin messages on right
+                        }`}
                       >
-                        {message.sender === "user" && (
+                        {/* Left side avatars for user and AI */}
+                        {(message.sender === "user" || message.sender === "ai") && (
                           <div className="flex flex-col items-center">
                             {showAvatar ? (
-                              <Avatar className="h-8 w-8">
+                              <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
+                                {message.sender === "ai" ? (
+                                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                                    <Bot className="h-4 w-4" />
+                                  </AvatarFallback>
+                                ) : (
+                                  <>
                                 <AvatarImage src={selectedConversation?.avatar || undefined} />
-                                <AvatarFallback className="bg-muted">
+                                    <AvatarFallback className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
                                   {getInitials(getDisplayName(selectedConversation))}
                                 </AvatarFallback>
+                                  </>
+                                )}
                               </Avatar>
                             ) : (
-                              <div className="h-8 w-8" />
+                              <div className="h-8 w-8 sm:h-9 sm:w-9" />
                             )}
                           </div>
                         )}
                         
                         <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                          className={`max-w-[85%] sm:max-w-[75%] md:max-w-[65%] rounded-2xl px-4 py-3 shadow-sm border ${
                             message.sender === "user" 
-                              ? "bg-muted border shadow-sm" 
+                              ? "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700" 
                               : message.sender === "ai"
-                              ? "bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50 border shadow-sm"
-                              : "bg-primary text-primary-foreground shadow-sm"
+                              ? "bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30 border-indigo-200 dark:border-indigo-800"
+                              : "bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-emerald-400"
                           }`}
                         >
+                          {/* Message Headers with improved styling */}
                           {message.sender === "ai" && (
-                            <div className="flex items-center gap-2 mb-2">
-                              <Bot className="h-3 w-3 text-blue-600" />
-                              <span className="text-xs font-medium text-blue-600">AI Assistant</span>
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-indigo-200 dark:border-indigo-800">
+                              <div className="flex items-center gap-2">
+                                <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">AI Assistant</span>
+                              </div>
                               {message.confidence && (
-                                <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
-                                  {message.confidence}%
+                                <Badge variant="secondary" className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+                                  {message.confidence}% confidence
                                 </Badge>
                               )}
                             </div>
                           )}
                           
                           {message.sender === "admin" && (
-                            <div className="flex items-center gap-2 mb-2">
-                              <Shield className="h-3 w-3 text-primary-foreground/80" />
-                                  <span className="text-xs font-medium text-primary-foreground/80">
-                                    {businessContact?.name || businessContact?.verifiedName || 'BargainB Business'}
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-emerald-400/30">
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-emerald-100" />
+                                <span className="text-sm font-semibold text-emerald-50">
+                                  Business Admin
                                   </span>
+                              </div>
+                              <Badge variant="outline" className="text-xs px-2 py-0.5 bg-emerald-400/20 text-emerald-100 border-emerald-300">
+                                {businessContact?.name || businessContact?.verifiedName || 'BargainB'}
+                              </Badge>
                             </div>
                           )}
                           
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                          {message.sender === "user" && showAvatar && (
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">
+                              <User className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                {getDisplayName(selectedConversation)}
+                              </span>
+                            </div>
+                          )}
                           
-                          <div className="flex items-center justify-between mt-3 pt-2 border-t border-white/20">
-                            <span className="text-xs opacity-75">
+                          <p className={`text-sm leading-relaxed whitespace-pre-wrap ${
+                            message.sender === "ai" 
+                              ? "text-slate-700 dark:text-slate-200" 
+                              : message.sender === "admin"
+                              ? "text-white"
+                              : "text-slate-600 dark:text-slate-300"
+                          }`}>
+                            {message.content}
+                          </p>
+                          
+                          <div className={`flex items-center justify-between mt-3 pt-2 border-t ${
+                            message.sender === "ai" 
+                              ? "border-indigo-200 dark:border-indigo-800" 
+                              : message.sender === "admin"
+                              ? "border-emerald-400/30"
+                              : "border-slate-200 dark:border-slate-700"
+                          }`}>
+                            <span className={`text-xs ${
+                              message.sender === "admin" 
+                                ? "text-emerald-100" 
+                                : "opacity-75"
+                            }`}>
                               {message.timestamp}
                             </span>
                             
@@ -1958,11 +2350,9 @@ export default function ChatPage() {
                                   {/* Show status icons for all outbound messages (admin, AI, and sent messages) */}
                                   {(() => {
                                     const shouldShow = message.sender === "admin" || message.sender === "ai" || (message.metadata && message.metadata.direction === "outbound") || (message.metadata && message.metadata.from_me);
-                                    console.log(`🔍 Message status check - sender: "${message.sender}", shouldShow: ${shouldShow}, metadata:`, message.metadata);
                                     
                                     if (shouldShow) {
                                       const statusInfo = getMessageStatusIcon(message.status, message.metadata);
-                                      console.log(`🔍 StatusInfo result:`, statusInfo);
                                 return statusInfo ? (
                                   <div 
                                           className={`text-sm ${statusInfo.color} flex items-center font-bold`}
@@ -1978,25 +2368,20 @@ export default function ChatPage() {
                           </div>
                         </div>
                         
-                        {(message.sender === "admin" || message.sender === "ai") && showAvatar && (
-                          <Avatar className="h-8 w-8">
-                            {message.sender === "ai" ? (
-                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                                <Bot className="h-4 w-4" />
-                              </AvatarFallback>
-                            ) : (
-                                  <>
+                        {/* Right side avatar for business admin */}
+                        {message.sender === "admin" && showAvatar && (
+                          <div className="flex flex-col items-center">
+                            <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                                     <AvatarImage 
                                       src={businessContact?.imgUrl || '/placeholder-user.jpg'} 
                                       alt={businessContact?.name || businessContact?.verifiedName || 'BargainB Business'} 
                                     />
-                              <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
+                              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-semibold">
                                       {businessContact?.name ? getInitials(businessContact.name) : 
                                        businessContact?.verifiedName ? getInitials(businessContact.verifiedName) : 'BB'}
                               </AvatarFallback>
-                                  </>
-                            )}
                           </Avatar>
+                          </div>
                         )}
                       </div>
                     )
@@ -2007,17 +2392,17 @@ export default function ChatPage() {
               </div>
             </ScrollArea>
             <Separator />
-            <div className="p-4 bg-muted/30">
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 border-t">
               <div className="flex gap-3 items-end">
                 <div className="flex-1">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 sm:gap-3">
                     <div className="relative flex-1">
                       <Textarea
-                        placeholder={`Message ${getDisplayName(selectedConversation)}...`}
+                        placeholder={`💬 Message ${getDisplayName(selectedConversation)}...`}
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        className="min-h-[44px] max-h-32 resize-none border-0 bg-background shadow-sm"
+                        className="min-h-[44px] max-h-32 resize-none border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 transition-all duration-200 rounded-xl"
                         disabled={!selectedContact || isSending}
                         rows={1}
                       />
@@ -2026,7 +2411,7 @@ export default function ChatPage() {
                       size="icon" 
                           onClick={handleSendMessageWithRefresh}
                       disabled={!newMessage.trim() || !selectedContact || isSending}
-                      className="h-11 w-11 rounded-full"
+                      className="h-11 w-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-lg hover:shadow-xl transition-all duration-200 disabled:from-slate-400 disabled:to-slate-500"
                     >
                       {isSending ? (
                         <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
@@ -2037,31 +2422,54 @@ export default function ChatPage() {
                   </div>
                 </div>
               </div>
+              
+              {/* Enhanced status indicators */}
               <div className="flex items-center justify-between mt-3 px-1">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <div className={`w-2 h-2 rounded-full ${aiEnabled ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-                  WhatsApp Business API
+                <div className="flex items-center gap-3 sm:gap-4 text-xs text-muted-foreground">
+                  {/* Real-time connection status */}
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${isRealTimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-orange-500 animate-pulse'}`}></div>
+                    <span className="hidden sm:inline">Real-time</span>
+                    <span className={`font-medium ${isRealTimeConnected ? 'text-emerald-600' : 'text-orange-600'}`}>
+                      {isRealTimeConnected ? 'Connected' : 'Connecting...'}
+                    </span>
                 </div>
+                  
+                  {/* WhatsApp API status */}
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span className="hidden sm:inline">WhatsApp</span>
+                    <span className="font-medium text-green-600">Online</span>
+                  </div>
+                </div>
+                
                 <div className="flex items-center gap-2">
                   {aiEnabled ? (
+                    <div className="flex items-center gap-1.5">
                     <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="text-xs font-medium text-green-600">AI Active</span>
+                    </div>
                   ) : (
+                    <div className="flex items-center gap-1.5">
                     <XCircle className="h-4 w-4 text-red-500" />
+                      <span className="text-xs font-medium text-red-600">AI Disabled</span>
+                    </div>
                   )}
-                  <span className="text-xs text-muted-foreground">AI {aiEnabled ? "Active" : "Disabled"}</span>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Right Panel - User Details & AI Settings */}
-        <Card className="col-span-3">
+        {/* Right Panel - Enhanced User Details & AI Management */}
+        <Card className="col-span-12 lg:col-span-3">
           <CardContent className="p-0">
             <Tabs defaultValue="user" className="h-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="user">Contact Details</TabsTrigger>
-                <TabsTrigger value="ai">AI Settings</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 text-xs">
+                <TabsTrigger value="user" className="text-xs">Contact</TabsTrigger>
+                <TabsTrigger value="ai" className="text-xs">AI Config</TabsTrigger>
+                <TabsTrigger value="meals" className="text-xs">Meals</TabsTrigger>
+                <TabsTrigger value="data" className="text-xs">Data</TabsTrigger>
               </TabsList>
 
               <TabsContent value="user" className="p-4 space-y-4">
@@ -2116,20 +2524,271 @@ export default function ChatPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="ai" className="p-0">
+              <TabsContent value="ai" className="p-4 space-y-4">
                 {selectedContact ? (
-                  <AIConfigTab 
-                    conversationId={selectedContact}
-                    userId={selectedContact}
-                    onConfigChange={(config) => {
-                      setAiEnabled(config.enabled);
-                    }}
-                  />
+                  <div className="space-y-4">
+                    <AIConfigTab 
+                      conversationId={selectedContact}
+                      userId={selectedContact}
+                      onConfigChange={(config) => {
+                        setAiEnabled(config.enabled);
+                      }}
+                    />
+                    
+                    {/* AI Technical Details */}
+                    {aiPromptsData && (
+                      <div className="mt-6 space-y-4">
+                        <Separator />
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <Brain className="h-4 w-4" />
+                            Technical Details
+                          </h4>
+                          <div className="grid grid-cols-2 gap-4 text-xs">
+                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                              <div className="font-medium text-slate-600 dark:text-slate-400">Assistant ID</div>
+                              <div className="font-mono text-slate-800 dark:text-slate-200 break-all">
+                                {aiPromptsData.assistantId?.slice(0, 8)}...
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                              <div className="font-medium text-slate-600 dark:text-slate-400">Thread ID</div>
+                              <div className="font-mono text-slate-800 dark:text-slate-200 break-all">
+                                {aiPromptsData.aiThreadId ? `${aiPromptsData.aiThreadId.slice(0, 8)}...` : 'None'}
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                              <div className="font-medium text-slate-600 dark:text-slate-400">Last AI Response</div>
+                              <div className="text-slate-800 dark:text-slate-200">
+                                {aiPromptsData.lastAiInteraction ? 
+                                  new Date(aiPromptsData.lastAiInteraction).toLocaleString() : 
+                                  'No interactions yet'
+                                }
+                              </div>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
+                              <div className="font-medium text-slate-600 dark:text-slate-400">AI Messages</div>
+                              <div className="text-slate-800 dark:text-slate-200">
+                                {aiPromptsData.totalAiMessages} sent
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* API Configuration */}
+                        <div>
+                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <Settings className="h-4 w-4" />
+                            API Configuration
+                          </h4>
+                          <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg text-xs space-y-2">
+                            <div>
+                              <span className="font-medium text-slate-600 dark:text-slate-400">Endpoint:</span>
+                              <div className="font-mono text-slate-800 dark:text-slate-200 break-all">
+                                {aiPromptsData.apiUrl}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium text-slate-600 dark:text-slate-400">Graph ID:</span>
+                              <span className="ml-2 text-slate-800 dark:text-slate-200">product_retrieval_agent</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full p-8">
                     <div className="text-center text-muted-foreground">
                       <Bot className="h-12 w-12 mx-auto mb-4" />
                       <p>Select a conversation to configure AI settings</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Meals Planning Tab */}
+              <TabsContent value="meals" className="p-4 space-y-4">
+                {selectedContact ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
+                          <circle cx="12" cy="12" r="10" />
+                        </svg>
+                        Meal Planning History
+                      </h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={loadMealPlanningData}
+                        disabled={isLoadingMealData}
+                      >
+                        {isLoadingMealData ? (
+                          <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                        ) : (
+                          'Refresh'
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {isLoadingMealData ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                      </div>
+                    ) : mealPlanningData.length > 0 ? (
+                      <ScrollArea className="h-[400px] space-y-2">
+                        {mealPlanningData.map((meal, index) => (
+                          <div key={meal.id} className="border rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+                               onClick={() => {
+                                 setSelectedMealPlan(meal)
+                                 setIsMealPlanModalOpen(true)
+                               }}>
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {new Date(meal.created_at).toLocaleDateString()}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                AI Generated
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3">
+                              {meal.content.slice(0, 150)}...
+                            </p>
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <svg className="h-12 w-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
+                          <circle cx="12" cy="12" r="10" />
+                        </svg>
+                        <p>No meal planning data found</p>
+                        <p className="text-xs">Ask the AI about meals, recipes, or dinner plans</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center text-muted-foreground">
+                      <svg className="h-12 w-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
+                        <circle cx="12" cy="12" r="10" />
+                      </svg>
+                      <p>Select a conversation to view meal planning</p>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Data Verification Tab */}
+              <TabsContent value="data" className="p-4 space-y-4">
+                {selectedContact ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-semibold flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4" />
+                        Grocery Lists & Data
+                      </h4>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={loadGroceryListsData}
+                        disabled={isLoadingGroceryData}
+                      >
+                        {isLoadingGroceryData ? (
+                          <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                        ) : (
+                          'Refresh'
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {isLoadingGroceryData ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                      </div>
+                    ) : groceryListsData.length > 0 ? (
+                      <ScrollArea className="h-[400px] space-y-2">
+                        {groceryListsData.map((list, index) => (
+                          <div key={list.id} className="border rounded-lg p-3 hover:bg-slate-50 dark:hover:bg-slate-900 cursor-pointer transition-colors"
+                               onClick={() => {
+                                 setSelectedGroceryList(list)
+                                 setIsGroceryListModalOpen(true)
+                               }}>
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {new Date(list.created_at).toLocaleDateString()}
+                              </Badge>
+                              <div className="flex gap-1">
+                                <Badge variant="outline" className="text-xs">
+                                  AI Generated
+                                </Badge>
+                                {list.content.includes('€') && (
+                                  <Badge variant="outline" className="text-xs text-green-600">
+                                    Pricing
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-3">
+                              {list.content.slice(0, 150)}...
+                            </p>
+                            {/* Extract pricing info if available */}
+                            {list.content.match(/€\d+\.?\d*/g) && (
+                              <div className="mt-2 pt-2 border-t">
+                                <div className="text-xs text-green-600 font-medium">
+                                  Detected prices: {list.content.match(/€\d+\.?\d*/g)?.slice(0, 3).join(', ')}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </ScrollArea>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No grocery list data found</p>
+                        <p className="text-xs">Ask the AI about shopping lists, budgets, or prices</p>
+                      </div>
+                    )}
+
+                    {/* Database verification info */}
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Target className="h-4 w-4" />
+                        Database Verification
+                      </h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-blue-50 dark:bg-blue-950/30 p-2 rounded border border-blue-200 dark:border-blue-800">
+                          <div className="font-medium text-blue-700 dark:text-blue-300">Meal Messages</div>
+                          <div className="text-blue-800 dark:text-blue-200">{mealPlanningData.length} found</div>
+                        </div>
+                        <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded border border-green-200 dark:border-green-800">
+                          <div className="font-medium text-green-700 dark:text-green-300">Grocery Messages</div>
+                          <div className="text-green-800 dark:text-green-200">{groceryListsData.length} found</div>
+                        </div>
+                        <div className="bg-purple-50 dark:bg-purple-950/30 p-2 rounded border border-purple-200 dark:border-purple-800">
+                          <div className="font-medium text-purple-700 dark:text-purple-300">AI Thread</div>
+                          <div className="text-purple-800 dark:text-purple-200">
+                            {aiPromptsData?.aiThreadId ? 'Active' : 'Inactive'}
+                          </div>
+                        </div>
+                        <div className="bg-orange-50 dark:bg-orange-950/30 p-2 rounded border border-orange-200 dark:border-orange-800">
+                          <div className="font-medium text-orange-700 dark:text-orange-300">Total Messages</div>
+                          <div className="text-orange-800 dark:text-orange-200">{databaseMessages.length}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center text-muted-foreground">
+                      <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                      <p>Select a conversation to view data</p>
                     </div>
                   </div>
                 )}
@@ -2169,6 +2828,224 @@ export default function ChatPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Meal Plan Details Modal */}
+      <Dialog open={isMealPlanModalOpen} onOpenChange={setIsMealPlanModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6l4 2" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+              Meal Planning Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedMealPlan && (
+                <div className="flex items-center gap-4 text-sm">
+                  <span>Generated: {new Date(selectedMealPlan.created_at).toLocaleString()}</span>
+                  <Badge variant="secondary">AI Assistant</Badge>
+                  {selectedMealPlan.ai_thread_id && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      Thread: {selectedMealPlan.ai_thread_id.slice(0, 8)}...
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedMealPlan && (
+            <ScrollArea className="h-[60vh] mt-4">
+              <div className="space-y-4">
+                {/* Parse and display meal content in a structured way */}
+                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3 text-lg">Complete AI Response</h4>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {selectedMealPlan.content}
+                  </div>
+                </div>
+                
+                {/* Extract structured information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Recipe/Meal Info */}
+                  {selectedMealPlan.content.match(/recipe|meal|dish/gi) && (
+                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Meal Details</h4>
+                      <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                        {selectedMealPlan.content.includes('recipe') && <div>✅ Recipe included</div>}
+                        {selectedMealPlan.content.includes('ingredient') && <div>✅ Ingredients listed</div>}
+                        {selectedMealPlan.content.includes('step') && <div>✅ Step-by-step instructions</div>}
+                        {selectedMealPlan.content.match(/\d+\s*(minute|hour)/gi) && <div>✅ Cooking time specified</div>}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Pricing Info */}
+                  {selectedMealPlan.content.match(/€\d+\.?\d*/g) && (
+                    <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">Pricing Information</h4>
+                      <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                                                 {selectedMealPlan.content.match(/€\d+\.?\d*/g)?.map((price: string, index: number) => (
+                           <div key={index} className="flex items-center gap-2">
+                             <span className="font-mono font-semibold">{price}</span>
+                           </div>
+                         ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Metadata */}
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3">Technical Metadata</h4>
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Message ID:</span>
+                      <div className="font-mono">{selectedMealPlan.id}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Conversation ID:</span>
+                      <div className="font-mono break-all">{selectedMealPlan.conversation_id}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Character Count:</span>
+                      <div>{selectedMealPlan.content.length} characters</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Word Count:</span>
+                      <div>{selectedMealPlan.content.split(/\s+/).length} words</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Grocery List Details Modal */}
+      <Dialog open={isGroceryListModalOpen} onOpenChange={setIsGroceryListModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Grocery List Details
+            </DialogTitle>
+            <DialogDescription>
+              {selectedGroceryList && (
+                <div className="flex items-center gap-4 text-sm">
+                  <span>Generated: {new Date(selectedGroceryList.created_at).toLocaleString()}</span>
+                  <Badge variant="secondary">AI Assistant</Badge>
+                  {selectedGroceryList.ai_thread_id && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      Thread: {selectedGroceryList.ai_thread_id.slice(0, 8)}...
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedGroceryList && (
+            <ScrollArea className="h-[60vh] mt-4">
+              <div className="space-y-4">
+                {/* Complete AI Response */}
+                <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3 text-lg">Complete AI Response</h4>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {selectedGroceryList.content}
+                  </div>
+                </div>
+                
+                {/* Extract structured information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Budget/Pricing Analysis */}
+                  {selectedGroceryList.content.match(/€\d+\.?\d*/g) && (
+                    <div className="bg-green-50 dark:bg-green-950/30 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                      <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">Pricing Analysis</h4>
+                      <div className="text-sm text-green-700 dark:text-green-300 space-y-2">
+                        <div className="font-semibold">Detected Prices:</div>
+                                                 {selectedGroceryList.content.match(/€\d+\.?\d*/g)?.map((price: string, index: number) => (
+                           <div key={index} className="flex items-center gap-2">
+                             <span className="font-mono font-semibold text-lg">{price}</span>
+                           </div>
+                         ))}
+                        {selectedGroceryList.content.match(/€\d+\.?\d*/g) && (
+                          <div className="pt-2 border-t border-green-200 dark:border-green-700">
+                            <div className="font-medium">
+                              Total Count: {selectedGroceryList.content.match(/€\d+\.?\d*/g)?.length} prices found
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Shopping List Analysis */}
+                  <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">List Analysis</h4>
+                    <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                      {selectedGroceryList.content.includes('shopping list') && <div>✅ Shopping list format</div>}
+                      {selectedGroceryList.content.includes('budget') && <div>✅ Budget-conscious</div>}
+                      {selectedGroceryList.content.match(/\d+\s*(item|product)/gi) && <div>✅ Item counts specified</div>}
+                      {selectedGroceryList.content.includes('supermarket') && <div>✅ Store recommendations</div>}
+                      {selectedGroceryList.content.includes('healthy') && <div>✅ Health-focused</div>}
+                      {selectedGroceryList.content.match(/breakfast|lunch|dinner/gi) && <div>✅ Meal planning included</div>}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Extract items if list format is detected */}
+                {selectedGroceryList.content.match(/^\d+\./gm) && (
+                  <div className="bg-orange-50 dark:bg-orange-950/30 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <h4 className="font-semibold text-orange-800 dark:text-orange-200 mb-2">Extracted Items</h4>
+                    <div className="text-sm text-orange-700 dark:text-orange-300">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                 {selectedGroceryList.content.match(/^\d+\..*$/gm)?.slice(0, 10).map((item: string, index: number) => (
+                           <div key={index} className="bg-white dark:bg-orange-900/20 p-2 rounded border">
+                             {item.trim()}
+                           </div>
+                         ))}
+                      </div>
+                      {selectedGroceryList.content.match(/^\d+\./gm)?.length > 10 && (
+                        <div className="mt-2 text-center italic">
+                          +{selectedGroceryList.content.match(/^\d+\./gm)?.length - 10} more items...
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Database Verification */}
+                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3">Database Storage Verification</h4>
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Stored in Table:</span>
+                      <div className="font-mono">messages</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Sender Type:</span>
+                      <div className="font-mono">{selectedGroceryList.sender_type}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Message ID:</span>
+                      <div className="font-mono">{selectedGroceryList.id}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-slate-600 dark:text-slate-400">Thread Status:</span>
+                      <div className={selectedGroceryList.ai_thread_id ? "text-green-600" : "text-orange-600"}>
+                        {selectedGroceryList.ai_thread_id ? "Linked to AI Thread" : "No Thread Link"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
