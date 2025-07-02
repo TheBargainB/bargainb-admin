@@ -4,12 +4,103 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
+type LanguageCode = 'nl' | 'en' | 'de' | 'fr' | 'it' | 'es';
+
+const phoneInputTranslations: Record<LanguageCode, {
+  placeholders: string[];
+  countryName: string;
+  floatingLabel: string;
+  validMessage: string;
+  helperText: string;
+  errorMessage: string;
+}> = {
+  nl: {
+    placeholders: [
+      "Voer je mobiele nummer in...",
+      "61234567 (8 cijfers)",
+      "Start met 6, bijvoorbeeld 61234567",
+      "Nederlandse mobiele nummer"
+    ],
+    countryName: "Nederland",
+    floatingLabel: "Mobiel nummer",
+    validMessage: "Geldig Nederlands mobiel nummer",
+    helperText: "Nederlandse mobiele nummers beginnen met 6 en hebben 8 cijfers",
+    errorMessage: "Voer 8 cijfers in die beginnen met 6"
+  },
+  en: {
+    placeholders: [
+      "Enter your mobile number...",
+      "6 12345678 (8 digits)",
+      "Start with 6, e.g. 61234567",
+      "Dutch mobile number"
+    ],
+    countryName: "Netherlands",
+    floatingLabel: "Mobile number",
+    validMessage: "Valid Dutch mobile number",
+    helperText: "Dutch mobile numbers start with 6 and have 8 digits",
+    errorMessage: "Enter 8 digits starting with 6"
+  },
+  de: {
+    placeholders: [
+      "Handynummer eingeben...",
+      "6 12345678 (8 Ziffern)",
+      "Beginnt mit 6, z.B. 61234567",
+      "Niederländische Handynummer"
+    ],
+    countryName: "Niederlande",
+    floatingLabel: "Handynummer",
+    validMessage: "Gültige niederländische Handynummer",
+    helperText: "Niederländische Handynummern beginnen mit 6 und haben 8 Ziffern",
+    errorMessage: "8 Ziffern eingeben, die mit 6 beginnen"
+  },
+  fr: {
+    placeholders: [
+      "Entrez votre numéro mobile...",
+      "6 12345678 (8 chiffres)",
+      "Commence par 6, ex. 61234567",
+      "Numéro mobile néerlandais"
+    ],
+    countryName: "Pays-Bas",
+    floatingLabel: "Numéro mobile",
+    validMessage: "Numéro mobile néerlandais valide",
+    helperText: "Les numéros mobiles néerlandais commencent par 6 et ont 8 chiffres",
+    errorMessage: "Entrez 8 chiffres commençant par 6"
+  },
+  it: {
+    placeholders: [
+      "Inserisci il tuo numero mobile...",
+      "6 12345678 (8 cifre)",
+      "Inizia con 6, es. 61234567",
+      "Numero mobile olandese"
+    ],
+    countryName: "Paesi Bassi",
+    floatingLabel: "Numero mobile",
+    validMessage: "Numero mobile olandese valido",
+    helperText: "I numeri mobili olandesi iniziano con 6 e hanno 8 cifre",
+    errorMessage: "Inserisci 8 cifre che iniziano con 6"
+  },
+  es: {
+    placeholders: [
+      "Ingresa tu número móvil...",
+      "6 12345678 (8 dígitos)",
+      "Empieza con 6, ej. 61234567",
+      "Número móvil holandés"
+    ],
+    countryName: "Países Bajos",
+    floatingLabel: "Número móvil",
+    validMessage: "Número móvil holandés válido",
+    helperText: "Los números móviles holandeses empiezan con 6 y tienen 8 dígitos",
+    errorMessage: "Ingresa 8 dígitos que empiecen con 6"
+  }
+};
+
 export const BeautifulPhoneInput = ({
   value,
   onChange,
   onSubmit,
   className,
   disabled = false,
+  language = 'nl',
   ...props
 }: {
   value: string;
@@ -17,16 +108,13 @@ export const BeautifulPhoneInput = ({
   onSubmit?: () => void;
   className?: string;
   disabled?: boolean;
+  language?: LanguageCode;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'>) => {
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const placeholders = [
-    "Voer je mobiele nummer in...",
-    "61234567 (8 cijfers)",
-    "Start met 6, bijvoorbeeld 61234567",
-    "Nederlandse mobiele nummer"
-  ];
+  const t = phoneInputTranslations[language];
+  const placeholders = t.placeholders;
 
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -85,7 +173,7 @@ export const BeautifulPhoneInput = ({
       <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <div className="w-6 h-4 bg-gradient-to-b from-red-500 via-white to-blue-500 rounded-sm shadow-sm" />
-          <span className="font-medium">Nederland</span>
+          <span className="font-medium">{t.countryName}</span>
           <span className="text-foreground font-semibold">+31</span>
         </div>
       </div>
@@ -156,7 +244,7 @@ export const BeautifulPhoneInput = ({
               transition={{ duration: 0.2 }}
               className="absolute top-2 left-6 text-xs font-medium text-primary"
             >
-              Mobiel nummer
+              {t.floatingLabel}
             </motion.label>
           )}
         </AnimatePresence>
@@ -202,7 +290,7 @@ export const BeautifulPhoneInput = ({
               className="text-orange-600 dark:text-orange-400 flex items-center gap-2"
             >
               <span className="text-orange-500">⚠</span>
-              Voer 8 cijfers in die beginnen met 6
+              {t.errorMessage}
             </motion.span>
           )}
           {isValid && (
@@ -213,12 +301,12 @@ export const BeautifulPhoneInput = ({
               className="text-green-600 dark:text-green-400 flex items-center gap-2"
             >
               <span className="text-green-500">✓</span>
-              Geldig Nederlands mobiel nummer
+              {t.validMessage}
             </motion.span>
           )}
           {!value && (
             <span className="text-muted-foreground">
-              Nederlandse mobiele nummers beginnen met 6 en hebben 8 cijfers
+              {t.helperText}
             </span>
           )}
         </AnimatePresence>

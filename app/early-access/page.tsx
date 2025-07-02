@@ -18,16 +18,6 @@ import Image from 'next/image'
 import { getTranslation, type LanguageCode } from '@/lib/translations'
 import { Check } from 'lucide-react'
 
-// Dutch mobile phone validation schema
-const earlyAccessSchema = z.object({
-  phoneNumber: z.string()
-    .min(8, 'Mobiel nummer moet minimaal 8 cijfers bevatten')
-    .max(8, 'Mobiel nummer mag maximaal 8 cijfers bevatten')
-    .regex(/^6[0-9]{7}$/, 'Voer een geldig Nederlands mobiel nummer in (start met 6)')
-})
-
-type EarlyAccessFormData = z.infer<typeof earlyAccessSchema>
-
 // Beautiful Floating Bees Component using Magic UI Orbiting Circles
 const FloatingBees = () => {
   const { theme } = useTheme()
@@ -45,36 +35,36 @@ const FloatingBees = () => {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Main orbiting bees */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px]">
-        <OrbitingCircles radius={200} duration={25} reverse={false} path={false} iconSize={32}>
+        <OrbitingCircles radius={200} duration={25} reverse={false} path={false} iconSize={48}>
           <div className="opacity-70">
-            <Image src={beeImage} alt="" width={32} height={32} />
+            <Image src={beeImage} alt="" width={48} height={48} />
           </div>
         </OrbitingCircles>
-        <OrbitingCircles radius={120} duration={20} reverse={true} path={false} iconSize={28}>
+        <OrbitingCircles radius={120} duration={20} reverse={true} path={false} iconSize={42}>
           <div className="opacity-60">
-            <Image src={beeImage} alt="" width={28} height={28} />
+            <Image src={beeImage} alt="" width={42} height={42} />
           </div>
         </OrbitingCircles>
-        <OrbitingCircles radius={320} duration={35} reverse={false} path={false} iconSize={24}>
+        <OrbitingCircles radius={320} duration={35} reverse={false} path={false} iconSize={36}>
           <div className="opacity-50">
-            <Image src={beeImage} alt="" width={24} height={24} />
+            <Image src={beeImage} alt="" width={36} height={36} />
           </div>
         </OrbitingCircles>
       </div>
 
       {/* Additional scattered bees with different orbits */}
       <div className="absolute top-[20%] right-[15%] w-[300px] h-[300px]">
-        <OrbitingCircles radius={80} duration={18} reverse={true} path={false} iconSize={20}>
+        <OrbitingCircles radius={80} duration={18} reverse={true} path={false} iconSize={30}>
           <div className="opacity-40">
-            <Image src={beeImage} alt="" width={20} height={20} />
+            <Image src={beeImage} alt="" width={30} height={30} />
           </div>
         </OrbitingCircles>
       </div>
 
       <div className="absolute bottom-[25%] left-[10%] w-[200px] h-[200px]">
-        <OrbitingCircles radius={60} duration={22} reverse={false} path={false} iconSize={24}>
+        <OrbitingCircles radius={60} duration={22} reverse={false} path={false} iconSize={36}>
           <div className="opacity-45">
-            <Image src={beeImage} alt="" width={24} height={24} />
+            <Image src={beeImage} alt="" width={36} height={36} />
           </div>
         </OrbitingCircles>
       </div>
@@ -89,6 +79,16 @@ export default function EarlyAccessPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
 
   const t = getTranslation(currentLanguage)
+
+  // Dynamic validation schema that responds to language changes
+  const earlyAccessSchema = z.object({
+    phoneNumber: z.string()
+      .min(8, t.validation.phoneLength)
+      .max(8, t.validation.phoneLength)
+      .regex(/^6[0-9]{7}$/, t.validation.phoneFormat)
+  })
+
+  type EarlyAccessFormData = z.infer<typeof earlyAccessSchema>
 
   useEffect(() => {
     setMounted(true)
@@ -152,17 +152,26 @@ export default function EarlyAccessPage() {
     }
   }
 
-
-
   if (!mounted) {
     return null
   }
 
-  const placeholders = [
-    "Voer je mobiele nummer in...",
-    "61234567 (zonder +31)",
-    "8 cijfers beginnend met 6",
-    "Bijvoorbeeld: 61234567"
+  // Dynamic benefits list based on language
+  const benefits = [
+    t.hero.description,
+    currentLanguage === 'nl' ? 'Werkt met supermarkten bij jou in de buurt' : 
+    currentLanguage === 'en' ? 'Works with supermarkets near you' :
+    currentLanguage === 'de' ? 'Funktioniert mit Supermärkten in Ihrer Nähe' :
+    currentLanguage === 'fr' ? 'Fonctionne avec les supermarchés près de chez vous' :
+    currentLanguage === 'it' ? 'Funziona con i supermercati vicino a te' :
+    'Funciona con supermercados cerca de ti',
+    t.hero.exclusiveWhatsApp,
+    currentLanguage === 'nl' ? 'Geen gedoe met folders of apps' : 
+    currentLanguage === 'en' ? 'No hassle with flyers or apps' :
+    currentLanguage === 'de' ? 'Kein Ärger mit Flyern oder Apps' :
+    currentLanguage === 'fr' ? 'Pas de tracas avec les dépliants ou les applications' :
+    currentLanguage === 'it' ? 'Niente seccature con volantini o app' :
+    'Sin complicaciones con folletos o aplicaciones'
   ]
 
   return (
@@ -208,19 +217,19 @@ export default function EarlyAccessPage() {
               {/* Title */}
               <div className="space-y-6 mb-10">
                 <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-tight">
-                  Krijg gratis early access tot{' '}
-                  <span className="text-primary">BargainB!</span>
+                  {currentLanguage === 'nl' ? 'Krijg gratis early access tot' : 
+                   currentLanguage === 'en' ? 'Get free early access to' :
+                   currentLanguage === 'de' ? 'Erhalten Sie kostenlosen frühen Zugang zu' :
+                   currentLanguage === 'fr' ? 'Obtenez un accès anticipé gratuit à' :
+                   currentLanguage === 'it' ? 'Ottieni accesso anticipato gratuito a' :
+                   'Obtén acceso anticipado gratuito a'}{' '}
+                  <span className="text-primary">{t.hero.bargainB}!</span>
                 </h1>
               </div>
               
               {/* Benefits list */}
               <div className="space-y-4 mb-8">
-                {[
-                  'Persoonlijke aanbiedingen op basis van jouw winkelgedrag',
-                  'Werkt met supermarkten bij jou in de buurt',
-                  'Automatische updates via WhatsApp',
-                  'Geen gedoe met folders of apps'
-                ].map((benefit, index) => (
+                {benefits.map((benefit, index) => (
                   <div key={index} className="flex items-start gap-3">
                     <div className="flex-shrink-0 w-5 h-5 bg-primary rounded-sm flex items-center justify-center mt-0.5">
                       <Check className="w-3.5 h-3.5 text-primary-foreground" />
@@ -250,10 +259,16 @@ export default function EarlyAccessPage() {
                       }
                     }}
                     disabled={isSubmitting}
+                    language={currentLanguage}
                   />
                     
                   <div className="text-xs text-muted-foreground text-right">
-                    Beperkte beschikbaarheid! Slechts 100 plekken over.
+                    {currentLanguage === 'nl' ? 'Beperkte beschikbaarheid! Slechts 100 plekken over.' : 
+                     currentLanguage === 'en' ? 'Limited availability! Only 100 spots left.' :
+                     currentLanguage === 'de' ? 'Begrenzte Verfügbarkeit! Nur noch 100 Plätze.' :
+                     currentLanguage === 'fr' ? 'Disponibilité limitée! Seulement 100 places restantes.' :
+                     currentLanguage === 'it' ? 'Disponibilità limitata! Solo 100 posti rimasti.' :
+                     '¡Disponibilidad limitada! Solo quedan 100 lugares.'}
                   </div>
                   
                   {/* Beautiful Shimmer Button */}
@@ -264,7 +279,7 @@ export default function EarlyAccessPage() {
                     shimmerColor="#ffffff40"
                     background="hsl(var(--primary))"
                   >
-                    {isSubmitting ? 'Even geduld...' : 'Vraag Early Access Aan'}
+                    {isSubmitting ? t.form.submitting : t.form.submitButton}
                   </ShimmerButton>
                   
                 </div>
@@ -327,13 +342,30 @@ export default function EarlyAccessPage() {
       <footer className="relative z-10 border-t border-border bg-background/80 backdrop-blur-sm dark:bg-card/20 py-8 mt-16">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <div className="flex flex-col sm:flex-row justify-center items-center gap-6 text-sm text-muted-foreground">
-            <span>© 2024 BargainB - Alle rechten voorbehouden</span>
+            <span>
+              {currentLanguage === 'nl' ? '© 2024 BargainB - Alle rechten voorbehouden' : 
+               currentLanguage === 'en' ? '© 2024 BargainB - All rights reserved' :
+               currentLanguage === 'de' ? '© 2024 BargainB - Alle Rechte vorbehalten' :
+               currentLanguage === 'fr' ? '© 2024 BargainB - Tous droits réservés' :
+               currentLanguage === 'it' ? '© 2024 BargainB - Tutti i diritti riservati' :
+               '© 2024 BargainB - Todos los derechos reservados'}
+            </span>
             <div className="flex items-center gap-6">
               <a href="/privacy" className="hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline">
-                Privacybeleid
+                {currentLanguage === 'nl' ? 'Privacybeleid' : 
+                 currentLanguage === 'en' ? 'Privacy Policy' :
+                 currentLanguage === 'de' ? 'Datenschutzerklärung' :
+                 currentLanguage === 'fr' ? 'Politique de confidentialité' :
+                 currentLanguage === 'it' ? 'Informativa sulla privacy' :
+                 'Política de Privacidad'}
               </a>
               <a href="/terms" className="hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline">
-                Algemene voorwaarden
+                {currentLanguage === 'nl' ? 'Algemene voorwaarden' : 
+                 currentLanguage === 'en' ? 'Terms of Service' :
+                 currentLanguage === 'de' ? 'Allgemeine Geschäftsbedingungen' :
+                 currentLanguage === 'fr' ? 'Conditions générales' :
+                 currentLanguage === 'it' ? 'Termini di servizio' :
+                 'Términos de Servicio'}
               </a>
             </div>
           </div>
