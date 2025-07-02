@@ -15,6 +15,12 @@ export async function GET(request: NextRequest) {
         last_message_at,
         total_messages,
         unread_count,
+        ai_enabled,
+        assistant_id,
+        assistant_name,
+        assistant_config,
+        assistant_metadata,
+        assistant_created_at,
         whatsapp_contacts (
           id,
           phone_number,
@@ -83,9 +89,16 @@ export async function GET(request: NextRequest) {
           status: conv.status === 'active' ? 'active' as const : 'resolved' as const,
           unread_count: unreadCount, // Matches database field and hook expectation
           type: 'whatsapp',
-          aiConfidence: 85,
+          aiConfidence: conv.ai_enabled ? 85 : 0, // Update based on actual AI status
           lastMessageAt: conv.last_message_at || conv.created_at,
-          phoneNumber: contact.phone_number
+          phoneNumber: contact.phone_number,
+          // Assistant fields
+          ai_enabled: conv.ai_enabled,
+          assistant_id: conv.assistant_id,
+          assistant_name: conv.assistant_name,
+          assistant_config: conv.assistant_config,
+          assistant_metadata: conv.assistant_metadata,
+          assistant_created_at: conv.assistant_created_at
         };
       })
     );
