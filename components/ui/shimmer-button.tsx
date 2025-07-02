@@ -45,7 +45,7 @@ export const ShimmerButton = React.forwardRef<
           "bg-[--background] text-white",
           "before:absolute before:inset-0 before:-translate-x-full before:animate-shimmer",
           "before:bg-gradient-to-r before:from-transparent before:via-[--shimmer-color] before:to-transparent",
-          "before:opacity-60 before:transition-transform before:duration-[--shimmer-duration]",
+          "before:opacity-60 before:transition-transform before:duration-1000",
           "hover:shadow-lg",
           className
         )}
