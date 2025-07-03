@@ -38,29 +38,18 @@ export async function POST(request: NextRequest) {
 
     console.log('🔧 Creating assignment for:', phone_number, 'with assistant:', assistant_id)
 
-    // Find the WhatsApp contact by phone number
-    const { data: contact, error: contactError } = await supabase
-      .from('whatsapp_contacts')
-      .select('id, phone_number, display_name, push_name')
-      .eq('phone_number', phone_number.replace('+', ''))
-      .single()
-
-    if (contactError || !contact) {
-      console.error('❌ Contact not found:', contactError)
-      return NextResponse.json({ 
-        error: 'WhatsApp contact not found' 
-      }, { status: 404 })
-    }
-
-    // Find the conversation for this contact
+    // Find the conversation by phone number using the correct field
+    const phoneWithoutPlus = phone_number.replace('+', '')
+    const remoteJid = `${phoneWithoutPlus}@s.whatsapp.net`
+    
     const { data: conversation, error: conversationError } = await supabase
       .from('conversations')
-      .select('id')
-      .eq('whatsapp_contact_id', contact.id)
+      .select('id, remote_jid')
+      .eq('remote_jid', remoteJid)
       .single()
 
     if (conversationError || !conversation) {
-      console.error('❌ Conversation not found:', conversationError)
+      console.error('❌ Conversation not found for remoteJid:', remoteJid, conversationError)
       return NextResponse.json({ 
         error: 'Conversation not found for this contact' 
       }, { status: 404 })
@@ -102,7 +91,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Assistant assigned successfully',
       conversation_id: conversation.id,
-      contact_name: contact.display_name || contact.push_name || phone_number,
+      contact_name: phone_number,
       assistant_id
     })
 
