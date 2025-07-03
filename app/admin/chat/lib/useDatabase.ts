@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase'
 import { refreshGlobalUnreadCount } from '@/hooks/useGlobalNotifications'
@@ -56,7 +56,7 @@ export const useDatabase = ({
   const [aiPromptsData, setAiPromptsData] = useState<any>(null)
 
   // Load messages for selected conversation from database
-  const loadMessagesFromDatabase = async (remoteJid: string, silent: boolean = false) => {
+  const loadMessagesFromDatabase = useCallback(async (remoteJid: string, silent: boolean = false) => {
     if (!remoteJid) return []
 
     try {
@@ -112,10 +112,10 @@ export const useDatabase = ({
         setIsLoadingMessages(false)
       }
     }
-  }
+  }, [onMessagesUpdate, toast])
 
   // Load conversations from database
-  const loadConversationsFromDatabase = async (silent: boolean = false) => {
+  const loadConversationsFromDatabase = useCallback(async (silent: boolean = false) => {
     try {
       if (!silent) {
         setIsLoadingConversations(true)
@@ -172,7 +172,7 @@ export const useDatabase = ({
         setIsLoadingConversations(false)
       }
     }
-  }
+  }, [onConversationsUpdate, toast])
 
   // Mark conversation as read
   const markConversationAsRead = async (conversationId: string) => {

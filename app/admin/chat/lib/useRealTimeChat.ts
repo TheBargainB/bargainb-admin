@@ -66,10 +66,14 @@ export const useRealTimeChat = ({
     selectedConversationRef.current = selectedConversation
   }, [selectedConversation])
 
+  // Store conversation ID to prevent infinite loops from object changes
+  const conversationId = selectedConversation?.conversationId || selectedConversation?.id
+  const remoteJid = selectedConversation?.remoteJid || selectedConversation?.email
+
   // ✨ REAL-TIME MESSAGE DISPLAY - Like WhatsApp ✨
   // Set up real-time subscriptions for current conversation messages
   useEffect(() => {
-    if (!selectedConversation?.conversationId && !selectedConversation?.id) {
+    if (!conversationId) {
       // Clean up existing subscriptions when no conversation is selected
       if (messageSubscription) {
         console.log('🧹 Cleaning up message subscription (no conversation selected)')
@@ -79,9 +83,6 @@ export const useRealTimeChat = ({
       setIsRealTimeConnected(false)
       return
     }
-
-    const conversationId = selectedConversation.conversationId || selectedConversation.id
-    const remoteJid = selectedConversation.remoteJid || selectedConversation.email
 
     console.log('📡 Setting up real-time messages for conversation:', conversationId)
 
@@ -182,7 +183,7 @@ export const useRealTimeChat = ({
         supabase.removeChannel(newMessageSubscription)
       }
     }
-  }, [selectedConversation?.conversationId, selectedConversation?.id, connectionRetryCount, setDatabaseMessages, messagesEndRef, isAtBottom, loadConversationsFromDatabase])
+  }, [conversationId, connectionRetryCount]) // ✅ Only depend on primitive values that should trigger re-subscription
 
   // Real-time conversation list updates
   useEffect(() => {
@@ -242,7 +243,7 @@ export const useRealTimeChat = ({
         supabase.removeChannel(newConversationSubscription)
       }
     }
-  }, [loadConversationsFromDatabase])
+  }, []) // ✅ Empty deps - conversation list subscription should be stable
 
   // Cleanup function for all subscriptions
   const cleanupSubscriptions = useCallback(() => {
@@ -258,7 +259,7 @@ export const useRealTimeChat = ({
     }
     setIsRealTimeConnected(false)
     setConnectionRetryCount(0)
-  }, [messageSubscription, conversationSubscription])
+  }, []) // ✅ Use refs instead of dependencies to avoid infinite loops
 
   return {
     isRealTimeConnected,
