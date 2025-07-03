@@ -232,6 +232,8 @@ export class WhatsAppAIService {
             user_id: userId,
             source: 'whatsapp',
             user_profile: userProfile,
+            // CRITICAL FIX: Override CRM profile ID with correct one for Focused Creativity
+            CRM_PROFILE_ID: 'a2ecb77b-f7a4-474c-a4ce-47ad47f4dea6',
             // SPEED OPTIMIZED: Reduced timeouts and limits
             ENABLE_GUARD_RAILS: aiConfig?.guard_rails_enabled ?? true,
             MAX_MESSAGE_LENGTH: aiConfig?.max_message_length ?? 300, // Reduced from 500
@@ -255,7 +257,12 @@ export class WhatsAppAIService {
     }
 
     const data = await response.json();
-    return data.messages[data.messages.length - 1]?.content || 'No response available';
+    const aiResponse = data.messages?.[data.messages.length - 1]?.content;
+    if (!aiResponse || typeof aiResponse !== 'string') {
+      console.warn('⚠️ AI agent returned empty or invalid response:', data);
+      return 'I apologize, but I was unable to generate a proper response. Please try again.';
+    }
+    return aiResponse;
   }
 
   private async createAIThread(userId: string, assistantId?: string): Promise<string> {
@@ -309,6 +316,8 @@ export class WhatsAppAIService {
             user_id: userId,
             source: 'whatsapp',
             user_profile: userProfile,
+            // CRITICAL FIX: Override CRM profile ID with correct one for Focused Creativity
+            CRM_PROFILE_ID: 'a2ecb77b-f7a4-474c-a4ce-47ad47f4dea6',
             // Pass through the AI configuration
             ENABLE_GUARD_RAILS: aiConfig?.guard_rails_enabled ?? true,
             MAX_MESSAGE_LENGTH: aiConfig?.max_message_length ?? 500,
@@ -332,7 +341,12 @@ export class WhatsAppAIService {
     }
 
     const data = await response.json();
-    return data.messages[data.messages.length - 1]?.content || 'No response available';
+    const aiResponse = data.messages?.[data.messages.length - 1]?.content;
+    if (!aiResponse || typeof aiResponse !== 'string') {
+      console.warn('⚠️ AI agent returned empty or invalid response:', data);
+      return 'I apologize, but I was unable to generate a proper response. Please try again.';
+    }
+    return aiResponse;
   }
 
   private async saveAIResponseMessage(chatId: string, aiResponse: string, threadId?: string) {
@@ -523,10 +537,10 @@ export class WhatsAppAIService {
           conversation_id: chatId,
           user_id: userId,
           user_message: userMessage,
-          ai_response: aiResponse,
+          ai_response: aiResponse || '',
           thread_id: threadId,
           processing_time_ms: processingTime,
-          tokens_used: aiResponse.length // Approximate token count
+          tokens_used: (aiResponse?.length || 0) // Safe token count with null check
         });
     } catch (error) {
       console.warn('⚠️ Failed to log AI interaction:', error);
