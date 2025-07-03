@@ -62,6 +62,7 @@ import { useWASender } from './lib/useWASender'
 import { useAnalytics } from './lib/useAnalytics'
 import { useDatabase } from './lib/useDatabase'
 import { useContacts } from './lib/useContacts'
+import { useChatActions } from './lib/useChatActions'
 import { useHelpers } from './lib/useHelpers'
 
 // Import contact types from service
@@ -146,7 +147,7 @@ export default function ChatPage() {
   const [responseDelay, setResponseDelay] = useState([2])
   const [confidenceThreshold, setConfidenceThreshold] = useState([75])
   const [isLoading, setIsLoading] = useState(false)
-  const [isSending, setIsSending] = useState(false)
+  // Note: isSending is now handled by useChatActions hook
   // Note: Contact-related state is now handled by useContacts hook
   
   // Delete dialog state
@@ -237,15 +238,8 @@ export default function ChatPage() {
   } = wasenderHook
 
   // Contacts functionality
-  const contactsHook = useContacts({
-    onConversationCreated: (conversation) => {
-      setDatabaseConversations(prev => [conversation, ...prev])
-    },
-    loadConversationsFromDatabase,
-    setSelectedContact,
-    setDatabaseMessages,
-    databaseConversations
-  })
+  // Pure contacts functionality (no chat dependencies)
+  const contactsHook = useContacts()
 
   // Extract contacts functions for use in component
   const {
@@ -253,18 +247,46 @@ export default function ChatPage() {
     filteredContacts,
     isLoadingContacts,
     isSyncingContacts,
-    isCreatingConversation,
     contactSearchTerm,
     isContactsDialogOpen,
     filteredContactsCount,
     loadAllContacts,
     syncContactsWithWASender,
     handleOpenContactsDialog,
-    startConversationWithContact,
     setContactSearchTerm,
     setIsContactsDialogOpen,
     closeContactsDialog
   } = contactsHook
+
+  // Chat actions functionality (conversation creation, messaging, etc.)
+  const chatActionsHook = useChatActions({
+    selectedContact: selectedContact || undefined,
+    newMessage,
+    setNewMessage,
+    loadConversationsFromDatabase: databaseHook.loadConversationsFromDatabase,
+    loadMessagesFromDatabase: databaseHook.loadMessagesFromDatabase,
+    setSelectedContact,
+    setDatabaseMessages,
+    databaseConversations,
+    onConversationCreated: (conversation: ChatConversation) => {
+      console.log('📞 Conversation created via chat actions:', conversation.id)
+      setSelectedContact(conversation.id)
+      setDatabaseMessages([])
+    },
+    wasenderHook
+  })
+
+  // Extract chat action functions for use in component
+  const {
+    isLoading: isChatLoading,
+    isSending,
+    isCreatingConversation,
+    loadWhatsAppData,
+    sendWhatsAppMessage,
+    startNewChat,
+    startConversationWithContact,
+    clearAllChatData
+  } = chatActionsHook
 
   // Helper utilities functionality
   const helpersHook = useHelpers({
@@ -299,62 +321,13 @@ export default function ChatPage() {
     databaseConversationsRef.current = databaseConversations
   }, [databaseConversations])
 
-  // Use loadWhatsAppData from WASender hook with loading state management
-  const loadWhatsAppData = async () => {
-    try {
-      setIsLoading(true)
-      await wasenderHook.loadWhatsAppData()
-      console.log('✅ WhatsApp data loading completed via hook')
-    } catch (error) {
-      console.error('Error loading WhatsApp data:', error)
-      toast({
-        title: "Error loading data",
-        description: "Failed to load WhatsApp data.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Note: loadWhatsAppData is now handled by useChatActions hook
 
 
 
     // Note: Utility functions are now handled by useHelpers hook
 
-  // Use sendWhatsAppMessage from WASender hook with additional database updates
-  const sendWhatsAppMessage = async () => {
-    if (!newMessage.trim() || !selectedContact || isSending) return
-
-    try {
-      setIsSending(true)
-      
-      // Find the conversation to get the remoteJid
-      const conversation = databaseConversations.find(conv => conv.id === selectedContact)
-      const remoteJid = conversation?.remoteJid || conversation?.email
-      
-      if (!remoteJid) {
-        throw new Error('Cannot find contact information for this conversation')
-      }
-      
-      // Use the hook's sendWhatsAppMessage but note that we need to set selectedContact for the hook
-      const success = await wasenderHook.sendWhatsAppMessage()
-      
-      if (success) {
-        // Reload messages for the current conversation
-        await loadMessagesFromDatabase(remoteJid)
-        await loadConversationsFromDatabase()
-      }
-    } catch (error) {
-      console.error('Error sending message:', error)
-      toast({
-        title: "Error sending message",
-        description: error instanceof Error ? error.message : "Failed to send WhatsApp message.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsSending(false)
-    }
-  }
+  // Note: sendWhatsAppMessage is now handled by useChatActions hook
 
   // Convert database messages to chat messages format
   // Memoize messages to prevent unnecessary re-calculations
@@ -413,62 +386,17 @@ export default function ChatPage() {
     selectedConversation
   })
 
-  // Use startNewChat from WASender hook with additional UI state management
-  const startNewChat = async (contact: WhatsAppContact) => {
-    console.log('🎯 startNewChat called with contact:', contact)
-    
-    // First, check if a conversation already exists with this contact
-    const phoneNumber = contact.phone_number || contact.jid.replace('@s.whatsapp.net', '')
-    const existingConversation = databaseConversations.find(conv => 
-      conv.remoteJid === contact.jid || 
-      conv.phoneNumber === phoneNumber ||
-      conv.email === contact.jid
-    )
-    
-    if (existingConversation) {
-      console.log('📞 Found existing conversation:', existingConversation.id)
-      setSelectedContact(existingConversation.id)
-      setIsContactsDialogOpen(false)
-      setContactSearchTerm("")
-      
-      // Load messages for the existing conversation
-      await loadMessagesFromDatabase(existingConversation.remoteJid || existingConversation.email)
-      
-      toast({
-        title: "Conversation opened",
-        description: `Opened existing conversation with ${contact.name || contact.notify || phoneNumber}`,
-      })
-      return
-    }
-
-    // Use the WASender hook's startNewChat function
-    const newConversation = await wasenderHook.startNewChat(contact)
-    
-    if (newConversation) {
-      // Update UI state
-      setSelectedContact(newConversation.id)
-      setIsContactsDialogOpen(false)
-      setContactSearchTerm("")
-      
-      // Initialize empty messages for the new conversation
-      setDatabaseMessages([])
-      
-      // Refresh conversations from database to ensure consistency
-      await loadConversationsFromDatabase()
-    }
-  }
+  // Note: startNewChat is now handled by useChatActions hook
 
   // Handle sending a new message
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedContact || isSending) return
 
     try {
-      setIsSending(true)
-
       // Mark that we should auto-scroll after sending (user's own message)
       setShouldAutoScroll(true)
 
-      // Send message via WhatsApp API
+      // Send message via WhatsApp API - hook handles isSending state internally
       await sendWhatsAppMessage()
       
       setNewMessage("")
@@ -479,9 +407,8 @@ export default function ChatPage() {
         title: "Error",
         description: "Failed to send message. Please try again.",
       })
-    } finally {
-      setIsSending(false)
     }
+    // Note: isSending state is now managed by useChatActions hook
   }
 
   // Handle selecting a conversation
@@ -533,26 +460,7 @@ export default function ChatPage() {
     )
   }, [allContacts, contactSearchTerm])
 
-  // Clear all chat data (both Zustand store and component state)
-  const clearAllChatData = () => {
-    console.log('🧹 Clearing all chat data...')
-    
-    // Clear localStorage chat storage
-    localStorage.removeItem('chat-storage')
-    
-    // Clear component state
-    setDatabaseConversations([])
-    setDatabaseMessages([])
-    setSelectedContact(null)
-    // Note: hookWhatsappMessages and hookWhatsappContacts are managed by the WASender hook
-    
-    console.log('✅ All chat data cleared')
-    
-    toast({
-      title: "Chat data cleared",
-      description: "All conversations and messages have been cleared from cache.",
-    })
-  }
+  // Note: clearAllChatData is now handled by useChatActions hook
 
   // Load data on mount - OPTIMIZED to prevent constant loading
   useEffect(() => {

@@ -17,38 +17,11 @@ interface WhatsAppContact {
   last_seen_at?: string
 }
 
-interface ChatConversation {
-  id: string
-  user: string
-  email: string
-  avatar: string
-  lastMessage: string
-  timestamp: string
-  status: 'active' | 'resolved' | 'escalated'
-  unread_count: number
-  type: string
-  aiConfidence: number
-  lastMessageAt?: string
-  remoteJid?: string
-  conversationId?: string
-  phoneNumber?: string
-}
-
 interface UseContactsOptions {
-  onConversationCreated?: (conversation: ChatConversation) => void
-  loadConversationsFromDatabase?: () => Promise<void>
-  setSelectedContact?: (contactId: string | null) => void
-  setDatabaseMessages?: (messages: any[]) => void
-  databaseConversations?: ChatConversation[]
+  // Contact-specific options only - no chat dependencies
 }
 
-export const useContacts = ({
-  onConversationCreated,
-  loadConversationsFromDatabase,
-  setSelectedContact,
-  setDatabaseMessages,
-  databaseConversations = []
-}: UseContactsOptions = {}) => {
+export const useContacts = (options: UseContactsOptions = {}) => {
   const { toast } = useToast()
   
   // Contact state
@@ -59,7 +32,6 @@ export const useContacts = ({
   
   // Dialog state
   const [isContactsDialogOpen, setIsContactsDialogOpen] = useState(false)
-  const [isCreatingConversation, setIsCreatingConversation] = useState(false)
 
   // Helper function to transform database contact to UI format
   const transformContactForUI = (contact: Contact): WhatsAppContact => {
@@ -78,7 +50,7 @@ export const useContacts = ({
     }
   }
 
-  // Load all contacts using ContactService
+  // Load all contacts using ContactService (pure contact management)
   const loadAllContacts = async () => {
     try {
       setIsLoadingContacts(true)
@@ -107,7 +79,7 @@ export const useContacts = ({
     }
   }
 
-  // Sync contacts with WASender API
+  // Sync contacts with WASender API (pure contact sync)
   const syncContactsWithWASender = async () => {
     try {
       setIsSyncingContacts(true)
@@ -155,201 +127,92 @@ export const useContacts = ({
     }
   }
 
-  // Handle opening contacts dialog
+  // Handle opening contacts dialog (pure UI management)
   const handleOpenContactsDialog = async () => {
     setIsContactsDialogOpen(true)
     await loadAllContacts()
   }
 
-  // Start conversation with a contact
-  const startConversationWithContact = async (contact: WhatsAppContact) => {
-    if (!contact) {
-      toast({
-        title: "No contact selected",
-        description: "Please select a contact to start a conversation.",
-        variant: "destructive"
-      })
-      return null
-    }
-
-    try {
-      setIsCreatingConversation(true)
-      console.log('🆕 Starting conversation with contact:', contact.name || contact.phone_number)
-
-      // Check if conversation already exists
-      const phoneNumber = contact.phone_number || contact.jid.replace('@s.whatsapp.net', '')
-      const existingConversation = databaseConversations.find(conv => 
-        conv.remoteJid === contact.jid || 
-        conv.phoneNumber === phoneNumber ||
-        conv.email === contact.jid
-      )
-      
-      if (existingConversation) {
-        console.log('📞 Found existing conversation, selecting it')
-        
-        if (setSelectedContact) {
-          setSelectedContact(existingConversation.id)
-        }
-        
-        // Load messages for existing conversation
-        const remoteJid = existingConversation.remoteJid || existingConversation.email
-        if (remoteJid && loadConversationsFromDatabase) {
-          // Note: We'd need to pass loadMessagesFromDatabase here, but it's in useDatabase
-          // For now, let the existing logic handle this
-        }
-        
-        setIsContactsDialogOpen(false)
-        return existingConversation
-      }
-
-      // Create new conversation via API
-      const response = await fetch('/admin/chat/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contact: {
-            phone_number: phoneNumber,
-            name: contact.name || contact.notify || 'Unknown',
-            notify: contact.notify,
-            img_url: contact.imgUrl
-          }
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to create conversation: ${response.status}`)
-      }
-
-      const result = await response.json()
-      
-      if (result.success && result.conversation) {
-        console.log('✅ Conversation created successfully')
-        
-        // Create conversation object for UI
-        const newConversation: ChatConversation = {
-          id: result.conversation.id,
-          user: contact.name || contact.notify || phoneNumber,
-          email: contact.jid,
-          avatar: contact.imgUrl || "/placeholder.svg",
-          lastMessage: "Conversation started",
-          timestamp: new Date().toISOString(),
-          status: 'active',
-          unread_count: 0,
-          type: 'whatsapp',
-          aiConfidence: 0,
-          remoteJid: contact.jid,
-          conversationId: result.conversation.id,
-          phoneNumber: phoneNumber
-        }
-        
-        // Refresh conversations
-        if (loadConversationsFromDatabase) {
-          await loadConversationsFromDatabase()
-        }
-        
-        // Select the new conversation
-        if (setSelectedContact) {
-          setSelectedContact(newConversation.id)
-        }
-        
-        // Clear messages for new conversation
-        if (setDatabaseMessages) {
-          setDatabaseMessages([])
-        }
-        
-        // Call callback if provided
-        if (onConversationCreated) {
-          onConversationCreated(newConversation)
-        }
-        
-        toast({
-          title: "Conversation started",
-          description: `Started conversation with ${contact.name || contact.notify || phoneNumber}`
-        })
-        
-        setIsContactsDialogOpen(false)
-        return newConversation
-      } else {
-        throw new Error(result.error || 'Failed to create conversation')
-      }
-    } catch (error) {
-      console.error('❌ Error starting conversation:', error)
-      toast({
-        title: "Failed to create conversation",
-        description: "Failed to create conversation. Please try again.",
-        variant: "destructive"
-      })
-      return null
-    } finally {
-      setIsCreatingConversation(false)
-    }
-  }
-
-  // Filter contacts based on search term
-  const filteredContacts = useMemo(() => {
-    if (!contactSearchTerm.trim()) return allContacts
-    
-    const searchLower = contactSearchTerm.toLowerCase()
-    return allContacts.filter(contact => 
-      (contact.name && contact.name.toLowerCase().includes(searchLower)) ||
-      (contact.notify && contact.notify.toLowerCase().includes(searchLower)) ||
-      (contact.phone_number && contact.phone_number.includes(contactSearchTerm)) ||
-      (contact.jid && contact.jid.toLowerCase().includes(searchLower))
-    )
-  }, [allContacts, contactSearchTerm])
-
-  // Get contacts count
-  const contactsCount = allContacts.length
-  const filteredContactsCount = filteredContacts.length
-
-  // Search contacts by query
+  // Search contacts by name or phone number (pure contact filtering)
   const searchContacts = async (query: string) => {
     try {
-      setIsLoadingContacts(true)
-      console.log('🔍 Searching contacts:', query)
+      console.log('🔍 Searching contacts for:', query)
+      setContactSearchTerm(query)
       
-      const searchResults = await ContactService.searchContacts(query)
-      const transformedResults = searchResults.map(transformContactForUI)
+      if (!query.trim()) {
+        return allContacts
+      }
       
-      setAllContacts(transformedResults)
-      return transformedResults
+      const filtered = allContacts.filter(contact => 
+        contact.name?.toLowerCase().includes(query.toLowerCase()) ||
+        contact.notify?.toLowerCase().includes(query.toLowerCase()) ||
+        contact.phone_number?.includes(query) ||
+        contact.jid.includes(query)
+      )
+      
+      console.log(`✅ Found ${filtered.length} contacts matching "${query}"`)
+      return filtered
+      
     } catch (error) {
       console.error('❌ Error searching contacts:', error)
-      toast({
-        title: "Search failed",
-        description: "Failed to search contacts.",
-        variant: "destructive"
-      })
       return []
-    } finally {
-      setIsLoadingContacts(false)
     }
   }
 
-  // Clear search and reset to all contacts
+  // Clear search (pure state management)
   const clearSearch = () => {
     setContactSearchTerm("")
-    loadAllContacts()
   }
 
-  // Get contact by phone number
-  const getContactByPhone = async (phoneNumber: string) => {
+  // Get contact by phone number (pure lookup)
+  const getContactByPhone = async (phoneNumber: string): Promise<WhatsAppContact | null> => {
     try {
-      const contact = await ContactService.getContactByPhone(phoneNumber)
-      return contact ? transformContactForUI(contact) : null
+      const cleanPhone = phoneNumber.replace('@s.whatsapp.net', '').replace('+', '')
+      const contact = allContacts.find(c => 
+        c.phone_number?.replace('+', '') === cleanPhone ||
+        c.jid.replace('@s.whatsapp.net', '') === cleanPhone
+      )
+      return contact || null
     } catch (error) {
-      console.error('❌ Error getting contact by phone:', error)
+      console.error('❌ Error finding contact by phone:', error)
       return null
     }
   }
 
-  // Close contacts dialog
+  // Close contacts dialog (pure UI management)
   const closeContactsDialog = () => {
     setIsContactsDialogOpen(false)
     setContactSearchTerm("")
   }
+
+  // Get contact count (pure data)
+  const getContactsCount = () => allContacts.length
+
+  // Check if a contact exists (pure lookup)
+  const contactExists = (phoneNumber: string): boolean => {
+    const cleanPhone = phoneNumber.replace('@s.whatsapp.net', '').replace('+', '')
+    return allContacts.some(c => 
+      c.phone_number?.replace('+', '') === cleanPhone ||
+      c.jid.replace('@s.whatsapp.net', '') === cleanPhone
+    )
+  }
+
+  // Filter contacts with memoization (pure filtering with search)
+  const filteredContacts = useMemo(() => {
+    if (!contactSearchTerm.trim()) {
+      return allContacts
+    }
+    
+    return allContacts.filter(contact => 
+      contact.name?.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+      contact.notify?.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+      contact.phone_number?.includes(contactSearchTerm) ||
+      contact.jid.includes(contactSearchTerm)
+    )
+  }, [allContacts, contactSearchTerm])
+
+  // Get filtered contacts count (pure calculation)
+  const filteredContactsCount = filteredContacts.length
 
   return {
     // State
@@ -357,28 +220,28 @@ export const useContacts = ({
     filteredContacts,
     isLoadingContacts,
     isSyncingContacts,
-    isCreatingConversation,
     contactSearchTerm,
     isContactsDialogOpen,
-    contactsCount,
     filteredContactsCount,
     
-    // Functions
+    // Core contact functions
     loadAllContacts,
     syncContactsWithWASender,
-    handleOpenContactsDialog,
-    startConversationWithContact,
     searchContacts,
     clearSearch,
     getContactByPhone,
-    closeContactsDialog,
+    getContactsCount,
+    contactExists,
     transformContactForUI,
     
-    // Setters
-    setAllContacts,
+    // Dialog management
+    handleOpenContactsDialog,
+    closeContactsDialog,
+    
+    // State setters
     setContactSearchTerm,
     setIsContactsDialogOpen,
-    setIsLoadingContacts,
-    setIsSyncingContacts
+    setAllContacts,
+    setIsLoadingContacts
   }
 } 
