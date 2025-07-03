@@ -362,11 +362,7 @@ export default function AIManagementPage() {
     }
   }
 
-  // Open assignment dialog and fetch contacts
-  const handleOpenAssignDialog = () => {
-    setIsAssignDialogOpen(true)
-    fetchAvailableContacts()
-  }
+
 
   const filteredAssistants = bbAssistants.filter(assistant =>
     assistant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -690,9 +686,14 @@ export default function AIManagementPage() {
           <TabsContent value="assignments" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
-              <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+              <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
+                setIsAssignDialogOpen(open)
+                if (open) {
+                  fetchAvailableContacts()
+                }
+              }}>
                 <DialogTrigger asChild>
-                  <Button onClick={handleOpenAssignDialog}>
+                  <Button>
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Assignment
                   </Button>
