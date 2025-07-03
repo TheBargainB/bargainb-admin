@@ -343,7 +343,13 @@ export class WhatsAppAIService {
         cleanPhoneNumber = `+${cleanPhoneNumber}`;
       }
 
-      console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber);
+      // Validate phone number format
+      if (!/^\+\d{10,15}$/.test(cleanPhoneNumber)) {
+        console.error('❌ Invalid phone number format:', cleanPhoneNumber);
+        return;
+      }
+
+      console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber.replace(/(\+\d{1,3})\d{4,}(\d{4})/, '$1***$2'));
 
       // Check if WASender API key is available
       const apiKey = process.env.WASENDER_API_KEY;
@@ -352,21 +358,33 @@ export class WhatsAppAIService {
         return;
       }
 
-      // Send via WASender API
-      const apiResponse = await fetch('https://www.wasenderapi.com/api/send-message', {
+      // Validate API key format
+      if (apiKey.length < 10) {
+        console.error('❌ Invalid WASENDER_API_KEY format - too short');
+        return;
+      }
+
+      // Send via WASender API with retry logic
+      const apiResponse = await this.fetchWithRetry('https://www.wasenderapi.com/api/send-message', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'User-Agent': 'BargainB-AI/1.0',
         },
         body: JSON.stringify({ 
           to: cleanPhoneNumber, // WASender expects E.164 format with + 
           text: aiResponse 
         }),
-      });
+      }, 3, 1000); // 3 retries with 1 second initial delay
 
       if (!apiResponse.ok) {
-        const errorData = await apiResponse.json();
+        let errorData;
+        try {
+          errorData = await apiResponse.json();
+        } catch {
+          errorData = { message: `HTTP ${apiResponse.status}: ${apiResponse.statusText}` };
+        }
         console.error('❌ Failed to send AI response via WhatsApp:', errorData);
         return;
       }
@@ -389,9 +407,85 @@ export class WhatsAppAIService {
       }
 
     } catch (error) {
-      console.error('❌ Error sending AI response to WhatsApp:', error);
+      // Enhanced error logging with more context
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorContext = {
+        chatId,
+        error: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString()
+      };
+      
+      console.error('❌ Error sending AI response to WhatsApp:', errorContext);
+      
+      // Log specific error types for debugging
+      if (errorMessage.includes('fetch failed')) {
+        console.error('🔍 Network connectivity issue detected. Check internet connection and API endpoint.');
+      } else if (errorMessage.includes('timeout')) {
+        console.error('🔍 Request timeout detected. WASender API may be slow or unavailable.');
+      } else if (errorMessage.includes('ENOTFOUND')) {
+        console.error('🔍 DNS resolution failed. Check if WASender API domain is accessible.');
+      }
+      
       // Don't throw error - message was saved successfully, sending is optional
     }
+  }
+
+  // Helper method for fetch with retry logic and timeout
+  private async fetchWithRetry(
+    url: string, 
+    options: RequestInit, 
+    maxRetries: number = 3, 
+    initialDelay: number = 1000
+  ): Promise<Response> {
+    let lastError: Error = new Error('All retry attempts failed');
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // Add timeout to fetch request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // If successful or client error (4xx), don't retry
+        if (response.ok || (response.status >= 400 && response.status < 500)) {
+          return response;
+        }
+        
+        // Server errors (5xx) should be retried
+        if (response.status >= 500 && attempt < maxRetries) {
+          console.warn(`🔄 Server error ${response.status}, retrying in ${initialDelay * Math.pow(2, attempt)}ms...`);
+          await this.delay(initialDelay * Math.pow(2, attempt)); // Exponential backoff
+          continue;
+        }
+        
+        return response;
+        
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        if (attempt < maxRetries) {
+          const delay = initialDelay * Math.pow(2, attempt);
+          console.warn(`🔄 Fetch attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay}ms...`);
+          await this.delay(delay);
+        } else {
+          console.error(`💥 All ${maxRetries + 1} fetch attempts failed. Last error: ${lastError.message}`);
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+
+  // Helper method for delay
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private async logAIInteraction(
@@ -523,6 +617,77 @@ export class WhatsAppAIService {
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  async testWhatsAppConnection(): Promise<{ 
+    success: boolean; 
+    apiKeyConfigured: boolean;
+    apiReachable: boolean;
+    error?: string; 
+  }> {
+    try {
+      const apiKey = process.env.WASENDER_API_KEY;
+      
+      if (!apiKey) {
+        return { 
+          success: false, 
+          apiKeyConfigured: false,
+          apiReachable: false,
+          error: 'WASENDER_API_KEY environment variable not configured' 
+        };
+      }
+
+      if (apiKey.length < 10) {
+        return { 
+          success: false, 
+          apiKeyConfigured: false,
+          apiReachable: false,
+          error: 'WASENDER_API_KEY appears to be invalid (too short)' 
+        };
+      }
+
+      // Test API connectivity without sending a message
+      const response = await this.fetchWithRetry('https://www.wasenderapi.com/api/profile', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'BargainB-AI/1.0',
+        },
+      }, 2, 500); // 2 retries with 500ms initial delay for testing
+
+      if (response.ok) {
+        return { 
+          success: true, 
+          apiKeyConfigured: true,
+          apiReachable: true 
+        };
+      } else {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        
+        return { 
+          success: false, 
+          apiKeyConfigured: true,
+          apiReachable: true,
+          error: `API request failed: ${JSON.stringify(errorData)}` 
+        };
+      }
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      return { 
+        success: false, 
+        apiKeyConfigured: !!process.env.WASENDER_API_KEY,
+        apiReachable: false,
+        error: `Connection test failed: ${errorMessage}` 
       };
     }
   }
