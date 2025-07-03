@@ -55,6 +55,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { ChatUserProfile } from './components/ChatUserProfile'
 import AIConfigTab from './components/AIConfigTab'
 import { useRealTimeChat } from './lib/useRealTimeChat'
+import { useGroceryLists } from './lib/useGroceryLists'
+import { useMealPlanning } from './lib/useMealPlanning'
 
 // WhatsApp types
 interface WhatsAppMessage {
@@ -160,15 +162,11 @@ export default function ChatPage() {
   const [contactsCount, setContactsCount] = useState(0)
   
   // Enhanced data viewing state
-  const [mealPlanningData, setMealPlanningData] = useState<any[]>([])
-  const [groceryListsData, setGroceryListsData] = useState<any[]>([])
   const [aiPromptsData, setAiPromptsData] = useState<any>(null)
-  const [isLoadingMealData, setIsLoadingMealData] = useState(false)
-  const [isLoadingGroceryData, setIsLoadingGroceryData] = useState(false)
-  const [selectedMealPlan, setSelectedMealPlan] = useState<any>(null)
-  const [isMealPlanModalOpen, setIsMealPlanModalOpen] = useState(false)
   const [selectedGroceryList, setSelectedGroceryList] = useState<any>(null)
   const [isGroceryListModalOpen, setIsGroceryListModalOpen] = useState(false)
+  
+
   
   // Refs for smooth scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -732,6 +730,24 @@ export default function ChatPage() {
     const phoneNumber = remoteJid.replace('@s.whatsapp.net', '')
     return phoneNumber === 'admin' || phoneNumber.includes('@') || !phoneNumber.match(/^\+?\d+$/)
   }, [selectedConversation])
+
+  // Grocery lists functionality
+  const { groceryListsData, isLoadingGroceryData, loadGroceryListsData } = useGroceryLists({
+    selectedConversation
+  })
+
+  // Meal planning functionality
+  const { 
+    mealPlanningData, 
+    isLoadingMealData, 
+    loadMealPlanningData,
+    selectedMealPlan,
+    setSelectedMealPlan,
+    isMealPlanModalOpen,
+    setIsMealPlanModalOpen
+  } = useMealPlanning({
+    selectedConversation
+  })
 
   // Start a new chat with a contact
   const startNewChat = async (contact: WhatsAppContact) => {
@@ -1308,72 +1324,9 @@ export default function ChatPage() {
     }
   }
 
-  // Load meal planning data for current conversation
-  const loadMealPlanningData = async () => {
-    if (!selectedConversation?.remoteJid) return
-    
-    setIsLoadingMealData(true)
-    try {
-      console.log('🍽️ Loading meal planning data for:', selectedConversation.remoteJid)
-      
-      // Query messages that contain meal planning AI responses
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', selectedConversation.conversationId || selectedConversation.remoteJid)
-        .eq('sender_type', 'ai_agent')
-        .ilike('content', '%meal%')
-        .or('content.ilike.%recipe%,content.ilike.%dinner%,content.ilike.%breakfast%,content.ilike.%lunch%')
-        .order('created_at', { ascending: false })
-        .limit(20)
-      
-      if (error) {
-        console.error('❌ Error loading meal planning data:', error)
-        return
-      }
-      
-      console.log('✅ Loaded meal planning data:', messages?.length || 0, 'messages')
-      setMealPlanningData(messages || [])
-      
-    } catch (error) {
-      console.error('❌ Failed to load meal planning data:', error)
-    } finally {
-      setIsLoadingMealData(false)
-    }
-  }
 
-  // Load grocery lists data for current conversation
-  const loadGroceryListsData = async () => {
-    if (!selectedConversation?.remoteJid) return
-    
-    setIsLoadingGroceryData(true)
-    try {
-      console.log('🛒 Loading grocery lists data for:', selectedConversation.remoteJid)
-      
-      // Query messages that contain grocery list AI responses
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', selectedConversation.conversationId || selectedConversation.remoteJid)
-        .eq('sender_type', 'ai_agent')
-        .or('content.ilike.%grocery%,content.ilike.%shopping list%,content.ilike.%€%,content.ilike.%budget%')
-        .order('created_at', { ascending: false })
-        .limit(20)
-      
-      if (error) {
-        console.error('❌ Error loading grocery lists data:', error)
-        return
-      }
-      
-      console.log('✅ Loaded grocery lists data:', messages?.length || 0, 'messages')
-      setGroceryListsData(messages || [])
-      
-    } catch (error) {
-      console.error('❌ Failed to load grocery lists data:', error)
-    } finally {
-      setIsLoadingGroceryData(false)
-    }
-  }
+
+
 
   // Load AI prompts and configuration
   const loadAiPromptsData = async () => {
