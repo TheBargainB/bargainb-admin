@@ -156,6 +156,8 @@ export const useAdminAuth = () => {
     
     // Only redirect to login if we're not already there
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
+      // Store current path to redirect back after login
+      sessionStorage.setItem('intendedPath', window.location.pathname + window.location.search)
       // Use replace instead of push to prevent back button issues
       router.replace("/admin/login")
     }
@@ -196,9 +198,11 @@ export const useAdminAuth = () => {
       console.log("✅ login: Authentication successful for:", data.user.email)
       await checkAdminAccess(data.user)
       
-      // Redirect to admin dashboard after successful login
+      // Redirect to intended destination or admin dashboard
       if (typeof window !== 'undefined') {
-        router.replace("/admin")
+        const intendedPath = sessionStorage.getItem('intendedPath') || '/admin'
+        sessionStorage.removeItem('intendedPath')
+        router.replace(intendedPath)
       }
       
       return true
@@ -213,10 +217,13 @@ export const useAdminAuth = () => {
     console.log("🔧 loginWithMagicLink: Starting magic link for:", email)
     
     try {
+      // Get intended path or default to admin
+      const intendedPath = sessionStorage.getItem('intendedPath') || '/admin'
+      
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/admin`
+          emailRedirectTo: `${window.location.origin}${intendedPath}`
         }
       })
 
