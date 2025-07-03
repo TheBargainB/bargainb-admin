@@ -59,6 +59,7 @@ import { useGroceryLists } from './lib/useGroceryLists'
 import { useMealPlanning } from './lib/useMealPlanning'
 import { useBusiness } from './lib/useBusiness'
 import { useWASender } from './lib/useWASender'
+import { useAnalytics } from './lib/useAnalytics'
 
 // Import contact types from service
 import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
@@ -157,10 +158,16 @@ export default function ChatPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   
-  // Analytics state
-  const [analyticsData, setAnalyticsData] = useState<any>(null)
-  const [chartData, setChartData] = useState<any>(null)
-  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false)
+  // Analytics functionality
+  const { 
+    analyticsData, 
+    chartData, 
+    isLoadingAnalytics, 
+    loadAnalyticsData,
+    getAnalyticsSummary,
+    getChartDataForPeriod,
+    calculateTrends 
+  } = useAnalytics()
   
   // Contacts count for stats (separate from dialog contacts)
   const [contactsCount, setContactsCount] = useState(0)
@@ -194,7 +201,7 @@ export default function ChatPage() {
 
   // Initialize WASender hook (gradually replacing existing functions)
   const wasenderHook = useWASender({
-    selectedContact,
+    selectedContact: selectedContact || undefined,
     selectedConversation: selectedContact ? databaseConversations.find(c => c.email === selectedContact) : undefined,
     newMessage,
     setNewMessage,
@@ -1051,41 +1058,7 @@ export default function ChatPage() {
     }
   }
 
-  // Load analytics data
-  const loadAnalyticsData = async () => {
-    try {
-      setIsLoadingAnalytics(true)
-      console.log('📊 Loading analytics data...')
-      
-      // Load insights and chart data in parallel
-      const [insightsResponse, chartsResponse] = await Promise.all([
-        fetch('/admin/chat/api/analytics/insights'),
-        fetch('/admin/chat/api/analytics/charts?days=7')
-      ])
-      
-      if (insightsResponse.ok) {
-        const insightsResult = await insightsResponse.json()
-        if (insightsResult.success) {
-          setAnalyticsData(insightsResult.data)
-          console.log('✅ Analytics insights loaded:', insightsResult.data)
-        }
-      }
-      
-      if (chartsResponse.ok) {
-        const chartsResult = await chartsResponse.json()
-        if (chartsResult.success) {
-          setChartData(chartsResult.data)
-          console.log('✅ Chart data loaded:', chartsResult.data.summary)
-        }
-      }
-      
-    } catch (error) {
-      console.error('❌ Error loading analytics data:', error)
-      // Don't show toast for analytics errors - not critical for chat functionality
-    } finally {
-      setIsLoadingAnalytics(false)
-    }
-  }
+  // Analytics data is now handled by useAnalytics hook
 
 
 
