@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useToast } from '@/hooks/use-toast'
 import { 
   Bot, 
   Brain, 
@@ -103,7 +104,25 @@ interface UsageAnalytics {
   success_rate: number
 }
 
+// WhatsApp Contact interface for assignment selection
+interface WhatsAppContact {
+  id: string
+  phone_number: string
+  whatsapp_jid: string
+  push_name: string | null
+  display_name: string | null
+  profile_picture_url: string | null
+  verified_name: string | null
+  whatsapp_status: string | null
+  last_seen_at: string | null
+  is_business_account: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export default function AIManagementPage() {
+  const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('assistants')
   const [bbAssistants, setBBAssistants] = useState<BBAssistant[]>([])
   const [userAssignments, setUserAssignments] = useState<UserAssignment[]>([])
@@ -116,7 +135,7 @@ export default function AIManagementPage() {
   const [connectionStatus, setConnectionStatus] = useState<'testing' | 'connected' | 'error' | null>(null)
   const [connectionError, setConnectionError] = useState<string>('')
   
-  // Form states
+  // Form states for assistant creation
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [selectedAssistant, setSelectedAssistant] = useState<BBAssistant | null>(null)
   const [formData, setFormData] = useState({
@@ -124,6 +143,15 @@ export default function AIManagementPage() {
     description: '',
     recursion_limit: 25,
     configurable: '{}'
+  })
+
+  // Form states for assignment creation
+  const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false)
+  const [availableContacts, setAvailableContacts] = useState<WhatsAppContact[]>([])
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
+  const [assignmentForm, setAssignmentForm] = useState({
+    contact_id: '',
+    assistant_id: ''
   })
 
   // Fetch all data
@@ -152,6 +180,34 @@ export default function AIManagementPage() {
       console.error('Failed to fetch AI management data:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Fetch available contacts for assignment
+  const fetchAvailableContacts = async () => {
+    setIsLoadingContacts(true)
+    try {
+      const response = await fetch('/admin/chat/api/contacts/db')
+      const result = await response.json()
+      
+      if (response.ok && result.success) {
+        setAvailableContacts(result.contacts)
+      } else {
+        toast({
+          title: "Error loading contacts",
+          description: result.error || "Failed to fetch WhatsApp contacts",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch contacts:', error)
+      toast({
+        title: "Error loading contacts",
+        description: "Failed to fetch WhatsApp contacts",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoadingContacts(false)
     }
   }
 
@@ -199,26 +255,91 @@ export default function AIManagementPage() {
       if (response.ok) {
         setIsCreateDialogOpen(false)
         setFormData({ name: '', description: '', recursion_limit: 25, configurable: '{}' })
-        fetchData() // Refresh data
+        fetchData()
+        toast({
+          title: "Assistant created",
+          description: "BB Agent assistant has been created successfully.",
+        })
       }
     } catch (error) {
       console.error('Failed to create assistant:', error)
+      toast({
+        title: "Error creating assistant",
+        description: "Failed to create BB Agent assistant.",
+        variant: "destructive"
+      })
     }
   }
 
   const handleDeleteAssistant = async (assistantId: string) => {
-    if (!confirm('Are you sure you want to delete this assistant? This action cannot be undone.')) return
-
     try {
       const response = await fetch(`/api/admin/ai-management/bb-assistants/${assistantId}`, {
         method: 'DELETE'
       })
 
       if (response.ok) {
-        fetchData() // Refresh data
+        fetchData()
+        toast({
+          title: "Assistant deleted",
+          description: "BB Agent assistant has been deleted successfully.",
+        })
       }
     } catch (error) {
       console.error('Failed to delete assistant:', error)
+      toast({
+        title: "Error deleting assistant",
+        description: "Failed to delete BB Agent assistant.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleCreateAssignment = async () => {
+    try {
+      const selectedContact = availableContacts.find(c => c.id === assignmentForm.contact_id)
+      const selectedAssistant = bbAssistants.find(a => a.assistant_id === assignmentForm.assistant_id)
+      
+      if (!selectedContact || !selectedAssistant) {
+        toast({
+          title: "Invalid selection",
+          description: "Please select both a contact and an assistant.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const response = await fetch('/api/admin/ai-management/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone_number: selectedContact.phone_number,
+          assistant_id: assignmentForm.assistant_id
+        })
+      })
+
+      if (response.ok) {
+        setIsAssignDialogOpen(false)
+        setAssignmentForm({ contact_id: '', assistant_id: '' })
+        fetchData()
+        toast({
+          title: "Assignment created",
+          description: `Assistant "${selectedAssistant.name}" has been assigned to ${selectedContact.display_name || selectedContact.phone_number}.`,
+        })
+      } else {
+        const result = await response.json()
+        toast({
+          title: "Error creating assignment",
+          description: result.error || "Failed to create assignment.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Failed to create assignment:', error)
+      toast({
+        title: "Error creating assignment",
+        description: "Failed to create assignment.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -239,6 +360,12 @@ export default function AIManagementPage() {
     } catch (error) {
       console.error('Failed to assign assistant:', error)
     }
+  }
+
+  // Open assignment dialog and fetch contacts
+  const handleOpenAssignDialog = () => {
+    setIsAssignDialogOpen(true)
+    fetchAvailableContacts()
   }
 
   const filteredAssistants = bbAssistants.filter(assistant =>
@@ -434,7 +561,7 @@ export default function AIManagementPage() {
                     Create Assistant
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create BB Agent Assistant</DialogTitle>
                     <DialogDescription>
@@ -447,8 +574,8 @@ export default function AIManagementPage() {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="e.g., Customer Support Assistant"
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Assistant Name"
                       />
                     </div>
                     <div>
@@ -456,8 +583,8 @@ export default function AIManagementPage() {
                       <Textarea
                         id="description"
                         value={formData.description}
-                        onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                        placeholder="Describe what this assistant does..."
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Description"
                       />
                     </div>
                     <div>
@@ -466,7 +593,7 @@ export default function AIManagementPage() {
                         id="recursion_limit"
                         type="number"
                         value={formData.recursion_limit}
-                        onChange={(e) => setFormData(prev => ({ ...prev, recursion_limit: parseInt(e.target.value) }))}
+                        onChange={(e) => setFormData({ ...formData, recursion_limit: parseInt(e.target.value) })}
                       />
                     </div>
                     <div>
@@ -474,14 +601,12 @@ export default function AIManagementPage() {
                       <Textarea
                         id="configurable"
                         value={formData.configurable}
-                        onChange={(e) => setFormData(prev => ({ ...prev, configurable: e.target.value }))}
-                        placeholder='{}'
-                        className="font-mono"
-                        rows={3}
+                        onChange={(e) => setFormData({ ...formData, configurable: e.target.value })}
+                        placeholder="{}"
                       />
                     </div>
-                    <div className="flex justify-end gap-3">
-                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setIsCreateDialogOpen(false)} variant="outline">
                         Cancel
                       </Button>
                       <Button onClick={handleCreateAssistant}>
@@ -495,64 +620,64 @@ export default function AIManagementPage() {
 
             {filteredAssistants.length === 0 ? (
               <Card>
-                <CardContent className="p-12 text-center">
-                  <Bot className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No BB Assistants</h3>
-                  <p className="text-gray-500 mb-4">
-                    {connectionStatus === 'connected' 
-                      ? 'Create your first BB Agent assistant to get started.'
-                      : 'Connect to BB Agent to see assistants.'
-                    }
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Bot className="h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No BB Assistants</h3>
+                  <p className="text-gray-600 text-center mb-4">
+                    Create your first BB Agent assistant to get started.
                   </p>
-                  {connectionStatus === 'connected' && (
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Assistant
-                    </Button>
-                  )}
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Assistant
+                      </Button>
+                    </DialogTrigger>
+                  </Dialog>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid gap-6">
                 {filteredAssistants.map((assistant) => (
-                  <Card key={assistant.assistant_id} className="relative">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Bot className="h-5 w-5" />
-                          {assistant.name}
-                        </CardTitle>
-                        <Badge variant="outline">v{assistant.version}</Badge>
-                      </div>
-                      {assistant.description && (
-                        <CardDescription>{assistant.description}</CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="text-sm text-gray-500 space-y-1">
-                        <p><strong>ID:</strong> {assistant.assistant_id.slice(0, 8)}...</p>
-                        <p><strong>Graph:</strong> {assistant.graph_id}</p>
-                        <p><strong>Created:</strong> {new Date(assistant.created_at).toLocaleDateString()}</p>
-                        <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setSelectedAssistant(assistant)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDeleteAssistant(assistant.assistant_id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                  <Card key={assistant.assistant_id}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-2">
+                              <Bot className="h-5 w-5 text-blue-600" />
+                              <h3 className="text-lg font-semibold">{assistant.name}</h3>
+                            </div>
+                            <Badge variant="outline">v{assistant.version}</Badge>
+                          </div>
+                          <p className="text-gray-600 mb-4">{assistant.description}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-4">
+                          <div className="text-right text-sm text-gray-500">
+                            <p><strong>ID:</strong> {assistant.assistant_id.slice(0, 8)}...</p>
+                            <p><strong>Graph:</strong> {assistant.graph_id}</p>
+                            <p><strong>Created:</strong> {new Date(assistant.created_at).toLocaleDateString()}</p>
+                            <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm">
+                              <Eye className="h-4 w-4" />
+                              View
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              <Edit className="h-4 w-4" />
+                              Edit
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleDeleteAssistant(assistant.assistant_id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -563,7 +688,81 @@ export default function AIManagementPage() {
 
           {/* User Assignments Tab */}
           <TabsContent value="assignments" className="space-y-6">
-            <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
+              <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={handleOpenAssignDialog}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create Assignment
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create Assistant Assignment</DialogTitle>
+                    <DialogDescription>
+                      Assign a BB Agent assistant to a WhatsApp contact
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="contact">WhatsApp Contact</Label>
+                      {isLoadingContacts ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="text-sm text-gray-500">Loading contacts...</div>
+                        </div>
+                      ) : (
+                        <Select value={assignmentForm.contact_id} onValueChange={(value) => setAssignmentForm({ ...assignmentForm, contact_id: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a contact" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableContacts.map((contact) => (
+                              <SelectItem key={contact.id} value={contact.id}>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">
+                                    {contact.display_name || contact.push_name || contact.phone_number}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    ({contact.phone_number})
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="assistant">BB Agent Assistant</Label>
+                      <Select value={assignmentForm.assistant_id} onValueChange={(value) => setAssignmentForm({ ...assignmentForm, assistant_id: value })}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an assistant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {bbAssistants.map((assistant) => (
+                            <SelectItem key={assistant.assistant_id} value={assistant.assistant_id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{assistant.name}</span>
+                                <span className="text-sm text-gray-500">{assistant.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setIsAssignDialogOpen(false)} variant="outline">
+                        Cancel
+                      </Button>
+                      <Button onClick={handleCreateAssignment}>
+                        Create Assignment
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             
             <Card>
               <CardHeader>

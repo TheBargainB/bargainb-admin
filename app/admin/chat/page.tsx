@@ -1292,9 +1292,8 @@ export default function ChatPage() {
         <Card className="col-span-12 lg:col-span-3 flex flex-col">
           <CardContent className="p-0 flex-1 flex flex-col min-h-0">
             <Tabs defaultValue="user" className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-4 text-xs flex-shrink-0">
+              <TabsList className="grid w-full grid-cols-3 text-xs flex-shrink-0">
                 <TabsTrigger value="user" className="text-xs">Contact</TabsTrigger>
-                <TabsTrigger value="ai" className="text-xs">AI Config</TabsTrigger>
                 <TabsTrigger value="meals" className="text-xs">Meals</TabsTrigger>
                 <TabsTrigger value="data" className="text-xs">Data</TabsTrigger>
               </TabsList>
@@ -1314,88 +1313,6 @@ export default function ChatPage() {
                 )}
               </TabsContent>
 
-              <TabsContent value="ai" className="p-4 space-y-4 flex-1 min-h-0">
-                {selectedContact ? (
-                  <div className="space-y-4">
-                    <AIConfigTab 
-                      conversationId={selectedContact}
-                      userId={selectedContact}
-                      onConfigChange={(config) => {
-                        setAiEnabled(config.enabled);
-                      }}
-                    />
-                    
-                    {/* AI Technical Details */}
-                    {aiPromptsData && (
-                      <div className="mt-6 space-y-4">
-                        <Separator />
-                        <div>
-                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                            <Brain className="h-4 w-4" />
-                            Technical Details
-                          </h4>
-                          <div className="grid grid-cols-2 gap-4 text-xs">
-                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
-                              <div className="font-medium text-muted-foreground">Assistant ID</div>
-                              <div className="font-mono text-foreground break-all">
-                                {aiPromptsData.assistantId?.slice(0, 8)}...
-                              </div>
-                            </div>
-                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
-                              <div className="font-medium text-muted-foreground">Thread ID</div>
-                              <div className="font-mono text-foreground break-all">
-                                {aiPromptsData.aiThreadId ? `${aiPromptsData.aiThreadId.slice(0, 8)}...` : 'None'}
-                              </div>
-                            </div>
-                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
-                              <div className="font-medium text-muted-foreground">Last AI Response</div>
-                              <div className="text-foreground">
-                                {aiPromptsData.lastAiInteraction ? 
-                                  new Date(aiPromptsData.lastAiInteraction).toLocaleString() : 
-                                  'No interactions yet'
-                                }
-                              </div>
-                            </div>
-                            <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg">
-                              <div className="font-medium text-muted-foreground">AI Messages</div>
-                              <div className="text-foreground">
-                                {aiPromptsData.totalAiMessages} sent
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* API Configuration */}
-                        <div>
-                          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                            <Settings className="h-4 w-4" />
-                            API Configuration
-                          </h4>
-                          <div className="bg-muted/30 dark:bg-muted/60 p-3 rounded-lg text-xs space-y-2">
-                            <div>
-                              <span className="font-medium text-muted-foreground">Endpoint:</span>
-                              <div className="font-mono text-foreground break-all">
-                                {aiPromptsData.apiUrl}
-                              </div>
-                            </div>
-                            <div>
-                              <span className="font-medium text-muted-foreground">Graph ID:</span>
-                              <span className="ml-2 text-foreground">product_retrieval_agent</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full p-8">
-                    <div className="text-center text-muted-foreground">
-                      <Bot className="h-12 w-12 mx-auto mb-4" />
-                      <p>Select a conversation to configure AI settings</p>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
 
               {/* Meals Planning Tab */}
               <TabsContent value="meals" className="p-4 space-y-4 flex-1 min-h-0">
