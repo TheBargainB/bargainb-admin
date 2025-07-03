@@ -4,7 +4,6 @@ import { getOrCreateAssistantForConversation } from './assistant-service';
 export interface AIAgentConfig {
   baseUrl: string;
   apiKey: string;
-  assistantId: string;
 }
 
 export interface ChatAIConfig {
@@ -38,8 +37,7 @@ export class WhatsAppAIService {
 
     this.aiConfig = {
       baseUrl: process.env.BARGAINB_API_URL || 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app',
-      apiKey: process.env.BARGAINB_API_KEY || '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',
-      assistantId: process.env.BARGAINB_ASSISTANT_ID || '5fd12ecb-9268-51f0-8168-fc7952c7c8b8'
+      apiKey: process.env.BARGAINB_API_KEY || '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'
     };
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -91,9 +89,24 @@ export class WhatsAppAIService {
         return { success: false, error: 'AI not enabled for this chat' };
       }
 
-      // 2. SPEED OPTIMIZATION: Use existing assistant or default shared assistant
-      let assistantId = chatData.assistant_id || this.aiConfig.assistantId;
-      console.log('🚀 Using assistant (speed mode):', assistantId);
+      // 2. Get or create personalized assistant for this conversation
+      let assistantId = chatData.assistant_id;
+      
+      if (!assistantId) {
+        console.log('🤖 No assistant found for conversation, creating personalized assistant...');
+        try {
+          assistantId = await getOrCreateAssistantForConversation(chatId);
+          if (!assistantId) {
+            return { success: false, error: 'Failed to create or get assistant for this conversation' };
+          }
+          console.log('✅ Created/retrieved personalized assistant:', assistantId);
+        } catch (error) {
+          console.error('❌ Error creating personalized assistant:', error);
+          return { success: false, error: 'Failed to create personalized assistant' };
+        }
+      } else {
+        console.log('🚀 Using existing personalized assistant:', assistantId);
+      }
 
       // 3. SPEED OPTIMIZATION: Get or create thread + user profile in parallel
       const cleanMessage = message.replace(/@bb\s*/i, '').trim();
@@ -217,7 +230,7 @@ export class WhatsAppAIService {
         metadata: { 
           user_id: userId, 
           source: 'whatsapp',
-          assistant_id: assistantId || this.aiConfig.assistantId
+          assistant_id: assistantId 
         }
       })
     });
@@ -234,7 +247,7 @@ export class WhatsAppAIService {
     const { data } = await this.supabase
       .from('crm_profiles')
       .select('*')
-      .eq('whatsapp_contact_id', userId)  // Fix: userId is actually whatsapp_contact_id
+      .eq('whatsapp_contact_id', userId)
       .single();
 
     return data;
@@ -248,7 +261,7 @@ export class WhatsAppAIService {
         'X-Api-Key': this.aiConfig.apiKey
       },
       body: JSON.stringify({
-        assistant_id: assistantId || this.aiConfig.assistantId,
+        assistant_id: assistantId,
         input: {
           messages: [{ role: 'user', content: message }]
         },
@@ -285,175 +298,115 @@ export class WhatsAppAIService {
 
   private async saveAIResponseMessage(chatId: string, aiResponse: string, threadId?: string) {
     try {
-      // Generate a unique WhatsApp message ID for the AI response
-      const whatsappMessageId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Get conversation details to find the phone number
+      const { data: conversation } = await this.supabase
+        .from('conversations')
+        .select(`
+          whatsapp_contact_id,
+          whatsapp_contacts!inner (
+            phone_number,
+            whatsapp_jid,
+            display_name,
+            push_name
+          )
+        `)
+        .eq('id', chatId)
+        .single();
 
-      // Save AI response as a message in the conversation with retry logic
-      await this.supabaseWithRetry(
-        async () => {
-          const { data, error } = await this.supabase
-            .from('messages')
-            .insert({
-              conversation_id: chatId,
-              whatsapp_message_id: whatsappMessageId,
-              content: aiResponse,
-              message_type: 'text',
-              direction: 'outbound', // AI responses are outbound messages
-              from_me: true, // AI responses are sent by the system (from our perspective)
-              sender_type: 'ai_agent', // Mark as AI agent message
-              is_ai_triggered: true, // Mark as AI-triggered
-              ai_thread_id: threadId, // Include AI thread ID for tracking
-              // created_at is automatically set by the database
-            })
-            .select(); // Select the inserted data to verify success
-
-          if (error) {
-            throw new Error(`Database insert failed: ${error.message}`);
-          }
-
-          console.log('✅ AI response message saved to database:', whatsappMessageId);
-          return data;
-        },
-        'Save AI response message to database',
-        3 // Try 3 times with exponential backoff
-      );
-
-      // Send the AI response back to the user via WhatsApp
-      // Use setTimeout to ensure this doesn't block the main response
-      setTimeout(() => {
-        this.sendAIResponseToWhatsApp(chatId, aiResponse).catch(error => {
-          console.error('Failed to send AI response to WhatsApp:', error);
-        });
-      }, 100);
-
-    } catch (error) {
-      const errorDetails = {
-        message: error instanceof Error ? error.message : String(error),
-        details: error instanceof Error ? error.stack : String(error),
-        hint: 'This error occurred while saving the AI response to the database. The AI processing was successful, but the response failed to save.',
-        code: error instanceof Error && 'code' in error ? (error as any).code : ''
-      };
-      
-      console.error('Error saving AI response message:', errorDetails);
-      
-      // Throw a more descriptive error
-      throw new Error(`Failed to save AI response: ${errorDetails.message}`);
-    }
-  }
-
-  private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string) {
-    try {
-      // Get conversation details to find the contact phone number (with retry logic)
-      const conversation = await this.supabaseWithRetry(
-        async () => {
-          const { data, error } = await this.supabase
-            .from('conversations')
-            .select(`
-              id,
-              whatsapp_contact_id
-            `)
-            .eq('id', chatId)
-            .single();
-
-          if (error) {
-            throw new Error(`Failed to fetch conversation: ${error.message}`);
-          }
-
-          if (!data) {
-            throw new Error('Conversation not found');
-          }
-
-          return data;
-        },
-        'Fetch conversation details for WhatsApp sending',
-        2 // Only 2 retries for this operation
-      );
-
-      // Get the contact details (with retry logic)
-      let phoneNumber = null;
-      if (conversation.whatsapp_contact_id) {
-        const contact = await this.supabaseWithRetry(
-          async () => {
-            const { data, error } = await this.supabase
-              .from('whatsapp_contacts')
-              .select('phone_number, whatsapp_jid')
-              .eq('id', conversation.whatsapp_contact_id)
-              .single();
-
-            if (error) {
-              throw new Error(`Failed to fetch contact: ${error.message}`);
-            }
-
-            return data;
-          },
-          'Fetch WhatsApp contact details',
-          2 // Only 2 retries for this operation
-        );
-        
-        phoneNumber = contact?.phone_number;
-        
-        // Fallback to whatsapp_jid if phone_number is not available
-        if (!phoneNumber && contact?.whatsapp_jid) {
-          phoneNumber = contact.whatsapp_jid.replace('@s.whatsapp.net', '');
-        }
-      }
-
-      if (!phoneNumber) {
-        console.error('❌ No phone number found for conversation:', chatId);
+      if (!conversation?.whatsapp_contacts) {
+        console.error('❌ No contact found for conversation:', chatId);
         return;
       }
 
-      // Clean phone number for WhatsApp API
-      let cleanPhoneNumber = phoneNumber;
-      if (phoneNumber.includes('@s.whatsapp.net')) {
-        cleanPhoneNumber = phoneNumber.replace('@s.whatsapp.net', '');
+      const contact = Array.isArray(conversation.whatsapp_contacts) 
+        ? conversation.whatsapp_contacts[0] 
+        : conversation.whatsapp_contacts;
+      const displayName = contact.display_name || contact.push_name || contact.phone_number;
+
+      // Store AI response in messages table
+      const { data: newMessage, error: messageError } = await this.supabase
+        .from('messages')
+        .insert({
+          conversation_id: chatId,
+          content: aiResponse,
+          message_type: 'text',
+          direction: 'outbound',
+          from_me: true,
+          whatsapp_status: 'pending',
+          raw_message_data: {
+            ai_generated: true,
+            from_ai: true,
+            thread_id: threadId,
+            generated_at: new Date().toISOString(),
+            ai_response_for: 'whatsapp_mention'
+          }
+        })
+        .select()
+        .single();
+
+      if (messageError) {
+        console.error('❌ Error storing AI response message:', messageError);
+        return;
       }
+
+      console.log('✅ AI response stored in database');
+
+      // Update conversation stats - get current count first
+      const { data: currentConv } = await this.supabase
+        .from('conversations')
+        .select('total_messages')
+        .eq('id', chatId)
+        .single();
+
+      const newTotal = (currentConv?.total_messages || 0) + 1;
+
+      await this.supabase
+        .from('conversations')
+        .update({
+          last_message_at: new Date().toISOString(),
+          total_messages: newTotal
+        })
+        .eq('id', chatId);
+
+      // Send AI response via WhatsApp
+      await this.sendAIResponseToWhatsApp(chatId, aiResponse, contact.phone_number);
+
+    } catch (error) {
+      console.error('❌ Error in saveAIResponseMessage:', error);
+    }
+  }
+
+  private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string, phoneNumber: string) {
+    try {
+      // Clean phone number for WASender API
+      let cleanPhoneNumber = phoneNumber;
       if (!cleanPhoneNumber.startsWith('+')) {
         cleanPhoneNumber = `+${cleanPhoneNumber}`;
       }
 
-      // Validate phone number format
-      if (!/^\+\d{10,15}$/.test(cleanPhoneNumber)) {
-        console.error('❌ Invalid phone number format:', cleanPhoneNumber);
-        return;
-      }
-
       console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber.replace(/(\+\d{1,3})\d{4,}(\d{4})/, '$1***$2'));
 
-      // Check if WASender API key is available
       const apiKey = process.env.WASENDER_API_KEY;
       if (!apiKey) {
         console.error('❌ WASENDER_API_KEY not configured - cannot send AI response');
         return;
       }
 
-      // Validate API key format
-      if (apiKey.length < 10) {
-        console.error('❌ Invalid WASENDER_API_KEY format - too short');
-        return;
-      }
-
-      // Send via WASender API with retry logic
-      const apiResponse = await this.fetchWithRetry('https://www.wasenderapi.com/api/send-message', {
+      // Send via WASender API
+      const apiResponse = await fetch('https://www.wasenderapi.com/api/send-message', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'User-Agent': 'BargainB-AI/1.0',
         },
         body: JSON.stringify({ 
-          to: cleanPhoneNumber, // WASender expects E.164 format with + 
+          to: cleanPhoneNumber, 
           text: aiResponse 
         }),
-      }, 3, 1000); // 3 retries with 1 second initial delay
+      });
 
       if (!apiResponse.ok) {
-        let errorData;
-        try {
-          errorData = await apiResponse.json();
-        } catch {
-          errorData = { message: `HTTP ${apiResponse.status}: ${apiResponse.statusText}` };
-        }
+        const errorData = await apiResponse.json().catch(() => ({ message: apiResponse.statusText }));
         console.error('❌ Failed to send AI response via WhatsApp:', errorData);
         return;
       }
@@ -461,152 +414,23 @@ export class WhatsAppAIService {
       const apiData = await apiResponse.json();
       console.log('✅ AI response sent successfully via WhatsApp:', apiData);
 
-      // Update the message with the actual WhatsApp message ID from the API (with retry logic)
+      // Update the message with the actual WhatsApp message ID
       if (apiData.data?.msgId) {
-        await this.supabaseWithRetry(
-          async () => {
-            const { error } = await this.supabase
-              .from('messages')
-              .update({ 
-                whatsapp_message_id: apiData.data.msgId.toString(),
-                whatsapp_status: 'sent'
-              })
-              .eq('conversation_id', chatId)
-              .eq('sender_type', 'ai_agent')
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            if (error) {
-              throw new Error(`Failed to update message status: ${error.message}`);
-            }
-
-            console.log('✅ Message status updated with WhatsApp message ID:', apiData.data.msgId);
-          },
-          'Update message with WhatsApp message ID',
-          2 // Only 2 retries for this operation
-        );
+        await this.supabase
+          .from('messages')
+          .update({ 
+            whatsapp_message_id: apiData.data.msgId.toString(),
+            whatsapp_status: 'sent'
+          })
+          .eq('conversation_id', chatId)
+          .eq('direction', 'outbound')
+          .order('created_at', { ascending: false })
+          .limit(1);
       }
 
     } catch (error) {
-      // Enhanced error logging with more context
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const errorContext = {
-        chatId,
-        error: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
-        timestamp: new Date().toISOString()
-      };
-      
-      console.error('❌ Error sending AI response to WhatsApp:', errorContext);
-      
-      // Log specific error types for debugging
-      if (errorMessage.includes('fetch failed')) {
-        console.error('🔍 Network connectivity issue detected. Check internet connection and API endpoint.');
-      } else if (errorMessage.includes('timeout')) {
-        console.error('🔍 Request timeout detected. WASender API may be slow or unavailable.');
-      } else if (errorMessage.includes('ENOTFOUND')) {
-        console.error('🔍 DNS resolution failed. Check if WASender API domain is accessible.');
-      }
-      
-      // Don't throw error - message was saved successfully, sending is optional
+      console.error('❌ Error sending AI response to WhatsApp:', error);
     }
-  }
-
-  // Helper method for Supabase operations with retry logic
-  private async supabaseWithRetry<T>(
-    operation: () => Promise<T>,
-    operationName: string = 'Supabase operation',
-    maxRetries: number = 3
-  ): Promise<T> {
-    let lastError: Error = new Error('All retry attempts failed');
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`🔄 ${operationName} - Attempt ${attempt}/${maxRetries}`);
-        const result = await operation();
-        
-        // Log success for debugging
-        if (attempt > 1) {
-          console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
-        }
-        
-        return result;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        console.warn(`❌ ${operationName} failed on attempt ${attempt}:`, lastError.message);
-        
-        // Don't retry on the last attempt
-        if (attempt === maxRetries) {
-          break;
-        }
-        
-        // Wait before retrying (exponential backoff)
-        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-        console.log(`⏳ Waiting ${delay}ms before retry...`);
-        await this.delay(delay);
-      }
-    }
-    
-    // All retries failed
-    console.error(`🚫 ${operationName} failed after ${maxRetries} attempts:`, lastError.message);
-    throw new Error(`${operationName} failed: ${lastError.message}`);
-  }
-
-  // Helper method for fetch with retry logic and timeout
-  private async fetchWithRetry(
-    url: string, 
-    options: RequestInit, 
-    maxRetries: number = 3, 
-    initialDelay: number = 1000
-  ): Promise<Response> {
-    let lastError: Error = new Error('All retry attempts failed');
-    
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        // Add timeout to fetch request
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
-        const response = await fetch(url, {
-          ...options,
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId);
-        
-        // If successful or client error (4xx), don't retry
-        if (response.ok || (response.status >= 400 && response.status < 500)) {
-          return response;
-        }
-        
-        // Server errors (5xx) should be retried
-        if (response.status >= 500 && attempt < maxRetries) {
-          console.warn(`🔄 Server error ${response.status}, retrying in ${initialDelay * Math.pow(2, attempt)}ms...`);
-          await this.delay(initialDelay * Math.pow(2, attempt)); // Exponential backoff
-          continue;
-        }
-        
-        return response;
-        
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        
-        if (attempt < maxRetries) {
-          const delay = initialDelay * Math.pow(2, attempt);
-          console.warn(`🔄 Fetch attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay}ms...`);
-          await this.delay(delay);
-        } else {
-          console.error(`💥 All ${maxRetries + 1} fetch attempts failed. Last error: ${lastError.message}`);
-        }
-      }
-    }
-    
-    throw lastError;
-  }
-
-  // Helper method for delay
-  private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   private async logAIInteraction(
@@ -617,18 +441,21 @@ export class WhatsAppAIService {
     threadId: string, 
     processingTime: number
   ) {
-    // Log in ai_interactions table (using conversation_id to match our database)
-    await this.supabase
-      .from('ai_interactions')
-      .insert({
-        conversation_id: chatId, // This should match our table schema
-        user_id: userId,
-        user_message: userMessage,
-        ai_response: aiResponse,
-        thread_id: threadId,
-        processing_time_ms: processingTime,
-        tokens_used: aiResponse.length // Approximate token count
-      });
+    try {
+      await this.supabase
+        .from('ai_interactions')
+        .insert({
+          conversation_id: chatId,
+          user_id: userId,
+          user_message: userMessage,
+          ai_response: aiResponse,
+          thread_id: threadId,
+          processing_time_ms: processingTime,
+          tokens_used: aiResponse.length // Approximate token count
+        });
+    } catch (error) {
+      console.warn('⚠️ Failed to log AI interaction:', error);
+    }
   }
 
   async enableAIForChat(chatId: string, config: ChatAIConfig = { 
@@ -694,10 +521,21 @@ export class WhatsAppAIService {
 
   async testAIConnection(): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
-      const response = await fetch(`${this.aiConfig.baseUrl}/assistants/${this.aiConfig.assistantId}`, {
+      // Test basic connection to AI service
+      const response = await fetch(`${this.aiConfig.baseUrl}/assistants/search`, {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'X-Api-Key': this.aiConfig.apiKey
-        }
+        },
+        body: JSON.stringify({
+          metadata: {},
+          graph_id: "product_retrieval_agent",
+          limit: 1,
+          offset: 0,
+          sort_by: "created_at",
+          sort_order: "desc"
+        })
       });
 
       if (!response.ok) {
@@ -709,31 +547,6 @@ export class WhatsAppAIService {
 
       const data = await response.json();
       return { success: true, data };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  }
-
-  async getAssistantInfo(): Promise<{ success: boolean; assistant?: any; error?: string }> {
-    try {
-      const response = await fetch(`${this.aiConfig.baseUrl}/assistants/${this.aiConfig.assistantId}`, {
-        headers: {
-          'X-Api-Key': this.aiConfig.apiKey
-        }
-      });
-
-      if (!response.ok) {
-        return { 
-          success: false, 
-          error: `Failed to fetch assistant: ${response.statusText}` 
-        };
-      }
-
-      const assistant = await response.json();
-      return { success: true, assistant };
     } catch (error) {
       return { 
         success: false, 
@@ -769,15 +582,14 @@ export class WhatsAppAIService {
         };
       }
 
-      // Test API connectivity without sending a message
-      const response = await this.fetchWithRetry('https://www.wasenderapi.com/api/profile', {
+      // Test API connectivity
+      const response = await fetch('https://www.wasenderapi.com/api/profile', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'User-Agent': 'BargainB-AI/1.0',
         },
-      }, 2, 500); // 2 retries with 500ms initial delay for testing
+      });
 
       if (response.ok) {
         return { 
@@ -786,13 +598,7 @@ export class WhatsAppAIService {
           apiReachable: true 
         };
       } else {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
-        }
-        
+        const errorData = await response.json().catch(() => ({ message: response.statusText }));
         return { 
           success: false, 
           apiKeyConfigured: true,
@@ -812,4 +618,4 @@ export class WhatsAppAIService {
       };
     }
   }
-} 
+}

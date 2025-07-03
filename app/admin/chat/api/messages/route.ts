@@ -19,15 +19,39 @@ export async function GET(request: NextRequest) {
     if (!conversationId && remoteJid) {
       // Extract phone number from JID
       const phoneNumber = remoteJid.split('@')[0];
-      // Add + if missing for international format
-      const formattedPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+      
+      // Try multiple phone number variations like the webhook does
+      const phoneVariations = [
+        phoneNumber,                                                // Raw: 31614539919
+        phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`,  // With +: +31614539919
+      ];
 
-      // Find the WhatsApp contact by phone number
-      const { data: whatsappContact } = await supabaseAdmin
+      let whatsappContact = null;
+      
+      // First try by whatsapp_jid (most reliable)
+      const { data: contactByJid } = await supabaseAdmin
         .from('whatsapp_contacts')
         .select('id')
-        .eq('phone_number', formattedPhoneNumber)
+        .eq('whatsapp_jid', remoteJid)
         .single();
+
+      if (contactByJid) {
+        whatsappContact = contactByJid;
+      } else {
+        // Fall back to phone number variations
+        for (const phoneVariation of phoneVariations) {
+          const { data: contact } = await supabaseAdmin
+            .from('whatsapp_contacts')
+            .select('id')
+            .eq('phone_number', phoneVariation)
+            .single();
+
+          if (contact) {
+            whatsappContact = contact;
+            break;
+          }
+        }
+      }
 
       if (!whatsappContact) {
         return NextResponse.json({ 
