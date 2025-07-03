@@ -58,6 +58,7 @@ import { useRealTimeChat } from './lib/useRealTimeChat'
 import { useGroceryLists } from './lib/useGroceryLists'
 import { useMealPlanning } from './lib/useMealPlanning'
 import { useBusiness } from './lib/useBusiness'
+import { useWASender } from './lib/useWASender'
 
 // Import contact types from service
 import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
@@ -128,9 +129,7 @@ interface ChatMessage {
 }
 
 export default function ChatPage() {
-  // WhatsApp State
-  const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>([])
-  const [whatsappContacts, setWhatsappContacts] = useState<WhatsAppContact[]>([])
+  // WhatsApp State (using hook for whatsappMessages and whatsappContacts)
   const [selectedContact, setSelectedContact] = useState<string | null>(null)
   
   // Chat interface state
@@ -192,6 +191,29 @@ export default function ChatPage() {
   
   // Business contact functionality
   const { businessContact, BUSINESS_PHONE_NUMBER, fetchContactInfo, fetchContactProfilePicture } = useBusiness()
+
+  // Initialize WASender hook (gradually replacing existing functions)
+  const wasenderHook = useWASender({
+    selectedContact,
+    selectedConversation: selectedContact ? databaseConversations.find(c => c.email === selectedContact) : undefined,
+    newMessage,
+    setNewMessage,
+    loadConversationsFromDatabase: () => loadConversationsFromDatabase(true),
+    onConversationCreated: (conversation) => {
+      setDatabaseConversations(prev => [conversation, ...prev])
+    }
+  })
+
+  // Extract WASender state and functions for use in component
+  const {
+    whatsappMessages: hookWhatsappMessages,
+    whatsappContacts: hookWhatsappContacts,
+    allContacts: wasenderAllContacts,
+    isLoadingContacts: wasenderLoadingContacts,
+    isSyncingContacts: wasenderSyncingContacts,
+    isCreatingConversation: wasenderCreatingConversation,
+    extractPhoneNumber: hookExtractPhoneNumber
+  } = wasenderHook
   
 
 
@@ -201,16 +223,12 @@ export default function ChatPage() {
     databaseConversationsRef.current = databaseConversations
   }, [databaseConversations])
 
-  // Load WhatsApp data
+  // Use loadWhatsAppData from WASender hook with loading state management
   const loadWhatsAppData = async () => {
     try {
       setIsLoading(true)
-      // Note: We no longer need to fetch from webhook since we're using database conversations
-      // Just set empty arrays to avoid errors
-      setWhatsappMessages([])
-      setWhatsappContacts([])
-      
-      console.log('✅ WhatsApp data loading completed (using database instead)')
+      await wasenderHook.loadWhatsAppData()
+      console.log('✅ WhatsApp data loading completed via hook')
     } catch (error) {
       console.error('Error loading WhatsApp data:', error)
       toast({
@@ -278,7 +296,7 @@ export default function ChatPage() {
       console.error('❌ Error loading contacts via ContactService:', error)
       
       // Fallback to existing whatsapp contacts if everything fails
-      setAllContacts(whatsappContacts)
+      setAllContacts(hookWhatsappContacts)
       
       toast({
         title: "Using conversation contacts",
@@ -291,51 +309,16 @@ export default function ChatPage() {
     }
   }
 
-  // Sync contacts with WASender API
+  // Use syncContactsWithWASender from WASender hook with additional refresh logic
   const syncContactsWithWASender = async () => {
-    try {
-      setIsSyncingContacts(true)
-      console.log('🔄 Manually syncing contacts with WASender API and storing in database...')
+    const success = await wasenderHook.syncContactsWithWASender()
+    
+    if (success) {
+      // Refresh the contacts from database
+      await loadAllContacts()
       
-      // Call the new sync endpoint that both fetches from WASender and stores in database
-      const response = await fetch('/admin/chat/api/contacts/sync', {
-        method: 'POST'
-      })
-      
-      if (!response.ok) {
-        throw new Error(`Failed to sync contacts: ${response.status} ${response.statusText}`)
-      }
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        toast({
-          title: "Contacts synced",
-          description: result.message,
-          variant: "default"
-        })
-        
-        // Refresh the contacts from database
-        await loadAllContacts()
-        
-        // Also refresh the contacts count for stats
-        await loadContactsCount()
-      } else {
-        toast({
-          title: "Sync failed",
-          description: result.error || "Failed to sync contacts from WASender API.",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      console.error('❌ Error syncing contacts:', error)
-      toast({
-        title: "Sync failed",
-        description: "Failed to sync contacts from WASender API.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsSyncingContacts(false)
+      // Also refresh the contacts count for stats
+      await loadContactsCount()
     }
   }
 
@@ -430,13 +413,13 @@ export default function ChatPage() {
   }
 
   const getContactName = (jid: string) => {
-    const contact = whatsappContacts.find(c => c.jid === jid)
+    const contact = hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === jid)
     return contact?.name || contact?.notify || jid
   }
 
   // Get contact profile picture URL
   const getContactAvatar = (jid: string) => {
-    const contact = whatsappContacts.find(c => c.jid === jid)
+    const contact = hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === jid)
     return contact?.imgUrl || "/placeholder.svg"
   }
 
@@ -511,7 +494,7 @@ export default function ChatPage() {
     }
   }
 
-  // Send WhatsApp message
+  // Use sendWhatsAppMessage from WASender hook with additional database updates
   const sendWhatsAppMessage = async () => {
     if (!newMessage.trim() || !selectedContact || isSending) return
 
@@ -526,40 +509,13 @@ export default function ChatPage() {
         throw new Error('Cannot find contact information for this conversation')
       }
       
-      // Extract phone number for validation
-      const phoneNumber = remoteJid.replace('@s.whatsapp.net', '')
-      if (!phoneNumber.match(/^\+?\d+$/)) {
-        throw new Error('Invalid phone number format for WhatsApp message.')
-      }
+      // Use the hook's sendWhatsAppMessage but note that we need to set selectedContact for the hook
+      const success = await wasenderHook.sendWhatsAppMessage()
       
-      console.log('📤 Sending message to:', remoteJid, 'Conversation:', selectedContact)
-      
-      const response = await fetch('/admin/chat/api/send-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: remoteJid,
-          text: newMessage.trim(),
-          conversationId: selectedContact
-        })
-      })
-
-      const result = await response.json()
-
-      if (response.ok) {
-        setNewMessage("")
-        toast({
-          title: "Message sent",
-          description: "Your WhatsApp message has been sent successfully."
-        })
-        
+      if (success) {
         // Reload messages for the current conversation
         await loadMessagesFromDatabase(remoteJid)
         await loadConversationsFromDatabase()
-      } else {
-        throw new Error(result.error || 'Failed to send message')
       }
     } catch (error) {
       console.error('Error sending message:', error)
@@ -593,11 +549,11 @@ export default function ChatPage() {
     return conversations.find(conv => conv.id === selectedContact) || 
       (selectedContact ? {
         id: selectedContact,
-        user: whatsappContacts.find(c => c.jid === selectedContact)?.name || 
-             whatsappContacts.find(c => c.jid === selectedContact)?.notify || 
+        user: hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === selectedContact)?.name || 
+             hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === selectedContact)?.notify || 
              selectedContact,
         email: selectedContact,
-        avatar: whatsappContacts.find(c => c.jid === selectedContact)?.imgUrl || "/placeholder.svg",
+        avatar: hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === selectedContact)?.imgUrl || "/placeholder.svg",
         lastMessage: "No messages yet",
         timestamp: "Never",
         status: 'active' as const,
@@ -608,7 +564,7 @@ export default function ChatPage() {
         remoteJid: selectedContact,
         phoneNumber: selectedContact.replace('@s.whatsapp.net', '')
       } : undefined)
-  }, [conversations, selectedContact, whatsappContacts])
+  }, [conversations, selectedContact, hookWhatsappContacts])
 
   // Check if the selected conversation is with a system user (non-WhatsApp contact) - memoized to prevent re-calculations
   const isSystemConversation = useMemo(() => {
@@ -637,124 +593,48 @@ export default function ChatPage() {
     selectedConversation
   })
 
-  // Start a new chat with a contact
+  // Use startNewChat from WASender hook with additional UI state management
   const startNewChat = async (contact: WhatsAppContact) => {
     console.log('🎯 startNewChat called with contact:', contact)
     
-    // Note: Admin panel handles user creation internally via API
-
-    try {
-      setIsCreatingConversation(true)
-      console.log('🔄 Set isCreatingConversation to true')
+    // First, check if a conversation already exists with this contact
+    const phoneNumber = contact.phone_number || contact.jid.replace('@s.whatsapp.net', '')
+    const existingConversation = databaseConversations.find(conv => 
+      conv.remoteJid === contact.jid || 
+      conv.phoneNumber === phoneNumber ||
+      conv.email === contact.jid
+    )
+    
+    if (existingConversation) {
+      console.log('📞 Found existing conversation:', existingConversation.id)
+      setSelectedContact(existingConversation.id)
+      setIsContactsDialogOpen(false)
+      setContactSearchTerm("")
       
-      console.log('🚀 Starting new chat with contact:', contact)
+      // Load messages for the existing conversation
+      await loadMessagesFromDatabase(existingConversation.remoteJid || existingConversation.email)
       
-      // First, check if a conversation already exists with this contact
-      // Clean the phone number to remove @s.whatsapp.net if present
-      const phoneNumber = contact.phone_number || contact.jid.replace('@s.whatsapp.net', '')
-      const existingConversation = databaseConversations.find(conv => 
-        conv.remoteJid === contact.jid || 
-        conv.phoneNumber === phoneNumber ||
-        conv.email === contact.jid
-      )
-      
-      if (existingConversation) {
-        console.log('📞 Found existing conversation:', existingConversation.id)
-        setSelectedContact(existingConversation.id)
-        setIsContactsDialogOpen(false)
-        setContactSearchTerm("")
-        
-        // Load messages for the existing conversation
-        await loadMessagesFromDatabase(existingConversation.remoteJid || existingConversation.email)
-        
-        toast({
-          title: "Conversation opened",
-          description: `Opened existing conversation with ${contact.name || contact.notify || phoneNumber}`,
-        })
-        return
-      }
-      
-      // Create a new conversation via API
-      console.log('💬 Creating new conversation for contact:', contact.name || contact.notify || phoneNumber)
-      
-      const response = await fetch('/admin/chat/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contact: {
-            phone_number: phoneNumber,
-            name: contact.name || contact.notify,
-            notify: contact.notify,
-            img_url: contact.imgUrl, // Dialog uses imgUrl field
-            jid: contact.jid
-          },
-          type: 'direct',
-          title: contact.name || contact.notify || `WhatsApp ${phoneNumber}`,
-          description: `WhatsApp conversation with ${contact.name || contact.notify || phoneNumber}`,
-          ai_enabled: aiEnabled
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to create conversation')
-      }
-
-      const result = await response.json()
-      console.log('✅ Created conversation:', result)
-
-      if (result.success) {
-        // Create a ChatConversation object for the UI
-        const newChatConversation: ChatConversation = {
-          id: result.data.conversation.id,
-          conversationId: result.data.conversation.id,
-          user: contact.name || contact.notify || 'Unknown',
-          email: contact.jid,
-          avatar: contact.imgUrl || '',
-          lastMessage: 'Conversation started',
-          timestamp: new Date().toLocaleTimeString(),
-          status: 'active',
-          unread_count: 0,
-          type: 'whatsapp',
-          aiConfidence: confidenceThreshold[0],
-          lastMessageAt: new Date().toISOString(),
-          remoteJid: contact.jid,
-          phoneNumber: phoneNumber
-        }
-
-        // Add to conversations list
-        setDatabaseConversations(prev => [newChatConversation, ...prev])
-        
-        // Select the new conversation
-        setSelectedContact(result.data.conversation.id)
-        setIsContactsDialogOpen(false)
-        setContactSearchTerm("")
-        
-        // Initialize empty messages for the new conversation
-        setDatabaseMessages([])
-        
-        // Refresh conversations from database to ensure consistency
-        await loadConversationsFromDatabase()
-        
-        toast({
-          title: "Conversation created",
-          description: `Started new conversation with ${contact.name || contact.notify || phoneNumber}`,
-        })
-      } else {
-        throw new Error(result.error || 'Failed to create conversation')
-      }
-      
-    } catch (error) {
-      console.error('❌ Error starting chat:', error)
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start chat. Please try again.",
+        title: "Conversation opened",
+        description: `Opened existing conversation with ${contact.name || contact.notify || phoneNumber}`,
       })
-    } finally {
-      setIsCreatingConversation(false)
+      return
+    }
+
+    // Use the WASender hook's startNewChat function
+    const newConversation = await wasenderHook.startNewChat(contact)
+    
+    if (newConversation) {
+      // Update UI state
+      setSelectedContact(newConversation.id)
+      setIsContactsDialogOpen(false)
+      setContactSearchTerm("")
+      
+      // Initialize empty messages for the new conversation
+      setDatabaseMessages([])
+      
+      // Refresh conversations from database to ensure consistency
+      await loadConversationsFromDatabase()
     }
   }
 
@@ -874,8 +754,7 @@ export default function ChatPage() {
     setDatabaseConversations([])
     setDatabaseMessages([])
     setSelectedContact(null)
-    setWhatsappMessages([])
-    setWhatsappContacts([])
+    // Note: hookWhatsappMessages and hookWhatsappContacts are managed by the WASender hook
     
     console.log('✅ All chat data cleared')
     
@@ -1319,10 +1198,10 @@ export default function ChatPage() {
     const remoteJid = conversation.remoteJid || conversation.email
     if (remoteJid) {
       const contact = allContacts.find(c => c.jid === remoteJid) || 
-                     whatsappContacts.find(c => c.jid === remoteJid)
+                     hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === remoteJid)
       
       if (contact) {
-        return contact.name || contact.notify || contact.verifiedName || extractPhoneNumber(remoteJid)
+        return contact.name || contact.notify || contact.verifiedName || hookExtractPhoneNumber(remoteJid)
       }
     }
     
@@ -1330,22 +1209,8 @@ export default function ChatPage() {
     return extractPhoneNumber(conversation.email || conversation.id)
   }
 
-  // Helper function to extract clean phone number
-  const extractPhoneNumber = (jidOrEmail: string) => {
-    if (!jidOrEmail) return "Unknown"
-    
-    // Remove @s.whatsapp.net suffix
-    const cleaned = jidOrEmail.replace('@s.whatsapp.net', '')
-    
-    // If it's a phone number, format it nicely
-    if (cleaned.match(/^\+?\d+$/)) {
-      // Add + if not present and format for readability
-      const phoneNumber = cleaned.startsWith('+') ? cleaned : `+${cleaned}`
-      return phoneNumber
-    }
-    
-    return cleaned
-  }
+  // Use extractPhoneNumber from WASender hook
+  const extractPhoneNumber = wasenderHook.extractPhoneNumber
 
   // Helper function to get conversation subtitle (phone number or status)
   const getConversationSubtitle = (conversation: ChatConversation | undefined): string => {
