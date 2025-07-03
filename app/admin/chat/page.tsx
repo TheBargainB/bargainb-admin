@@ -163,7 +163,7 @@ export default function ChatPage() {
   // Initialize WASender hook (gradually replacing existing functions)
   const wasenderHook = useWASender({
     selectedContact: selectedContact || undefined,
-    selectedConversation: selectedContact ? databaseConversations.find(c => c.email === selectedContact) : undefined,
+    selectedConversation: selectedContact ? databaseConversations.find(c => c.id === selectedContact) : undefined,
     newMessage,
     setNewMessage,
     loadConversationsFromDatabase: () => loadConversationsFromDatabase(true),
