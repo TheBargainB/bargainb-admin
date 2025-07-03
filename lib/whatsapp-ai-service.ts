@@ -232,8 +232,8 @@ export class WhatsAppAIService {
             user_id: userId,
             source: 'whatsapp',
             user_profile: userProfile,
-            // CRITICAL FIX: Override CRM profile ID with correct one for Focused Creativity
-            CRM_PROFILE_ID: 'a2ecb77b-f7a4-474c-a4ce-47ad47f4dea6',
+            // FIXED: Use actual CRM profile ID from user profile instead of hardcoded value
+            CRM_PROFILE_ID: userProfile?.id || null, // Use the actual CRM profile ID
             // SPEED OPTIMIZED: Reduced timeouts and limits
             ENABLE_GUARD_RAILS: aiConfig?.guard_rails_enabled ?? true,
             MAX_MESSAGE_LENGTH: aiConfig?.max_message_length ?? 300, // Reduced from 500
@@ -257,6 +257,13 @@ export class WhatsAppAIService {
     }
 
     const data = await response.json();
+    
+    // Enhanced error handling for AI agent responses
+    if (data.__error__) {
+      console.error('❌ AI Agent returned error:', data.__error__);
+      throw new Error(`AI Agent error: ${data.__error__.message || 'Unknown AI error'}`);
+    }
+    
     const aiResponse = data.messages?.[data.messages.length - 1]?.content;
     if (!aiResponse || typeof aiResponse !== 'string') {
       console.warn('⚠️ AI agent returned empty or invalid response:', data);
@@ -316,8 +323,8 @@ export class WhatsAppAIService {
             user_id: userId,
             source: 'whatsapp',
             user_profile: userProfile,
-            // CRITICAL FIX: Override CRM profile ID with correct one for Focused Creativity
-            CRM_PROFILE_ID: 'a2ecb77b-f7a4-474c-a4ce-47ad47f4dea6',
+            // FIXED: Use actual CRM profile ID from user profile instead of hardcoded value
+            CRM_PROFILE_ID: userProfile?.id || null, // Use the actual CRM profile ID
             // Pass through the AI configuration
             ENABLE_GUARD_RAILS: aiConfig?.guard_rails_enabled ?? true,
             MAX_MESSAGE_LENGTH: aiConfig?.max_message_length ?? 500,
@@ -341,6 +348,13 @@ export class WhatsAppAIService {
     }
 
     const data = await response.json();
+    
+    // Enhanced error handling for AI agent responses
+    if (data.__error__) {
+      console.error('❌ AI Agent returned error:', data.__error__);
+      throw new Error(`AI Agent error: ${data.__error__.message || 'Unknown AI error'}`);
+    }
+    
     const aiResponse = data.messages?.[data.messages.length - 1]?.content;
     if (!aiResponse || typeof aiResponse !== 'string') {
       console.warn('⚠️ AI agent returned empty or invalid response:', data);
