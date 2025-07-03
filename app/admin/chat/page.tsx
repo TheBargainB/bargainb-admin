@@ -58,6 +58,9 @@ import { useRealTimeChat } from './lib/useRealTimeChat'
 import { useGroceryLists } from './lib/useGroceryLists'
 import { useMealPlanning } from './lib/useMealPlanning'
 
+// Import contact types from service
+import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
+
 // WhatsApp types
 interface WhatsAppMessage {
   id: string
@@ -68,6 +71,7 @@ interface WhatsAppMessage {
   status?: number
 }
 
+// UI-friendly WhatsApp contact interface (mapped from database)
 interface WhatsAppContact {
   jid: string
   name?: string
@@ -79,7 +83,7 @@ interface WhatsAppContact {
   phone_number?: string
   created_at?: string
   updated_at?: string
-  last_seen_at?: string // WhatsApp last seen timestamp
+  last_seen_at?: string
 }
 
 // Message status enum
@@ -330,64 +334,57 @@ export default function ChatPage() {
     }
   }
 
-  // Load all contacts from database first, then sync with API if needed
+  // Helper function to transform database contact to UI format
+  const transformContactForUI = (contact: Contact): WhatsAppContact => {
+    return {
+      jid: contact.phone_number.replace('+', '') + '@s.whatsapp.net',
+      id: contact.id,
+      name: contact.name || undefined,
+      notify: contact.notify || undefined,
+      verifiedName: contact.verified_name || undefined,
+      imgUrl: contact.img_url || undefined,
+      status: contact.status || undefined,
+      phone_number: contact.phone_number,
+      created_at: contact.created_at,
+      updated_at: contact.updated_at,
+      last_seen_at: contact.last_seen_at || undefined
+    }
+  }
+
+  // Load all contacts using ContactService (removes duplication)
   const loadAllContacts = async () => {
     try {
       setIsLoadingContacts(true)
-      console.log('💾 Loading contacts from database first...')
+      console.log('💾 Loading contacts using ContactService...')
       
-      // Load contacts from database first (fast)
-      const dbResponse = await fetch('/admin/chat/api/contacts/db')
+      // Use ContactService to get all contacts from database
+      const contactsFromDb = await ContactService.getAllContacts()
       
-      if (dbResponse.ok) {
-        const dbData = await dbResponse.json()
-        const contactsFromDb = dbData.data || []
-        console.log(`💾 Found ${contactsFromDb.length} contacts in database`)
+      if (contactsFromDb.length > 0) {
+        // Transform database contacts to UI format
+        const transformedContacts = contactsFromDb.map(transformContactForUI)
         
-        if (contactsFromDb.length > 0) {
-          // ContactService returns legacy Contact format, transform to WhatsAppContact format for dialog
-          const transformedContacts = contactsFromDb.map((contact: any) => {
-            const transformed = {
-              jid: contact.phone_number.replace('+', '') + '@s.whatsapp.net',
-              id: contact.id,
-              name: contact.name,
-              notify: contact.notify,
-              verifiedName: contact.verified_name,
-              imgUrl: contact.img_url, // ContactService returns img_url field
-              status: contact.status,
-              phone_number: contact.phone_number,
-              created_at: contact.created_at,
-              updated_at: contact.updated_at
-            }
-            console.log('🔄 Raw contact from ContactService:', contact)
-            console.log('🔄 Transformed for dialog:', transformed)
-            return transformed
-          })
-          
-          setAllContacts(transformedContacts)
-          console.log(`✅ Loaded ${transformedContacts.length} contacts from database`)
-          
-          toast({
-            title: "Contacts loaded",
-            description: `Found ${transformedContacts.length} contacts in database.`,
-            variant: "default"
-          })
-          return // Exit early - we have contacts from database
-        }
+        setAllContacts(transformedContacts)
+        console.log(`✅ Loaded ${transformedContacts.length} contacts via ContactService`)
+        
+        toast({
+          title: "Contacts loaded",
+          description: `Found ${transformedContacts.length} contacts in database.`,
+          variant: "default"
+        })
+      } else {
+        console.log('💾 No contacts found in database')
+        setAllContacts([])
+        
+        toast({
+          title: "No contacts found",
+          description: "Use the sync button to fetch contacts from WASender API.",
+          variant: "default"
+        })
       }
       
-      // If no database contacts, show empty state
-      console.log('💾 No contacts found in database')
-      setAllContacts([])
-      
-      toast({
-        title: "No contacts found",
-        description: "Use the sync button to fetch contacts from WASender API.",
-        variant: "default"
-      })
-      
     } catch (error) {
-      console.error('❌ Error loading contacts:', error)
+      console.error('❌ Error loading contacts via ContactService:', error)
       
       // Fallback to existing whatsapp contacts if everything fails
       setAllContacts(whatsappContacts)
@@ -399,7 +396,7 @@ export default function ChatPage() {
       })
     } finally {
       setIsLoadingContacts(false)
-      console.log('🏁 Finished loading contacts')
+      console.log('🏁 Finished loading contacts via ContactService')
     }
   }
 
@@ -1272,19 +1269,15 @@ export default function ChatPage() {
     setDatabaseMessages
   })
 
-  // Load contacts count for stats
+  // Load contacts count for stats using ContactService (removes duplication)
   const loadContactsCount = async () => {
     try {
-      console.log('📋 Fetching contacts from database')
-      const response = await fetch('/admin/chat/api/contacts/db')
-      if (response.ok) {
-        const result = await response.json()
-        const contacts = result.data || []
-        console.log(`📱 Found ${contacts.length} total contacts in database`)
-        setContactsCount(contacts.length)
-      }
+      console.log('📋 Fetching contacts count via ContactService')
+      const contacts = await ContactService.getAllContacts()
+      console.log(`📱 Found ${contacts.length} total contacts via ContactService`)
+      setContactsCount(contacts.length)
     } catch (error) {
-      console.error('❌ Error loading contacts count:', error)
+      console.error('❌ Error loading contacts count via ContactService:', error)
     }
   }
 
