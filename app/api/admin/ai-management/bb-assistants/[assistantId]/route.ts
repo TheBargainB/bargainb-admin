@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const BB_AGENT_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
-const BB_AGENT_API_KEY = process.env.BB_AGENT_API_KEY || process.env.LANGGRAPH_API_KEY
+const BB_AGENT_API_KEY = process.env.LANGSMITH_API_KEY || process.env.BB_AGENT_API_KEY || process.env.LANGGRAPH_API_KEY
 
 export async function DELETE(
   request: NextRequest,
