@@ -204,7 +204,7 @@ export class WhatsAppAIService {
     try {
       const { data } = await this.supabase
         .from('crm_profiles')
-        .select('full_name, preferred_name, shopping_persona, preferred_stores, dietary_restrictions')
+        .select('id, full_name, preferred_name, shopping_persona, preferred_stores, dietary_restrictions')
         .eq('whatsapp_contact_id', userId)  // Fix: userId is actually whatsapp_contact_id
         .single();
       return data;
