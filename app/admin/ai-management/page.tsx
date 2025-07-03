@@ -191,11 +191,27 @@ export default function AIManagementPage() {
       const result = await response.json()
       
       if (response.ok && result.success) {
-        setAvailableContacts(result.contacts)
+        // Map the contact data to match our interface
+        const mappedContacts = result.data.map((contact: any) => ({
+          id: contact.id,
+          phone_number: contact.phone_number,
+          whatsapp_jid: `${contact.phone_number}@s.whatsapp.net`,
+          push_name: contact.notify,
+          display_name: contact.name || contact.notify,
+          profile_picture_url: contact.img_url,
+          verified_name: contact.verified_name,
+          whatsapp_status: contact.status,
+          last_seen_at: contact.last_seen_at,
+          is_business_account: false,
+          is_active: true,
+          created_at: contact.created_at,
+          updated_at: contact.updated_at
+        }))
+        setAvailableContacts(mappedContacts)
       } else {
         toast({
-          title: "Error loading contacts",
-          description: result.error || "Failed to fetch WhatsApp contacts",
+          title: "Error loading contacts", 
+          description: "Failed to fetch WhatsApp contacts",
           variant: "destructive"
         })
       }
