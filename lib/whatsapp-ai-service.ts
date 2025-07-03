@@ -121,11 +121,12 @@ export class WhatsAppAIService {
       const aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
       const processingTime = Date.now() - startTime;
 
-      // 5. SPEED OPTIMIZATION: Save response and log in parallel (non-blocking)
-      Promise.all([
-        this.saveAIResponseMessage(chatId, aiResponse, threadId),
-        this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
-      ]).catch(error => console.warn('⚠️ Background save failed:', error));
+      // 5. Save response and send via WhatsApp (synchronous to catch errors)
+      await this.saveAIResponseMessage(chatId, aiResponse, threadId);
+      
+      // 6. Log interaction (can be background)
+      this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
+        .catch(error => console.warn('⚠️ Background log failed:', error));
 
       return { success: true, aiResponse };
 
@@ -298,8 +299,10 @@ export class WhatsAppAIService {
 
   private async saveAIResponseMessage(chatId: string, aiResponse: string, threadId?: string) {
     try {
+      console.log('💾 Saving AI response for conversation:', chatId);
+      
       // Get conversation details to find the phone number
-      const { data: conversation } = await this.supabase
+      const { data: conversation, error: convError } = await this.supabase
         .from('conversations')
         .select(`
           whatsapp_contact_id,
@@ -313,9 +316,14 @@ export class WhatsAppAIService {
         .eq('id', chatId)
         .single();
 
+      if (convError) {
+        console.error('❌ Error fetching conversation:', convError);
+        throw new Error(`Failed to fetch conversation: ${convError.message}`);
+      }
+
       if (!conversation?.whatsapp_contacts) {
         console.error('❌ No contact found for conversation:', chatId);
-        return;
+        throw new Error('No WhatsApp contact found for conversation');
       }
 
       const contact = Array.isArray(conversation.whatsapp_contacts) 
@@ -323,6 +331,8 @@ export class WhatsAppAIService {
         : conversation.whatsapp_contacts;
       const displayName = contact.display_name || contact.push_name || contact.phone_number;
 
+      console.log('💾 Storing AI response message in database...');
+      
       // Store AI response in messages table
       const { data: newMessage, error: messageError } = await this.supabase
         .from('messages')
@@ -346,21 +356,25 @@ export class WhatsAppAIService {
 
       if (messageError) {
         console.error('❌ Error storing AI response message:', messageError);
-        return;
+        throw new Error(`Failed to store AI response: ${messageError.message}`);
       }
 
-      console.log('✅ AI response stored in database');
+      console.log('✅ AI response stored in database with ID:', newMessage.id);
 
       // Update conversation stats - get current count first
-      const { data: currentConv } = await this.supabase
+      const { data: currentConv, error: convStatsError } = await this.supabase
         .from('conversations')
         .select('total_messages')
         .eq('id', chatId)
         .single();
 
+      if (convStatsError) {
+        console.warn('⚠️ Could not fetch conversation stats:', convStatsError);
+      }
+
       const newTotal = (currentConv?.total_messages || 0) + 1;
 
-      await this.supabase
+      const { error: updateError } = await this.supabase
         .from('conversations')
         .update({
           last_message_at: new Date().toISOString(),
@@ -368,11 +382,19 @@ export class WhatsAppAIService {
         })
         .eq('id', chatId);
 
+      if (updateError) {
+        console.warn('⚠️ Failed to update conversation stats:', updateError);
+      }
+
       // Send AI response via WhatsApp
+      console.log('📤 Sending AI response via WhatsApp...');
       await this.sendAIResponseToWhatsApp(chatId, aiResponse, contact.phone_number);
 
+      console.log('✅ AI response saved and sent successfully');
+
     } catch (error) {
-      console.error('❌ Error in saveAIResponseMessage:', error);
+      console.error('❌ Critical error in saveAIResponseMessage:', error);
+      throw error; // Re-throw so caller can handle it
     }
   }
 
@@ -388,8 +410,9 @@ export class WhatsAppAIService {
 
       const apiKey = process.env.WASENDER_API_KEY;
       if (!apiKey) {
-        console.error('❌ WASENDER_API_KEY not configured - cannot send AI response');
-        return;
+        const error = 'WASENDER_API_KEY not configured - cannot send AI response';
+        console.error('❌', error);
+        throw new Error(error);
       }
 
       // Send via WASender API
@@ -406,17 +429,22 @@ export class WhatsAppAIService {
       });
 
       if (!apiResponse.ok) {
-        const errorData = await apiResponse.json().catch(() => ({ message: apiResponse.statusText }));
-        console.error('❌ Failed to send AI response via WhatsApp:', errorData);
-        return;
+        let errorData;
+        try {
+          errorData = await apiResponse.json();
+        } catch {
+          errorData = { message: apiResponse.statusText };
+        }
+        console.error('❌ WhatsApp API error:', apiResponse.status, errorData);
+        throw new Error(`WhatsApp API failed (${apiResponse.status}): ${errorData.message || apiResponse.statusText}`);
       }
 
       const apiData = await apiResponse.json();
-      console.log('✅ AI response sent successfully via WhatsApp:', apiData);
+      console.log('✅ AI response sent successfully via WhatsApp. Message ID:', apiData.data?.msgId);
 
       // Update the message with the actual WhatsApp message ID
       if (apiData.data?.msgId) {
-        await this.supabase
+        const { error: updateError } = await this.supabase
           .from('messages')
           .update({ 
             whatsapp_message_id: apiData.data.msgId.toString(),
@@ -426,10 +454,19 @@ export class WhatsAppAIService {
           .eq('direction', 'outbound')
           .order('created_at', { ascending: false })
           .limit(1);
+
+        if (updateError) {
+          console.warn('⚠️ Failed to update message with WhatsApp ID:', updateError);
+        } else {
+          console.log('✅ Message updated with WhatsApp ID:', apiData.data.msgId);
+        }
       }
 
+      return apiData;
+
     } catch (error) {
-      console.error('❌ Error sending AI response to WhatsApp:', error);
+      console.error('❌ Critical error sending AI response to WhatsApp:', error);
+      throw error; // Re-throw so caller can handle it
     }
   }
 
