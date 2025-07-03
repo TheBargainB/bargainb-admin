@@ -46,9 +46,31 @@ export class WhatsAppAIService {
       throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for server-side operations');
     }
 
+    // Enhanced Supabase client configuration for serverless environments
     this.supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for server-side operations
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role for server-side operations
+      {
+        auth: {
+          persistSession: false, // Don't persist sessions in serverless functions
+          autoRefreshToken: false, // Don't auto-refresh tokens in serverless
+        },
+        global: {
+          headers: {
+            'User-Agent': 'BargainB-Admin/1.0',
+          },
+        },
+        // Add fetch options for better serverless compatibility
+        db: {
+          schema: 'public',
+        },
+        // Configure realtime (disable for serverless performance)
+        realtime: {
+          params: {
+            eventsPerSecond: 1,
+          },
+        },
+      }
     );
   }
 
@@ -262,64 +284,111 @@ export class WhatsAppAIService {
   }
 
   private async saveAIResponseMessage(chatId: string, aiResponse: string, threadId?: string) {
-    // Generate a unique WhatsApp message ID for the AI response
-    const whatsappMessageId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    try {
+      // Generate a unique WhatsApp message ID for the AI response
+      const whatsappMessageId = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Save AI response as a message in the conversation
-    const { error } = await this.supabase
-      .from('messages')
-      .insert({
-        conversation_id: chatId,
-        whatsapp_message_id: whatsappMessageId,
-        content: aiResponse,
-        message_type: 'text',
-        direction: 'outbound', // AI responses are outbound messages
-        from_me: true, // AI responses are sent by the system (from our perspective)
-        sender_type: 'ai_agent', // Mark as AI agent message
-        is_ai_triggered: true, // Mark as AI-triggered
-        ai_thread_id: threadId, // Include AI thread ID for tracking
-        // created_at is automatically set by the database
-      });
+      // Save AI response as a message in the conversation with retry logic
+      await this.supabaseWithRetry(
+        async () => {
+          const { data, error } = await this.supabase
+            .from('messages')
+            .insert({
+              conversation_id: chatId,
+              whatsapp_message_id: whatsappMessageId,
+              content: aiResponse,
+              message_type: 'text',
+              direction: 'outbound', // AI responses are outbound messages
+              from_me: true, // AI responses are sent by the system (from our perspective)
+              sender_type: 'ai_agent', // Mark as AI agent message
+              is_ai_triggered: true, // Mark as AI-triggered
+              ai_thread_id: threadId, // Include AI thread ID for tracking
+              // created_at is automatically set by the database
+            })
+            .select(); // Select the inserted data to verify success
 
-    if (error) {
-      console.error('Error saving AI response message:', error);
-      throw new Error(`Failed to save AI response: ${error.message}`);
+          if (error) {
+            throw new Error(`Database insert failed: ${error.message}`);
+          }
+
+          console.log('✅ AI response message saved to database:', whatsappMessageId);
+          return data;
+        },
+        'Save AI response message to database',
+        3 // Try 3 times with exponential backoff
+      );
+
+      // Send the AI response back to the user via WhatsApp
+      // Use setTimeout to ensure this doesn't block the main response
+      setTimeout(() => {
+        this.sendAIResponseToWhatsApp(chatId, aiResponse).catch(error => {
+          console.error('Failed to send AI response to WhatsApp:', error);
+        });
+      }, 100);
+
+    } catch (error) {
+      const errorDetails = {
+        message: error instanceof Error ? error.message : String(error),
+        details: error instanceof Error ? error.stack : String(error),
+        hint: 'This error occurred while saving the AI response to the database. The AI processing was successful, but the response failed to save.',
+        code: error instanceof Error && 'code' in error ? (error as any).code : ''
+      };
+      
+      console.error('Error saving AI response message:', errorDetails);
+      
+      // Throw a more descriptive error
+      throw new Error(`Failed to save AI response: ${errorDetails.message}`);
     }
-
-    // Send the AI response back to the user via WhatsApp
-    // Use setTimeout to ensure this doesn't block the main response
-    setTimeout(() => {
-      this.sendAIResponseToWhatsApp(chatId, aiResponse).catch(error => {
-        console.error('Failed to send AI response to WhatsApp:', error);
-      });
-    }, 100);
   }
 
   private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string) {
     try {
-      // Get conversation details to find the contact phone number
-      const { data: conversation } = await this.supabase
-        .from('conversations')
-        .select(`
-          id,
-          whatsapp_contact_id
-        `)
-        .eq('id', chatId)
-        .single();
+      // Get conversation details to find the contact phone number (with retry logic)
+      const conversation = await this.supabaseWithRetry(
+        async () => {
+          const { data, error } = await this.supabase
+            .from('conversations')
+            .select(`
+              id,
+              whatsapp_contact_id
+            `)
+            .eq('id', chatId)
+            .single();
 
-      if (!conversation) {
-        console.error('❌ Conversation not found for AI response sending');
-        return;
-      }
+          if (error) {
+            throw new Error(`Failed to fetch conversation: ${error.message}`);
+          }
 
-      // Get the contact details
+          if (!data) {
+            throw new Error('Conversation not found');
+          }
+
+          return data;
+        },
+        'Fetch conversation details for WhatsApp sending',
+        2 // Only 2 retries for this operation
+      );
+
+      // Get the contact details (with retry logic)
       let phoneNumber = null;
       if (conversation.whatsapp_contact_id) {
-        const { data: contact } = await this.supabase
-          .from('whatsapp_contacts')
-          .select('phone_number, whatsapp_jid')
-          .eq('id', conversation.whatsapp_contact_id)
-          .single();
+        const contact = await this.supabaseWithRetry(
+          async () => {
+            const { data, error } = await this.supabase
+              .from('whatsapp_contacts')
+              .select('phone_number, whatsapp_jid')
+              .eq('id', conversation.whatsapp_contact_id)
+              .single();
+
+            if (error) {
+              throw new Error(`Failed to fetch contact: ${error.message}`);
+            }
+
+            return data;
+          },
+          'Fetch WhatsApp contact details',
+          2 // Only 2 retries for this operation
+        );
         
         phoneNumber = contact?.phone_number;
         
@@ -392,18 +461,30 @@ export class WhatsAppAIService {
       const apiData = await apiResponse.json();
       console.log('✅ AI response sent successfully via WhatsApp:', apiData);
 
-      // Update the message with the actual WhatsApp message ID from the API
+      // Update the message with the actual WhatsApp message ID from the API (with retry logic)
       if (apiData.data?.msgId) {
-        await this.supabase
-          .from('messages')
-          .update({ 
-            whatsapp_message_id: apiData.data.msgId.toString(),
-            whatsapp_status: 'sent'
-          })
-          .eq('conversation_id', chatId)
-          .eq('sender_type', 'ai_agent')
-          .order('created_at', { ascending: false })
-          .limit(1);
+        await this.supabaseWithRetry(
+          async () => {
+            const { error } = await this.supabase
+              .from('messages')
+              .update({ 
+                whatsapp_message_id: apiData.data.msgId.toString(),
+                whatsapp_status: 'sent'
+              })
+              .eq('conversation_id', chatId)
+              .eq('sender_type', 'ai_agent')
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (error) {
+              throw new Error(`Failed to update message status: ${error.message}`);
+            }
+
+            console.log('✅ Message status updated with WhatsApp message ID:', apiData.data.msgId);
+          },
+          'Update message with WhatsApp message ID',
+          2 // Only 2 retries for this operation
+        );
       }
 
     } catch (error) {
@@ -429,6 +510,46 @@ export class WhatsAppAIService {
       
       // Don't throw error - message was saved successfully, sending is optional
     }
+  }
+
+  // Helper method for Supabase operations with retry logic
+  private async supabaseWithRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string = 'Supabase operation',
+    maxRetries: number = 3
+  ): Promise<T> {
+    let lastError: Error = new Error('All retry attempts failed');
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 ${operationName} - Attempt ${attempt}/${maxRetries}`);
+        const result = await operation();
+        
+        // Log success for debugging
+        if (attempt > 1) {
+          console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
+        }
+        
+        return result;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.warn(`❌ ${operationName} failed on attempt ${attempt}:`, lastError.message);
+        
+        // Don't retry on the last attempt
+        if (attempt === maxRetries) {
+          break;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        console.log(`⏳ Waiting ${delay}ms before retry...`);
+        await this.delay(delay);
+      }
+    }
+    
+    // All retries failed
+    console.error(`🚫 ${operationName} failed after ${maxRetries} attempts:`, lastError.message);
+    throw new Error(`${operationName} failed: ${lastError.message}`);
   }
 
   // Helper method for fetch with retry logic and timeout
