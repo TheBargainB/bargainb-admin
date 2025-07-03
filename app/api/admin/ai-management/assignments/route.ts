@@ -28,7 +28,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { phone_number, assistant_id } = body
+    const { phone_number, assistant_id, force_update = false } = body
 
     if (!phone_number || !assistant_id) {
       return NextResponse.json({ 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('🔧 Creating assignment for:', phone_number, 'with assistant:', assistant_id)
+    console.log('🔧 Creating assignment for:', phone_number, 'with assistant:', assistant_id, force_update ? '(FORCE UPDATE)' : '')
 
     // Find the WhatsApp contact by phone number
     const phoneWithoutPlus = phone_number.replace('+', '')
@@ -84,11 +84,15 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Found conversation:', conversation.id, 'for contact:', contact.id)
 
-    // Check if assignment already exists
-    if (conversation.assistant_id) {
+    // Check if assignment already exists (unless force_update is true)
+    if (conversation.assistant_id && !force_update) {
       return NextResponse.json({ 
-        error: 'This contact already has an assistant assigned' 
+        error: 'This contact already has an assistant assigned. Use force_update=true to overwrite.' 
       }, { status: 409 })
+    }
+
+    if (conversation.assistant_id && force_update) {
+      console.log('🔄 Force updating existing assignment from:', conversation.assistant_id, 'to:', assistant_id)
     }
 
     // Update the conversation with the assistant assignment
