@@ -2408,48 +2408,11 @@ export default function ChatPage() {
               </TabsList>
 
               <TabsContent value="user" className="p-4 space-y-4 flex-1 min-h-0">
-                    {selectedContact && selectedConversation ? (() => {
-                      // Find the actual WhatsApp contact using the conversation's remoteJid or email
-                      const remoteJid = selectedConversation.remoteJid || selectedConversation.email
-                      const whatsappContact = whatsappContacts.find(c => c.jid === remoteJid) || 
-                                            allContacts.find(c => c.jid === remoteJid)
-                      
-                      // Use actual contact data or fallback to conversation data
-                      const contactData = whatsappContact || {
-                        created_at: selectedConversation.lastMessageAt || new Date().toISOString(),
-                        updated_at: selectedConversation.lastMessageAt || new Date().toISOString(),
-                        last_seen_at: selectedConversation.lastMessageAt || new Date().toISOString(),
-                        status: 'active'
-                      }
-                      
-                      // Determine online status based on recent activity (last 5 minutes)
-                      const isRecentlyActive = contactData?.last_seen_at ? 
-                        (new Date().getTime() - new Date(contactData.last_seen_at).getTime()) < 5 * 60 * 1000 : false
-                      const userStatus = isRecentlyActive ? 'online' : 
-                        (contactData?.status === 'available' || contactData?.status === 'online' ? 'online' : 'offline')
-                      
-                      return (
+                {selectedContact && selectedConversation ? (
                   <ChatUserProfile 
-                    user={{
-                      id: selectedContact,
-                      authUserId: selectedContact,
-                      username: selectedConversation.user,
-                      displayName: selectedConversation.user,
-                      email: selectedConversation.email,
-                      avatarUrl: selectedConversation.avatar,
-                      role: 'customer',
-                            status: userStatus,
-                            lastSeen: contactData?.last_seen_at,
-                      preferences: {},
-                      notificationSettings: {},
-                      profileData: {},
-                      isActive: true,
-                            createdAt: contactData?.created_at || new Date().toISOString(),
-                            updatedAt: contactData?.updated_at || selectedConversation.lastMessageAt || new Date().toISOString()
-                    }}
+                    conversationId={selectedConversation.id}
                   />
-                      )
-                    })() : (
+                ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center text-muted-foreground">
                       <User className="h-12 w-12 mx-auto mb-4" />
