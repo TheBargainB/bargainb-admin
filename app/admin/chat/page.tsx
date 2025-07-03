@@ -60,6 +60,7 @@ import { useMealPlanning } from './lib/useMealPlanning'
 import { useBusiness } from './lib/useBusiness'
 import { useWASender } from './lib/useWASender'
 import { useAnalytics } from './lib/useAnalytics'
+import { useDatabase } from './lib/useDatabase'
 
 // Import contact types from service
 import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
@@ -145,7 +146,6 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [isCreatingConversation, setIsCreatingConversation] = useState(false)
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   
   // Contacts dialog state
   const [isContactsDialogOpen, setIsContactsDialogOpen] = useState(false)
@@ -169,11 +169,30 @@ export default function ChatPage() {
     calculateTrends 
   } = useAnalytics()
   
-  // Contacts count for stats (separate from dialog contacts)
-  const [contactsCount, setContactsCount] = useState(0)
+  // Database functionality
+  const databaseHook = useDatabase({
+    onConversationsUpdate: setDatabaseConversations,
+    onMessagesUpdate: setDatabaseMessages,
+    onContactsCountUpdate: (count) => console.log('📊 Contacts count updated:', count)
+  })
   
-  // Enhanced data viewing state
-  const [aiPromptsData, setAiPromptsData] = useState<any>(null)
+  // Extract database state and functions
+  const {
+    isLoadingMessages,
+    isLoadingConversations,
+    isLoadingContactsCount,
+    isDeletingConversation,
+    contactsCount,
+    aiPromptsData,
+    loadMessagesFromDatabase,
+    loadConversationsFromDatabase,
+    markConversationAsRead,
+    deleteConversation: deleteDatabaseConversation,
+    loadContactsCount,
+    loadAiPromptsData,
+    clearDatabaseState,
+    refreshAllData
+  } = databaseHook
   const [selectedGroceryList, setSelectedGroceryList] = useState<any>(null)
   const [isGroceryListModalOpen, setIsGroceryListModalOpen] = useState(false)
   
@@ -699,37 +718,7 @@ export default function ChatPage() {
     setTimeout(() => refreshGlobalUnreadCount(), 500)
   }
 
-  // Mark conversation as read
-  const markConversationAsRead = async (conversationId: string) => {
-    try {
-      console.log('📖 Marking conversation as read:', conversationId)
-      
-      const response = await fetch(`/admin/chat/api/conversations/${conversationId}/read`, {
-        method: 'POST',
-      })
-
-      if (response.ok) {
-        console.log('✅ Conversation marked as read')
-        
-        // Update local state to reset unread count
-        setDatabaseConversations(prev => 
-          prev.map(conv => 
-            conv.id === conversationId 
-              ? { ...conv, unread_count: 0 }
-              : conv
-          )
-        )
-        
-                  // Refresh global unread count
-          setTimeout(() => refreshGlobalUnreadCount(), 300)
-      } else {
-        console.warn('⚠️ Failed to mark conversation as read:', response.status)
-      }
-    } catch (error) {
-      console.error('❌ Error marking conversation as read:', error)
-      // Don't show toast for this error - it's not critical to user experience
-    }
-  }
+  // Mark conversation as read (now handled by database hook)
   
   // Filter conversations by search term - memoized to prevent re-calculations
   const filteredConversations = useMemo(() => {
@@ -947,94 +936,9 @@ export default function ChatPage() {
     }
   }
 
-  // Load messages for selected conversation from database
-  const loadMessagesFromDatabase = async (remoteJid: string, silent: boolean = false) => {
-    if (!remoteJid) return
+  // Load messages (now handled by database hook)
 
-    try {
-      if (!silent) {
-        setIsLoadingMessages(true)
-      }
-      console.log('📨 Loading messages from database for:', remoteJid)
-      
-      const url = `/admin/chat/api/messages?remoteJid=${encodeURIComponent(remoteJid)}`
-      console.log('🔗 API URL:', url)
-      
-      const response = await fetch(url)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch messages: ${response.status}`)
-      }
-      
-      const result = await response.json()
-      console.log('📦 API Response:', result)
-      
-      if (result.success) {
-        console.log(`✅ Loaded ${result.data.messages.length} messages from database`)
-        console.log('📋 Messages:', result.data.messages)
-        setDatabaseMessages(result.data.messages || [])
-      } else {
-        console.log('📭 No messages found in database for this conversation')
-        setDatabaseMessages([])
-      }
-    } catch (error) {
-      console.error('❌ Error loading messages from database:', error)
-      setDatabaseMessages([])
-      if (!silent) {
-        toast({
-          title: "Error loading messages",
-          description: "Failed to load conversation messages from database.",
-          variant: "destructive"
-        })
-      }
-    } finally {
-      if (!silent) {
-        setIsLoadingMessages(false)
-      }
-    }
-  }
-
-  // Load conversations from database
-  const loadConversationsFromDatabase = async (silent: boolean = false) => {
-    try {
-      if (!silent) {
-        console.log('💬 Loading conversations from database...')
-      }
-      
-      const response = await fetch('/admin/chat/api/conversations')
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch conversations: ${response.status}`)
-      }
-      
-      const result = await response.json()
-      
-      if (result.success) {
-        if (!silent) {
-          console.log(`✅ Loaded ${result.data.conversations.length} conversations from database`)
-        }
-        setDatabaseConversations(result.data.conversations || [])
-        
-        // Refresh global unread count when conversations are loaded (but don't spam)
-        if (!silent) {
-          setTimeout(() => refreshGlobalUnreadCount(), 300)
-        }
-      } else {
-        console.log('📭 No conversations found in database')
-        setDatabaseConversations([])
-      }
-    } catch (error) {
-      console.error('❌ Error loading conversations from database:', error)
-      setDatabaseConversations([])
-      if (!silent) {
-        toast({
-          title: "Error loading conversations",
-          description: "Failed to load conversations from database.",
-          variant: "destructive"
-        })
-      }
-    }
-  }
+  // Load conversations (now handled by database hook)
 
   // Real-time chat functionality
   const { isRealTimeConnected, connectionRetryCount } = useRealTimeChat({
@@ -1046,17 +950,7 @@ export default function ChatPage() {
     setDatabaseMessages
   })
 
-  // Load contacts count for stats using ContactService (removes duplication)
-  const loadContactsCount = async () => {
-    try {
-      console.log('📋 Fetching contacts count via ContactService')
-      const contacts = await ContactService.getAllContacts()
-      console.log(`📱 Found ${contacts.length} total contacts via ContactService`)
-      setContactsCount(contacts.length)
-    } catch (error) {
-      console.error('❌ Error loading contacts count via ContactService:', error)
-    }
-  }
+  // Load contacts count (now handled by database hook)
 
   // Analytics data is now handled by useAnalytics hook
 
@@ -1064,99 +958,9 @@ export default function ChatPage() {
 
 
 
-  // Load AI prompts and configuration
-  const loadAiPromptsData = async () => {
-    if (!selectedConversation?.remoteJid) return
-    
-    try {
-      console.log('🤖 Loading AI prompts and config for:', selectedConversation.remoteJid)
-      
-      // Get AI thread and configuration data by joining with whatsapp_contacts
-      const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          whatsapp_contacts!inner(whatsapp_jid)
-        `)
-        .eq('whatsapp_contacts.whatsapp_jid', selectedConversation.remoteJid)
-        .single()
-      
-      if (error && error.code !== 'PGRST116') {
-        console.error('❌ Error loading AI config:', error)
-        return
-      }
-      
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('ai_thread_id, created_at')
-        .eq('conversation_id', selectedConversation.conversationId || selectedConversation.remoteJid)
-        .eq('sender_type', 'ai_agent')
-        .not('ai_thread_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-      
-      setAiPromptsData({
-        conversation: conversations,
-        aiThreadId: messages?.[0]?.ai_thread_id,
-        lastAiInteraction: messages?.[0]?.created_at,
-        totalAiMessages: messages?.length || 0,
-        assistantId: '5fd12ecb-9268-51f0-8168-fc7952c7c8b8',
-        apiUrl: 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
-      })
-      
-      console.log('✅ Loaded AI config data')
-      
-    } catch (error) {
-      console.error('❌ Failed to load AI prompts data:', error)
-    }
-  }
+  // Load AI prompts (now handled by database hook)
 
-  // Delete conversation function
-  const deleteConversation = async (conversationId: string) => {
-    try {
-      console.log('🗑️ Deleting conversation:', conversationId)
-      
-      const response = await fetch(`/admin/chat/api/conversations/${conversationId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete conversation: ${response.status}`)
-      }
-
-      const result = await response.json()
-      
-      if (result.success) {
-        console.log('✅ Conversation deleted successfully')
-        
-        // Remove from local state
-        setDatabaseConversations(prev => prev.filter(conv => conv.id !== conversationId))
-        
-        // Clear selection if this conversation was selected
-        if (selectedContact === conversationId) {
-          setSelectedContact(null)
-          setDatabaseMessages([])
-        }
-        
-        toast({
-          title: "Conversation deleted",
-          description: "The conversation and all its messages have been removed.",
-        })
-        
-        // Reload conversations to ensure consistency
-        await loadConversationsFromDatabase()
-      } else {
-        throw new Error(result.error || 'Failed to delete conversation')
-      }
-    } catch (error) {
-      console.error('❌ Error deleting conversation:', error)
-      toast({
-        title: "Error deleting conversation",
-        description: "Failed to delete the conversation. Please try again.",
-        variant: "destructive"
-      })
-    }
-  }
+  // Delete conversation (now handled by database hook)
 
   // Helper function to get proper display name from conversation
   const getDisplayName = (conversation: ChatConversation | undefined): string => {
@@ -2200,9 +2004,16 @@ export default function ChatPage() {
             <AlertDialogAction
               onClick={async () => {
                 if (conversationToDelete) {
-                  await deleteConversation(conversationToDelete);
-                  setConversationToDelete(null);
-                  setIsDeleteDialogOpen(false);
+                  const success = await deleteDatabaseConversation(conversationToDelete);
+                  if (success) {
+                    // Clear selection if this conversation was selected
+                    if (selectedContact === conversationToDelete) {
+                      setSelectedContact(null);
+                      setDatabaseMessages([]);
+                    }
+                    setConversationToDelete(null);
+                    setIsDeleteDialogOpen(false);
+                  }
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
