@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Find the WhatsApp contact by phone number
     const phoneWithoutPlus = phone_number.replace('+', '')
+    console.log('🔍 Looking for contact with phone:', phoneWithoutPlus)
     
     const { data: contact, error: contactError } = await supabase
       .from('whatsapp_contacts')
@@ -48,25 +49,40 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (contactError || !contact) {
-      console.error('❌ Contact not found for phone:', phoneWithoutPlus, contactError)
+      console.error('❌ Contact not found for phone:', phoneWithoutPlus, 'Error:', contactError)
       return NextResponse.json({ 
-        error: 'WhatsApp contact not found' 
+        error: `WhatsApp contact not found for phone: ${phoneWithoutPlus}` 
       }, { status: 404 })
     }
 
+    console.log('✅ Found contact:', contact.id, contact.display_name || contact.push_name)
+
     // Find the conversation for this contact
+    console.log('🔍 Looking for conversation with whatsapp_contact_id:', contact.id)
+    
     const { data: conversation, error: conversationError } = await supabase
       .from('conversations')
-      .select('id, assistant_id')
+      .select('id, assistant_id, whatsapp_contact_id')
       .eq('whatsapp_contact_id', contact.id)
       .single()
 
     if (conversationError || !conversation) {
-      console.error('❌ Conversation not found for contact:', contact.id, conversationError)
+      console.error('❌ Conversation not found for contact ID:', contact.id, 'Error:', conversationError)
+      
+      // Let's also try to find ANY conversation for debugging
+      const { data: allConversations } = await supabase
+        .from('conversations')
+        .select('id, whatsapp_contact_id')
+        .limit(5)
+      
+      console.log('🔍 Sample conversations in database:', allConversations)
+      
       return NextResponse.json({ 
-        error: 'Conversation not found for this contact' 
+        error: `Conversation not found for contact: ${contact.id}` 
       }, { status: 404 })
     }
+
+    console.log('✅ Found conversation:', conversation.id, 'for contact:', contact.id)
 
     // Check if assignment already exists
     if (conversation.assistant_id) {
