@@ -62,6 +62,7 @@ import { useWASender } from './lib/useWASender'
 import { useAnalytics } from './lib/useAnalytics'
 import { useDatabase } from './lib/useDatabase'
 import { useContacts } from './lib/useContacts'
+import { useHelpers } from './lib/useHelpers'
 
 // Import contact types from service
 import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
@@ -264,6 +265,31 @@ export default function ChatPage() {
     setIsContactsDialogOpen,
     closeContactsDialog
   } = contactsHook
+
+  // Helper utilities functionality
+  const helpersHook = useHelpers({
+    contacts: hookWhatsappContacts,
+    allContacts
+  })
+
+  // Extract helper functions for use in component
+  const {
+    formatTime,
+    getContactName,
+    getContactAvatar,
+    getInitials,
+    getStatusColor,
+    getConfidenceColor,
+    getMessageStatusIcon,
+    getDisplayName,
+    getConversationSubtitle,
+    extractPhoneNumber,
+    isSystemConversation,
+    isAtBottom,
+    formatFileSize,
+    truncateText,
+    isValidPhoneNumber
+  } = helpersHook
   
 
 
@@ -293,105 +319,7 @@ export default function ChatPage() {
 
 
 
-    // Note: Contact functions are now handled by useContacts hook
-
-  // Helper functions (defined early to avoid initialization errors)
-  const formatTime = (timestamp: number) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    
-    if (diffInHours < 1) {
-      const diffInMinutes = Math.floor(diffInHours * 60)
-      return diffInMinutes <= 1 ? 'Just now' : `${diffInMinutes}m ago`
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h ago`
-    } else {
-      return date.toLocaleDateString()
-    }
-  }
-
-  const getContactName = (jid: string) => {
-    const contact = hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === jid)
-    return contact?.name || contact?.notify || jid
-  }
-
-  // Get contact profile picture URL
-  const getContactAvatar = (jid: string) => {
-    const contact = hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === jid)
-    return contact?.imgUrl || "/placeholder.svg"
-  }
-
-  // Helper function to safely get initials from a name
-  const getInitials = (name: string | null | undefined): string => {
-    if (!name || typeof name !== 'string') return '?'
-    
-    return name
-      .split(" ")
-      .filter(part => part.length > 0)
-      .map((n) => n[0]?.toUpperCase() || '')
-      .filter(initial => initial.length > 0)
-      .join("")
-      .slice(0, 2) || '?'
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500"
-      case "escalated":
-        return "bg-red-500"
-      case "resolved":
-        return "bg-muted-foreground"
-      default:
-        return "bg-blue-500"
-    }
-  }
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 80) return "text-green-600"
-    if (confidence >= 60) return "text-yellow-600"
-    return "text-red-600"
-  }
-
-  // Helper function to get message status icon and color
-  const getMessageStatusIcon = (status?: string, metadata?: Record<string, any>) => {
-    const whatsappStatus = metadata?.whatsapp_status
-    const statusName = metadata?.whatsapp_status_name || status
-    
-    // Convert numeric status to string for comparison
-    const statusStr = String(statusName)
-    
-    // Debug logging to understand status values
-    console.log(`🔍 getMessageStatusIcon called - status: "${status}", statusName: "${statusName}", statusStr: "${statusStr}"`)
-    console.log(`🔍 metadata:`, metadata)
-    
-    switch (statusStr) {
-      case 'sent':
-      case 'pending':
-      case '1': // WhatsApp status code for pending
-      case '2': // WhatsApp status code for sent
-        console.log('🔍 Returning sent status icon')
-        return { icon: '✓', color: 'text-muted-foreground', tooltip: 'Sent' }
-      case 'delivered':
-      case '3': // WhatsApp status code for delivered
-        console.log('🔍 Returning delivered status icon')
-        return { icon: '✓✓', color: 'text-muted-foreground', tooltip: 'Delivered' }
-      case 'read':
-      case '4': // WhatsApp status code for read
-        console.log('🔍 Returning read status icon')
-        return { icon: '✓✓', color: 'text-blue-600 dark:text-blue-400', tooltip: 'Read' }
-      case 'failed':
-      case 'error':
-      case '0': // WhatsApp status code for error
-        console.log('🔍 Returning error status icon')
-        return { icon: '⚠', color: 'text-red-600 dark:text-red-400', tooltip: 'Failed to send' }
-      default:
-        // For messages without status, don't show any icon
-        console.log('🔍 No status match, returning null for:', statusStr)
-        return null
-    }
-  }
+    // Note: Utility functions are now handled by useHelpers hook
 
   // Use sendWhatsAppMessage from WASender hook with additional database updates
   const sendWhatsAppMessage = async () => {
@@ -465,14 +393,7 @@ export default function ChatPage() {
       } : undefined)
   }, [conversations, selectedContact, hookWhatsappContacts])
 
-  // Check if the selected conversation is with a system user (non-WhatsApp contact) - memoized to prevent re-calculations
-  const isSystemConversation = useMemo(() => {
-    if (!selectedConversation) return false
-    const remoteJid = selectedConversation.remoteJid || selectedConversation.email
-    if (!remoteJid) return false
-    const phoneNumber = remoteJid.replace('@s.whatsapp.net', '')
-    return phoneNumber === 'admin' || phoneNumber.includes('@') || !phoneNumber.match(/^\+?\d+$/)
-  }, [selectedConversation])
+  // Note: isSystemConversation function is now handled by useHelpers hook
 
   // Grocery lists functionality
   const { groceryListsData, isLoadingGroceryData, loadGroceryListsData } = useGroceryLists({
@@ -704,14 +625,7 @@ export default function ChatPage() {
   // Note: Conversation list polling is handled globally by useGlobalNotifications hook
   // This prevents duplicate polling and ensures notifications work across all pages
 
-  // Check if user is at bottom of chat
-  const isAtBottom = useCallback(() => {
-    if (!scrollAreaRef.current) return true
-    
-    const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current
-    const threshold = 100 // pixels from bottom
-    return scrollHeight - scrollTop - clientHeight < threshold
-  }, [])
+  // Note: isAtBottom function is now handled by useHelpers hook
 
   // Handle scroll position tracking
   const handleScroll = useCallback(() => {
@@ -835,48 +749,7 @@ export default function ChatPage() {
 
   // Delete conversation (now handled by database hook)
 
-  // Helper function to get proper display name from conversation
-  const getDisplayName = (conversation: ChatConversation | undefined): string => {
-    if (!conversation) return "Select a contact"
-    
-    // If user field already has a proper name (not a phone number), use it
-    if (conversation.user && conversation.user !== 'Unknown' && !conversation.user.includes('@') && !conversation.user.match(/^\+?\d+$/)) {
-      return conversation.user
-    }
-    
-    // Try to find the contact from our contacts list to get the proper name
-    const remoteJid = conversation.remoteJid || conversation.email
-    if (remoteJid) {
-      const contact = allContacts.find(c => c.jid === remoteJid) || 
-                     hookWhatsappContacts.find((c: WhatsAppContact) => c.jid === remoteJid)
-      
-      if (contact) {
-        return contact.name || contact.notify || contact.verifiedName || hookExtractPhoneNumber(remoteJid)
-      }
-    }
-    
-    // Fallback to extracting phone number from email/jid
-    return extractPhoneNumber(conversation.email || conversation.id)
-  }
-
-  // Use extractPhoneNumber from WASender hook
-  const extractPhoneNumber = wasenderHook.extractPhoneNumber
-
-  // Helper function to get conversation subtitle (phone number or status)
-  const getConversationSubtitle = (conversation: ChatConversation | undefined): string => {
-    if (!conversation) return ""
-    
-    const remoteJid = conversation.remoteJid || conversation.email
-    const phoneNumber = extractPhoneNumber(remoteJid || '')
-    
-    // If the display name is already the phone number, show status instead
-    const displayName = getDisplayName(conversation)
-    if (displayName === phoneNumber) {
-      return conversation.status === 'active' ? 'Online' : 'Last seen recently'
-    }
-    
-    return phoneNumber
-  }
+  // Note: Display name and conversation subtitle functions are now handled by useHelpers hook
 
   return (
     <div className="space-y-6">
