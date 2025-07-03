@@ -38,31 +38,38 @@ export async function POST(request: NextRequest) {
 
     console.log('🔧 Creating assignment for:', phone_number, 'with assistant:', assistant_id)
 
-    // Find the conversation by phone number using the correct field
+    // Find the WhatsApp contact by phone number
     const phoneWithoutPlus = phone_number.replace('+', '')
-    const remoteJid = `${phoneWithoutPlus}@s.whatsapp.net`
     
+    const { data: contact, error: contactError } = await supabase
+      .from('whatsapp_contacts')
+      .select('id, phone_number, display_name, push_name')
+      .eq('phone_number', phoneWithoutPlus)
+      .single()
+
+    if (contactError || !contact) {
+      console.error('❌ Contact not found for phone:', phoneWithoutPlus, contactError)
+      return NextResponse.json({ 
+        error: 'WhatsApp contact not found' 
+      }, { status: 404 })
+    }
+
+    // Find the conversation for this contact
     const { data: conversation, error: conversationError } = await supabase
       .from('conversations')
-      .select('id, remote_jid')
-      .eq('remote_jid', remoteJid)
+      .select('id, assistant_id')
+      .eq('whatsapp_contact_id', contact.id)
       .single()
 
     if (conversationError || !conversation) {
-      console.error('❌ Conversation not found for remoteJid:', remoteJid, conversationError)
+      console.error('❌ Conversation not found for contact:', contact.id, conversationError)
       return NextResponse.json({ 
         error: 'Conversation not found for this contact' 
       }, { status: 404 })
     }
 
     // Check if assignment already exists
-    const { data: existingAssignment } = await supabase
-      .from('conversations')
-      .select('ai_assistant_id')
-      .eq('id', conversation.id)
-      .single()
-
-    if (existingAssignment?.ai_assistant_id) {
+    if (conversation.assistant_id) {
       return NextResponse.json({ 
         error: 'This contact already has an assistant assigned' 
       }, { status: 409 })
@@ -72,7 +79,8 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from('conversations')
       .update({ 
-        ai_assistant_id: assistant_id,
+        assistant_id: assistant_id,
+        assistant_created_at: new Date().toISOString(),
         ai_enabled: true,
         updated_at: new Date().toISOString()
       })
@@ -91,7 +99,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Assistant assigned successfully',
       conversation_id: conversation.id,
-      contact_name: phone_number,
+      contact_name: contact.display_name || contact.push_name || phone_number,
       assistant_id
     })
 
