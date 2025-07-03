@@ -135,8 +135,12 @@ export const useWASender = ({
     }
 
     try {
-      // Extract phone number from JID
-      const remoteJid = selectedContact
+      // Extract phone number from selected conversation's remoteJid
+      const remoteJid = selectedConversation?.remoteJid
+      if (!remoteJid) {
+        throw new Error('No contact phone number found. Please select a valid conversation.')
+      }
+      
       const phoneNumber = remoteJid.replace('@s.whatsapp.net', '')
       
       if (!phoneNumber || phoneNumber.length < 10) {
@@ -144,17 +148,26 @@ export const useWASender = ({
       }
 
       console.log('📱 Sending WhatsApp message to:', phoneNumber)
+      console.log('🔍 DEBUG: selectedConversation:', selectedConversation)
+      console.log('🔍 DEBUG: selectedConversation.id:', selectedConversation?.id)
+      console.log('🔍 DEBUG: selectedConversation.conversationId:', selectedConversation?.conversationId)
+      
+      const finalConversationId = selectedConversation?.id || selectedConversation?.conversationId
+      console.log('🔍 DEBUG: finalConversationId:', finalConversationId)
+      
+      const requestBody = {
+        to: phoneNumber,
+        text: newMessage.trim(),
+        conversationId: finalConversationId
+      }
+      console.log('🔍 DEBUG: Full request body:', JSON.stringify(requestBody, null, 2))
       
       const response = await fetch('/admin/chat/api/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          phoneNumber,
-          message: newMessage.trim(),
-          remoteJid
-        })
+        body: JSON.stringify(requestBody)
       })
 
       if (!response.ok) {
