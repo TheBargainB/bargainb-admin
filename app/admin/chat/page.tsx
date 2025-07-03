@@ -54,6 +54,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 import { ChatUserProfile } from './components/ChatUserProfile'
 import AIConfigTab from './components/AIConfigTab'
+import { useRealTimeChat } from './lib/useRealTimeChat'
 
 // WhatsApp types
 interface WhatsAppMessage {
@@ -169,17 +170,6 @@ export default function ChatPage() {
   const [selectedGroceryList, setSelectedGroceryList] = useState<any>(null)
   const [isGroceryListModalOpen, setIsGroceryListModalOpen] = useState(false)
   
-  // Real-time subscriptions state - Optimized to prevent excessive re-renders
-  const [messageSubscription, setMessageSubscription] = useState<any>(null)
-  const [conversationSubscription, setConversationSubscription] = useState<any>(null)
-  const [isRealTimeConnected, setIsRealTimeConnected] = useState(false)
-  const [connectionRetryCount, setConnectionRetryCount] = useState(0)
-  
-  // Refs to avoid stale closures in real-time subscriptions
-  const selectedContactRef = useRef(selectedContact)
-  const databaseConversationsRef = useRef(databaseConversations)
-  const selectedConversationRef = useRef<ChatConversation | undefined>(undefined)
-  
   // Refs for smooth scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -256,11 +246,8 @@ export default function ChatPage() {
     loadBusinessContact()
   }, [])
 
-  // Keep refs updated with current values
-  useEffect(() => {
-    selectedContactRef.current = selectedContact
-  }, [selectedContact])
-
+  // Keep database conversations ref updated
+  const databaseConversationsRef = useRef(databaseConversations)
   useEffect(() => {
     databaseConversationsRef.current = databaseConversations
   }, [databaseConversations])
@@ -1134,189 +1121,7 @@ export default function ChatPage() {
     lastMessageCountRef.current = 0
   }, [selectedContact])
 
-  // Update refs when values change to avoid stale closures in subscriptions
-  useEffect(() => {
-    selectedContactRef.current = selectedContact
-    selectedConversationRef.current = selectedConversation
-  }, [selectedContact, selectedConversation])
 
-  // ✨ REAL-TIME MESSAGE DISPLAY - Like WhatsApp ✨
-  // Set up real-time subscriptions for current conversation messages
-  useEffect(() => {
-    if (!selectedConversation?.conversationId && !selectedConversation?.id) {
-      // Clean up existing subscriptions when no conversation is selected
-      if (messageSubscription) {
-        console.log('🧹 Cleaning up message subscription (no conversation selected)')
-        supabase.removeChannel(messageSubscription)
-        setMessageSubscription(null)
-      }
-      setIsRealTimeConnected(false)
-      return
-    }
-
-    const conversationId = selectedConversation.conversationId || selectedConversation.id
-    const remoteJid = selectedConversation.remoteJid || selectedConversation.email
-
-    console.log('📡 Setting up real-time messages for conversation:', conversationId)
-
-    // Clean up existing subscription first
-    if (messageSubscription) {
-      console.log('🧹 Cleaning up previous message subscription')
-      supabase.removeChannel(messageSubscription)
-    }
-
-    // Create new subscription for instant message updates
-    const newMessageSubscription = supabase
-      .channel(`messages-${conversationId}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
-        },
-        async (payload) => {
-          console.log('🔔 NEW MESSAGE ARRIVED:', payload.new?.content?.substring(0, 50) + '...')
-          
-                      // Instantly add the new message to the current view
-            const newMessage = payload.new
-            if (newMessage && selectedConversationRef.current?.remoteJid) {
-              // Add message directly to state for instant display
-              setDatabaseMessages(prevMessages => {
-                // Check if message already exists to prevent duplicates
-                const messageExists = prevMessages.some(msg => msg.id === newMessage.id)
-                if (messageExists) return prevMessages
-                
-                // Convert database message to expected format and add to list
-                const updatedMessages = [...prevMessages, newMessage as any]
-                console.log('✅ Message added instantly to UI')
-                return updatedMessages
-              })
-            
-            // Auto-scroll to new message if user is at bottom
-            setTimeout(() => {
-              if (messagesEndRef.current && isAtBottom()) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
-                console.log('📍 Auto-scrolled to new message')
-              }
-            }, 100)
-            
-            // Also refresh conversation list to update last message
-            setTimeout(() => {
-              loadConversationsFromDatabase(true)
-            }, 200)
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
-        },
-        async (payload) => {
-          console.log('🔄 Message updated (status change):', payload.new?.id)
-          
-          // Update the specific message in state
-          const updatedMessage = payload.new
-          if (updatedMessage) {
-            setDatabaseMessages(prevMessages => 
-              prevMessages.map(msg => 
-                msg.id === updatedMessage.id ? updatedMessage as any : msg
-              )
-            )
-            console.log('✅ Message status updated instantly')
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 Real-time message subscription:', status)
-        if (status === 'SUBSCRIBED') {
-          setIsRealTimeConnected(true)
-          setConnectionRetryCount(0)
-          console.log('✅ Real-time messages CONNECTED - messages will appear instantly')
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          setIsRealTimeConnected(false)
-          console.warn('⚠️ Real-time messages DISCONNECTED:', status)
-          if (connectionRetryCount < 2) {
-            setConnectionRetryCount(prev => prev + 1)
-            console.log('🔄 Will retry connection...')
-          }
-        }
-      })
-
-    setMessageSubscription(newMessageSubscription)
-
-    return () => {
-      if (newMessageSubscription) {
-        console.log('🧹 Cleaning up message subscription')
-        supabase.removeChannel(newMessageSubscription)
-      }
-    }
-  }, [selectedConversation?.conversationId, selectedConversation?.id, connectionRetryCount])
-
-  // Real-time conversation list updates
-  useEffect(() => {
-    console.log('📡 Setting up real-time conversation list updates')
-
-    // Clean up existing subscription first
-    if (conversationSubscription) {
-      supabase.removeChannel(conversationSubscription)
-    }
-
-    // Subscribe to new messages globally to update conversation list
-    const newConversationSubscription = supabase
-      .channel(`conversations-global-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages'
-        },
-        async (payload) => {
-          console.log('🔔 New message globally - updating conversation list')
-          
-          // Update conversation list to show new last message
-          setTimeout(() => {
-            loadConversationsFromDatabase(true)
-          }, 300)
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'conversations'
-        },
-        async (payload) => {
-          console.log('🔔 Conversation updated - refreshing list')
-          
-          setTimeout(() => {
-            loadConversationsFromDatabase(true)
-          }, 500)
-        }
-      )
-      .subscribe((status) => {
-        console.log('📡 Conversation list subscription:', status)
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Conversation list real-time CONNECTED')
-        }
-      })
-
-    setConversationSubscription(newConversationSubscription)
-
-    return () => {
-      if (newConversationSubscription) {
-        console.log('🧹 Cleaning up conversation subscription')
-        supabase.removeChannel(newConversationSubscription)
-      }
-    }
-  }, [])
 
   // REMOVE ALL POLLING - Real-time should handle everything
   useEffect(() => {
@@ -1441,7 +1246,15 @@ export default function ChatPage() {
     }
   }
 
-
+  // Real-time chat functionality
+  const { isRealTimeConnected, connectionRetryCount } = useRealTimeChat({
+    selectedContact,
+    selectedConversation,
+    loadConversationsFromDatabase,
+    messagesEndRef,
+    isAtBottom,
+    setDatabaseMessages
+  })
 
   // Load contacts count for stats
   const loadContactsCount = async () => {
