@@ -65,33 +65,9 @@ import { useContacts } from './lib/useContacts'
 import { useChatActions } from './lib/useChatActions'
 import { useHelpers } from './lib/useHelpers'
 
-// Import contact types from service
-import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
-
-// WhatsApp types
-interface WhatsAppMessage {
-  id: string
-  fromMe: boolean
-  remoteJid: string
-  conversation: string
-  timestamp: number
-  status?: number
-}
-
-// UI-friendly WhatsApp contact interface (mapped from database)
-interface WhatsAppContact {
-  jid: string
-  name?: string
-  notify?: string
-  status?: string
-  imgUrl?: string
-  verifiedName?: string
-  id?: string
-  phone_number?: string
-  created_at?: string
-  updated_at?: string
-  last_seen_at?: string
-}
+// Import contact service and shared types
+import { ContactService, Contact } from './lib/contact-service'
+import type { WhatsAppContact, WhatsAppMessage, ChatConversation, ChatMessage } from './lib/types'
 
 // Message status enum
 enum MessageStatus {
@@ -101,36 +77,6 @@ enum MessageStatus {
   DELIVERED = 3,
   READ = 4,
   PLAYED = 5,
-}
-
-// Chat conversation interface for UI consistency
-interface ChatConversation {
-  id: string
-  user: string
-  email: string
-  avatar: string
-  lastMessage: string
-  timestamp: string
-  status: 'active' | 'resolved' | 'escalated'
-  unread_count: number
-  type: string
-  aiConfidence: number
-  lastMessageAt?: string
-  remoteJid?: string
-  conversationId?: string
-  phoneNumber?: string
-}
-
-// Chat message interface for UI consistency
-interface ChatMessage {
-  id: string
-  content: string
-  sender: 'user' | 'ai' | 'admin'
-  senderName: string
-  timestamp: string
-  confidence?: number
-  status?: string
-  metadata?: Record<string, any>
 }
 
 export default function ChatPage() {

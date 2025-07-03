@@ -1,21 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { ContactService, Contact } from './contact-service'
-
-// UI-friendly WhatsApp contact interface (mapped from database)
-interface WhatsAppContact {
-  jid: string
-  name?: string
-  notify?: string
-  status?: string
-  imgUrl?: string
-  verifiedName?: string
-  id?: string
-  phone_number?: string
-  created_at?: string
-  updated_at?: string
-  last_seen_at?: string
-}
+import type { WhatsAppContact } from './types'
 
 interface UseContactsOptions {
   // Contact-specific options only - no chat dependencies

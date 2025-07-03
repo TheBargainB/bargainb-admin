@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase'
+import type { WhatsAppContact } from './types'
 
-// Define types inline to match the actual database schema
-export type WhatsAppContact = {
+// Database schema types (match actual database structure)
+export type WhatsAppContactDB = {
   id: string
   phone_number: string
   whatsapp_jid: string

@@ -1,38 +1,6 @@
 import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
-
-// UI-friendly WhatsApp contact interface
-interface WhatsAppContact {
-  jid: string
-  name?: string
-  notify?: string
-  status?: string
-  imgUrl?: string
-  verifiedName?: string
-  id?: string
-  phone_number?: string
-  created_at?: string
-  updated_at?: string
-  last_seen_at?: string
-}
-
-// Chat conversation interface
-interface ChatConversation {
-  id: string
-  user: string
-  email: string
-  avatar: string
-  lastMessage: string
-  timestamp: string
-  status: 'active' | 'resolved' | 'escalated'
-  unread_count: number
-  type: string
-  aiConfidence: number
-  lastMessageAt?: string
-  remoteJid?: string
-  conversationId?: string
-  phoneNumber?: string
-}
+import type { WhatsAppContact, ChatConversation, UseWASenderHook } from './types'
 
 interface UseChatActionsOptions {
   selectedContact: string | undefined
@@ -44,7 +12,7 @@ interface UseChatActionsOptions {
   setDatabaseMessages: (messages: any[]) => void
   databaseConversations: ChatConversation[]
   onConversationCreated?: (conversation: ChatConversation) => void
-  wasenderHook: any // WASender hook instance
+  wasenderHook: UseWASenderHook
 }
 
 export const useChatActions = ({
