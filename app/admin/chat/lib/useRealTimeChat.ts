@@ -107,17 +107,56 @@ export const useRealTimeChat = ({
           console.log('🔔 NEW MESSAGE ARRIVED:', payload.new?.content?.substring(0, 50) + '...')
           
           // Instantly add the new message to the current view
-          const newMessage = payload.new
-          if (newMessage && selectedConversationRef.current?.remoteJid) {
+          const rawMessage = payload.new
+          if (rawMessage && selectedConversationRef.current) {
+            
+            // Format the raw database message to match ChatMessage interface
+            const selectedConversation = selectedConversationRef.current
+            const contactName = selectedConversation.user || 'Unknown'
+            
+            // Determine sender type based on direction
+            let senderType: 'user' | 'admin' | 'ai' = 'user'
+            let senderName = contactName
+            
+            if (rawMessage.direction === 'outbound') {
+              senderType = 'admin'
+              senderName = 'BargainB'
+            } else if (rawMessage.direction === 'inbound') {
+              senderType = 'user'
+              senderName = contactName
+            }
+            
+            // Check for AI generation indicators
+            const rawData = rawMessage.raw_message_data as any
+            if (rawData?.ai_generated || rawData?.from_ai) {
+              senderType = 'ai'
+              senderName = 'AI Assistant'
+            }
+            
+            // Format message to match ChatMessage interface
+            const formattedMessage: ChatMessage = {
+              id: rawMessage.id,
+              content: rawMessage.content || '',
+              sender: senderType,
+              senderName: senderName,
+              timestamp: new Date(rawMessage.created_at || new Date()).toLocaleTimeString(),
+              confidence: rawData?.ai_confidence || undefined,
+              status: rawMessage.whatsapp_status || 'sent',
+              metadata: rawData || {}
+            }
+            
             // Add message directly to state for instant display
             setDatabaseMessages(prevMessages => {
               // Check if message already exists to prevent duplicates
-              const messageExists = prevMessages.some(msg => msg.id === newMessage.id)
-              if (messageExists) return prevMessages
+              const messageExists = prevMessages.some(msg => msg.id === formattedMessage.id)
+              if (messageExists) {
+                console.log('⚠️ Message already exists, skipping duplicate')
+                return prevMessages
+              }
               
-              // Convert database message to expected format and add to list
-              const updatedMessages = [...prevMessages, newMessage as any]
-              console.log('✅ Message added instantly to UI')
+              // Add formatted message to list
+              const updatedMessages = [...prevMessages, formattedMessage]
+              console.log('✅ Message formatted and added instantly to UI:', senderType, formattedMessage.content.substring(0, 30))
               return updatedMessages
             })
             
@@ -148,14 +187,47 @@ export const useRealTimeChat = ({
           console.log('🔄 Message updated (status change):', payload.new?.id)
           
           // Update the specific message in state
-          const updatedMessage = payload.new
-          if (updatedMessage) {
+          const rawUpdatedMessage = payload.new
+          if (rawUpdatedMessage && selectedConversationRef.current) {
+            
+            // Format the updated message properly
+            const selectedConversation = selectedConversationRef.current
+            const contactName = selectedConversation.user || 'Unknown'
+            
+            let senderType: 'user' | 'admin' | 'ai' = 'user'
+            let senderName = contactName
+            
+            if (rawUpdatedMessage.direction === 'outbound') {
+              senderType = 'admin'
+              senderName = 'BargainB'
+            } else if (rawUpdatedMessage.direction === 'inbound') {
+              senderType = 'user'
+              senderName = contactName
+            }
+            
+            const rawData = rawUpdatedMessage.raw_message_data as any
+            if (rawData?.ai_generated || rawData?.from_ai) {
+              senderType = 'ai'
+              senderName = 'AI Assistant'
+            }
+            
+            const formattedUpdatedMessage: ChatMessage = {
+              id: rawUpdatedMessage.id,
+              content: rawUpdatedMessage.content || '',
+              sender: senderType,
+              senderName: senderName,
+              timestamp: new Date(rawUpdatedMessage.created_at || new Date()).toLocaleTimeString(),
+              confidence: rawData?.ai_confidence || undefined,
+              status: rawUpdatedMessage.whatsapp_status || 'sent',
+              metadata: rawData || {}
+            }
+            
             setDatabaseMessages(prevMessages => 
               prevMessages.map(msg => 
-                msg.id === updatedMessage.id ? updatedMessage as any : msg
+                msg.id === formattedUpdatedMessage.id ? formattedUpdatedMessage : msg
               )
             )
-            console.log('✅ Message status updated instantly')
+            console.log('✅ Message status updated instantly:', formattedUpdatedMessage.status)
           }
         }
       )

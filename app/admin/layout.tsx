@@ -11,6 +11,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Toaster } from "@/components/ui/toaster"
 import { useGlobalNotifications } from "@/hooks/useGlobalNotifications"
+import { NotificationDropdown } from "@/components/ui/notification-dropdown"
 import Link from "next/link"
 
 interface AdminLayoutProps {
@@ -71,28 +72,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <span>{adminSession?.user.email}</span>
                 </div>
                 
-                {/* Notification Bell - IMPROVED: Only show when notifications are ready */}
+                {/* Notification Dropdown - IMPROVED: Clickable dropdown with recent messages */}
                 {shouldUseNotifications && (
-                  <div className="relative">
-                    <Link href="/admin/chat">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="relative p-2"
-                        title={unreadMessages > 0 ? `${unreadMessages} unread messages` : 'No unread messages'}
-                      >
-                        <Bell className="w-4 h-4" />
-                        {unreadMessages > 0 && (
-                          <Badge 
-                            variant="destructive" 
-                            className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center rounded-full animate-pulse"
-                          >
-                            {unreadMessages > 99 ? '99+' : unreadMessages}
-                          </Badge>
-                        )}
-                      </Button>
-                    </Link>
-                  </div>
+                  <NotificationDropdown 
+                    unreadCount={unreadMessages}
+                    onMarkAllAsRead={markAllAsRead}
+                  />
                 )}
 
                 <ThemeToggle />
