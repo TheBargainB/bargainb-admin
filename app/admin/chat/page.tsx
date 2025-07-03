@@ -232,8 +232,8 @@ export default function ChatPage() {
     allContacts: wasenderAllContacts,
     isLoadingContacts: wasenderLoadingContacts,
     isSyncingContacts: wasenderSyncingContacts,
-    isCreatingConversation: wasenderCreatingConversation,
-    extractPhoneNumber: hookExtractPhoneNumber
+    isCreatingConversation: wasenderCreatingConversation
+    // Note: extractPhoneNumber is now provided by useHelpers hook
   } = wasenderHook
 
   // Contacts functionality
