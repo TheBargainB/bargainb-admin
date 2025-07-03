@@ -61,6 +61,7 @@ import { useBusiness } from './lib/useBusiness'
 import { useWASender } from './lib/useWASender'
 import { useAnalytics } from './lib/useAnalytics'
 import { useDatabase } from './lib/useDatabase'
+import { useContacts } from './lib/useContacts'
 
 // Import contact types from service
 import { ContactService, WhatsAppContact as DbWhatsAppContact, Contact } from './lib/contact-service'
@@ -145,14 +146,7 @@ export default function ChatPage() {
   const [confidenceThreshold, setConfidenceThreshold] = useState([75])
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
-  const [isCreatingConversation, setIsCreatingConversation] = useState(false)
-  
-  // Contacts dialog state
-  const [isContactsDialogOpen, setIsContactsDialogOpen] = useState(false)
-  const [allContacts, setAllContacts] = useState<WhatsAppContact[]>([])
-  const [isLoadingContacts, setIsLoadingContacts] = useState(false)
-  const [contactSearchTerm, setContactSearchTerm] = useState("")
-  const [isSyncingContacts, setIsSyncingContacts] = useState(false)
+  // Note: Contact-related state is now handled by useContacts hook
   
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -240,6 +234,36 @@ export default function ChatPage() {
     isCreatingConversation: wasenderCreatingConversation,
     extractPhoneNumber: hookExtractPhoneNumber
   } = wasenderHook
+
+  // Contacts functionality
+  const contactsHook = useContacts({
+    onConversationCreated: (conversation) => {
+      setDatabaseConversations(prev => [conversation, ...prev])
+    },
+    loadConversationsFromDatabase,
+    setSelectedContact,
+    setDatabaseMessages,
+    databaseConversations
+  })
+
+  // Extract contacts functions for use in component
+  const {
+    allContacts,
+    filteredContacts,
+    isLoadingContacts,
+    isSyncingContacts,
+    isCreatingConversation,
+    contactSearchTerm,
+    isContactsDialogOpen,
+    filteredContactsCount,
+    loadAllContacts,
+    syncContactsWithWASender,
+    handleOpenContactsDialog,
+    startConversationWithContact,
+    setContactSearchTerm,
+    setIsContactsDialogOpen,
+    closeContactsDialog
+  } = contactsHook
   
 
 
@@ -269,158 +293,7 @@ export default function ChatPage() {
 
 
 
-  // Helper function to transform database contact to UI format
-  const transformContactForUI = (contact: Contact): WhatsAppContact => {
-    return {
-      jid: contact.phone_number.replace('+', '') + '@s.whatsapp.net',
-      id: contact.id,
-      name: contact.name || undefined,
-      notify: contact.notify || undefined,
-      verifiedName: contact.verified_name || undefined,
-      imgUrl: contact.img_url || undefined,
-      status: contact.status || undefined,
-      phone_number: contact.phone_number,
-      created_at: contact.created_at,
-      updated_at: contact.updated_at,
-      last_seen_at: contact.last_seen_at || undefined
-    }
-  }
-
-  // Load all contacts using ContactService (removes duplication)
-  const loadAllContacts = async () => {
-    try {
-      setIsLoadingContacts(true)
-      console.log('💾 Loading contacts using ContactService...')
-      
-      // Use ContactService to get all contacts from database
-      const contactsFromDb = await ContactService.getAllContacts()
-      
-      if (contactsFromDb.length > 0) {
-        // Transform database contacts to UI format
-        const transformedContacts = contactsFromDb.map(transformContactForUI)
-        
-        setAllContacts(transformedContacts)
-        console.log(`✅ Loaded ${transformedContacts.length} contacts via ContactService`)
-        
-        toast({
-          title: "Contacts loaded",
-          description: `Found ${transformedContacts.length} contacts in database.`,
-          variant: "default"
-        })
-      } else {
-        console.log('💾 No contacts found in database')
-        setAllContacts([])
-        
-        toast({
-          title: "No contacts found",
-          description: "Use the sync button to fetch contacts from WASender API.",
-          variant: "default"
-        })
-      }
-      
-    } catch (error) {
-      console.error('❌ Error loading contacts via ContactService:', error)
-      
-      // Fallback to existing whatsapp contacts if everything fails
-      setAllContacts(hookWhatsappContacts)
-      
-      toast({
-        title: "Using conversation contacts",
-        description: "Showing contacts from current conversations.",
-        variant: "default"
-      })
-    } finally {
-      setIsLoadingContacts(false)
-      console.log('🏁 Finished loading contacts via ContactService')
-    }
-  }
-
-  // Use syncContactsWithWASender from WASender hook with additional refresh logic
-  const syncContactsWithWASender = async () => {
-    const success = await wasenderHook.syncContactsWithWASender()
-    
-    if (success) {
-      // Refresh the contacts from database
-      await loadAllContacts()
-      
-      // Also refresh the contacts count for stats
-      await loadContactsCount()
-    }
-  }
-
-  // Handle opening contacts dialog
-  const handleOpenContactsDialog = async () => {
-    setIsContactsDialogOpen(true)
-    await loadAllContacts()
-  }
-
-  // Start conversation with a contact
-  const startConversationWithContact = async (contact: WhatsAppContact) => {
-    setIsCreatingConversation(true)
-    
-    try {
-      // Create a new conversation in the database using the new API
-      const response = await fetch('/admin/chat/api/conversations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contact: {
-            phone_number: contact.jid.replace('@s.whatsapp.net', ''),
-            name: contact.name || contact.notify || 'Unknown',
-            notify: contact.notify,
-            img_url: contact.imgUrl
-          }
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to create conversation: ${response.status}`)
-      }
-
-      const result = await response.json()
-      const conversation = result.data
-
-      // Create a ChatConversation object for the UI
-      const newChatConversation: ChatConversation = {
-        id: conversation.id,
-        user: contact.name || contact.notify || 'Unknown',
-        email: contact.jid,
-        avatar: contact.imgUrl || '',
-        lastMessage: 'Conversation started',
-        timestamp: new Date().toLocaleTimeString(),
-        status: 'active',
-        unread_count: 0,
-        type: 'whatsapp',
-        aiConfidence: confidenceThreshold[0],
-        lastMessageAt: new Date().toISOString()
-      }
-
-      // Add to conversations list
-      setDatabaseConversations(prev => [newChatConversation, ...prev])
-      
-      // Select the new conversation
-      setSelectedContact(contact.jid)
-      setIsContactsDialogOpen(false)
-      setContactSearchTerm("")
-      
-      toast({
-        title: "Conversation created",
-        description: `Started new conversation with ${contact.name || contact.notify || "Unknown"}`,
-      })
-      
-    } catch (error) {
-      console.error('Error creating conversation:', error)
-      toast({
-        title: "Error",
-        description: "Failed to create conversation. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsCreatingConversation(false)
-    }
-  }
+    // Note: Contact functions are now handled by useContacts hook
 
   // Helper functions (defined early to avoid initialization errors)
   const formatTime = (timestamp: number) => {
