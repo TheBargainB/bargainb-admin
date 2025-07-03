@@ -78,6 +78,8 @@ export class WhatsAppAIService {
     error?: string;
   }> {
     try {
+      console.log('🚀 Starting AI message processing for chat:', chatId);
+      
       // 1. Check if AI is enabled for this chat
       const { data: chatData } = await this.supabase
         .from('conversations')
@@ -86,8 +88,11 @@ export class WhatsAppAIService {
         .single();
 
       if (!chatData?.ai_enabled) {
+        console.log('❌ AI not enabled for chat:', chatId);
         return { success: false, error: 'AI not enabled for this chat' };
       }
+
+      console.log('✅ AI enabled for chat, assistant_id:', chatData.assistant_id);
 
       // 2. Get or create personalized assistant for this conversation
       let assistantId = chatData.assistant_id;
@@ -110,19 +115,51 @@ export class WhatsAppAIService {
 
       // 3. SPEED OPTIMIZATION: Get or create thread + user profile in parallel
       const cleanMessage = message.replace(/@bb\s*/i, '').trim();
+      console.log('📝 Cleaned message:', cleanMessage);
       
       const [threadId, userProfile] = await Promise.all([
         this.getOrCreateThreadFast(chatId, userId, assistantId, chatData.ai_thread_id),
         this.getUserProfileFast(userId) // Non-blocking, returns null if not found quickly
       ]);
 
-      // 4. Send to AI agent - optimized call
-      const startTime = Date.now();
-      const aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
-      const processingTime = Date.now() - startTime;
+      console.log('✅ Thread ID:', threadId);
+      console.log('✅ User profile:', userProfile ? 'found' : 'not found');
 
-      // 5. Save response and send via WhatsApp (synchronous to catch errors)
-      await this.saveAIResponseMessage(chatId, aiResponse, threadId);
+      // 4. Send to AI agent - optimized call
+      console.log('🤖 Calling AI agent...');
+      const startTime = Date.now();
+      let aiResponse;
+      
+      try {
+        aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
+        console.log('✅ AI response generated:', aiResponse?.substring(0, 100) + '...');
+      } catch (error) {
+        console.error('❌ AI agent call failed:', error);
+        return { success: false, error: `AI agent error: ${error instanceof Error ? error.message : 'Unknown error'}` };
+      }
+      
+      const processingTime = Date.now() - startTime;
+      console.log('⏱️ AI processing time:', processingTime, 'ms');
+
+      // 5. Save response and send via WhatsApp (with detailed error handling)
+      try {
+        console.log('💾 Starting to save AI response...');
+        await this.saveAIResponseMessage(chatId, aiResponse, threadId);
+        console.log('✅ AI response saved and sent successfully');
+      } catch (error) {
+        console.error('❌ Error saving AI response:', error);
+        
+        // Even if saving fails, we can still return the AI response
+        // Log the interaction in background without failing the whole process
+        this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
+          .catch(logError => console.warn('⚠️ Background log also failed:', logError));
+          
+        return { 
+          success: false, 
+          error: `Response generated but save failed: ${error instanceof Error ? error.message : 'Unknown save error'}`,
+          aiResponse: aiResponse // Still return the AI response for debugging
+        };
+      }
       
       // 6. Log interaction (can be background)
       this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
@@ -131,10 +168,11 @@ export class WhatsAppAIService {
       return { success: true, aiResponse };
 
     } catch (error) {
-      console.error('AI processing error:', error);
+      console.error('❌ Critical AI processing error:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       return { 
         success: false, 
-        error: 'Sorry, I encountered an error processing your request. Please try again.' 
+        error: `Critical error: ${error instanceof Error ? error.message : 'Unknown critical error'}` 
       };
     }
   }
