@@ -125,20 +125,22 @@ export const useWASender = ({
 
   // Send WhatsApp message
   const sendWhatsAppMessage = async () => {
-    if (!selectedContact || !newMessage.trim()) {
+    // Extract phone number from selected conversation's remoteJid
+    const remoteJid = selectedConversation?.remoteJid
+    
+    if (!remoteJid || !newMessage.trim()) {
       toast({
         title: "Cannot send message",
-        description: "Please select a contact and enter a message.",
+        description: "Please select a conversation and enter a message.",
         variant: "destructive"
       })
       return false
     }
 
     try {
-      // Extract phone number from selected conversation's remoteJid
-      const remoteJid = selectedConversation?.remoteJid
-      if (!remoteJid) {
-        throw new Error('No contact phone number found. Please select a valid conversation.')
+      // Validate remoteJid format
+      if (!remoteJid.includes('@s.whatsapp.net')) {
+        throw new Error('Invalid conversation format. Please select a valid WhatsApp conversation.')
       }
       
       const phoneNumber = remoteJid.replace('@s.whatsapp.net', '')
