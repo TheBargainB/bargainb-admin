@@ -66,23 +66,23 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
     const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
     const formattedPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
 
-    // Try to find existing contact
-    const { data: existingContact, error: fetchError } = await supabaseAdmin
+    // First, try to find existing contact by whatsapp_jid (most reliable)
+    const { data: existingContactByJid, error: fetchByJidError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .select('*')
-      .eq('phone_number', formattedPhoneNumber)
+      .eq('whatsapp_jid', remoteJid)
       .single();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('❌ Error fetching WhatsApp contact:', fetchError);
-      throw fetchError;
+    if (fetchByJidError && fetchByJidError.code !== 'PGRST116') {
+      console.error('❌ Error fetching WhatsApp contact by JID:', fetchByJidError);
+      throw fetchByJidError;
     }
 
-    if (existingContact) {
-      console.log('✅ Found existing WhatsApp contact:', existingContact.id);
+    if (existingContactByJid) {
+      console.log('✅ Found existing WhatsApp contact by JID:', existingContactByJid.id);
       
-      // Update contact name if we have new information
-      if (pushName && (!existingContact.push_name || !existingContact.display_name)) {
+      // Update contact name and last seen if we have new information
+      if (pushName && (!existingContactByJid.push_name || !existingContactByJid.display_name)) {
         const { data: updatedContact, error: updateError } = await supabaseAdmin
           .from('whatsapp_contacts')
           .update({
@@ -91,41 +91,117 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
             last_seen_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingContact.id)
+          .eq('id', existingContactByJid.id)
           .select()
           .single();
 
         if (updateError) {
           console.warn('⚠️ Could not update contact name:', updateError);
-          return existingContact;
+          return existingContactByJid;
         } else {
           console.log('📝 Updated contact name to:', pushName);
           return updatedContact;
         }
       }
       
-      return existingContact;
+      // Update last seen
+      const { error: updateLastSeenError } = await supabaseAdmin
+        .from('whatsapp_contacts')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', existingContactByJid.id);
+
+      if (updateLastSeenError) {
+        console.warn('⚠️ Could not update last seen:', updateLastSeenError);
+      }
+      
+      return existingContactByJid;
     }
 
-    // Create new WhatsApp contact
-    console.log('🆕 Creating new WhatsApp contact for:', formattedPhoneNumber);
+    // If not found by JID, try by phone number variations
+    const phoneVariations = [
+      phoneNumber,           // Raw: 31614539919
+      formattedPhoneNumber,  // With +: +31614539919
+    ];
+
+    let existingContactByPhone = null;
+    for (const phoneVariation of phoneVariations) {
+      const { data: contact, error: fetchError } = await supabaseAdmin
+        .from('whatsapp_contacts')
+        .select('*')
+        .eq('phone_number', phoneVariation)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        console.error('❌ Error fetching WhatsApp contact by phone:', fetchError);
+        continue;
+      }
+
+      if (contact) {
+        existingContactByPhone = contact;
+        console.log('✅ Found existing WhatsApp contact by phone:', contact.id, 'with phone:', phoneVariation);
+        break;
+      }
+    }
+
+    if (existingContactByPhone) {
+      // Update the existing contact with the WhatsApp JID if missing
+      const { data: updatedContact, error: updateError } = await supabaseAdmin
+        .from('whatsapp_contacts')
+        .update({
+          whatsapp_jid: remoteJid,
+          push_name: pushName || existingContactByPhone.push_name,
+          display_name: pushName || existingContactByPhone.display_name,
+          last_seen_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingContactByPhone.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.warn('⚠️ Could not update contact with WhatsApp JID:', updateError);
+        return existingContactByPhone;
+      } else {
+        console.log('📝 Updated contact with WhatsApp JID:', remoteJid);
+        return updatedContact;
+      }
+    }
+
+    // Create new WhatsApp contact using upsert to handle race conditions
+    console.log('🆕 Creating new WhatsApp contact for:', phoneNumber);
     
     const { data: newContact, error: createError } = await supabaseAdmin
       .from('whatsapp_contacts')
-      .insert({
-        phone_number: formattedPhoneNumber,
+      .upsert({
+        phone_number: phoneNumber,  // Store without + prefix for consistency
         whatsapp_jid: remoteJid,
         push_name: pushName,
         display_name: pushName,
         whatsapp_status: 'available',
         is_active: true,
         last_seen_at: new Date().toISOString()
+      }, {
+        onConflict: 'whatsapp_jid',
+        ignoreDuplicates: false
       })
       .select()
       .single();
 
     if (createError) {
       console.error('❌ Error creating WhatsApp contact:', createError);
+      
+      // If still failing due to constraint, try one more lookup
+      const { data: finalContact } = await supabaseAdmin
+        .from('whatsapp_contacts')
+        .select('*')
+        .eq('whatsapp_jid', remoteJid)
+        .single();
+      
+      if (finalContact) {
+        console.log('✅ Found contact after failed create (race condition):', finalContact.id);
+        return finalContact;
+      }
+      
       throw createError;
     }
 
@@ -180,10 +256,38 @@ async function getOrCreateConversation(contactId: string, contactName: string, r
 
     if (existingConversation) {
       console.log('✅ Found existing conversation:', existingConversation.id);
+      
+      // Ensure AI is enabled for existing conversations
+      if (!existingConversation.ai_enabled) {
+        console.log('🤖 Enabling AI for existing conversation...');
+        const { data: updatedConversation, error: updateError } = await supabaseAdmin
+          .from('conversations')
+          .update({
+            ai_enabled: true,
+            ai_config: {
+              enabled: true,
+              response_style: 'helpful',
+              auto_respond: false
+            },
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingConversation.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.warn('⚠️ Could not enable AI for conversation:', updateError);
+          return existingConversation;
+        } else {
+          console.log('✅ AI enabled for existing conversation');
+          return updatedConversation;
+        }
+      }
+      
       return existingConversation;
     }
 
-    // Create new conversation
+    // Create new conversation using upsert to handle race conditions
     console.log('💬 Creating new conversation for contact:', contactId);
     
     // Generate a unique WhatsApp conversation ID from the remoteJid
@@ -191,7 +295,7 @@ async function getOrCreateConversation(contactId: string, contactName: string, r
     
     const { data: newConversation, error: createError } = await supabaseAdmin
       .from('conversations')
-      .insert({
+      .upsert({
         whatsapp_contact_id: contactId,
         whatsapp_conversation_id: whatsappConversationId,
         title: contactName || 'WhatsApp Chat',
@@ -207,12 +311,28 @@ async function getOrCreateConversation(contactId: string, contactName: string, r
           response_style: 'helpful',
           auto_respond: false
         }
+      }, {
+        onConflict: 'whatsapp_conversation_id',
+        ignoreDuplicates: false
       })
       .select()
       .single();
 
     if (createError) {
       console.error('❌ Error creating conversation:', createError);
+      
+      // If still failing due to constraint, try one more lookup
+      const { data: finalConversation } = await supabaseAdmin
+        .from('conversations')
+        .select('*')
+        .eq('whatsapp_conversation_id', whatsappConversationId)
+        .single();
+      
+      if (finalConversation) {
+        console.log('✅ Found conversation after failed create (race condition):', finalConversation.id);
+        return finalConversation;
+      }
+      
       throw createError;
     }
 
@@ -587,7 +707,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unknown event type' }, { status: 400 });
     }
   } catch (error) {
-    console.error('Error in webhook POST:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('❌ Error in webhook POST:', error);
+    
+    // Provide more detailed error information
+    const errorDetails = {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+      endpoint: '/admin/chat/api/webhook',
+      requestInfo: {
+        method: 'POST',
+        headers: {
+          'content-type': request.headers.get('content-type'),
+          'user-agent': request.headers.get('user-agent'),
+          'signature': request.headers.get('x-webhook-signature') ? 'present' : 'missing'
+        }
+      }
+    };
+    
+    console.error('❌ Detailed webhook error:', JSON.stringify(errorDetails, null, 2));
+    
+    // Return appropriate error response
+    if (error instanceof Error) {
+      if (error.message.includes('duplicate key value')) {
+        return NextResponse.json({ 
+          error: 'Database constraint violation - data already exists',
+          type: 'duplicate_key',
+          timestamp: new Date().toISOString()
+        }, { status: 409 });
+      }
+      
+      if (error.message.includes('foreign key constraint')) {
+        return NextResponse.json({ 
+          error: 'Invalid reference in database',
+          type: 'foreign_key',
+          timestamp: new Date().toISOString()
+        }, { status: 400 });
+      }
+      
+      if (error.message.includes('JSON')) {
+        return NextResponse.json({ 
+          error: 'Invalid JSON format',
+          type: 'json_parse',
+          timestamp: new Date().toISOString()
+        }, { status: 400 });
+      }
+    }
+    
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      timestamp: new Date().toISOString(),
+      requestId: Math.random().toString(36).substr(2, 9)
+    }, { status: 500 });
   }
 } 

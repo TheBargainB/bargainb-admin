@@ -138,7 +138,7 @@ export default function ChatPage() {
   const [selectedGroceryList, setSelectedGroceryList] = useState<any>(null)
   const [isGroceryListModalOpen, setIsGroceryListModalOpen] = useState(false)
   
-
+  
   
   // Refs for smooth scrolling
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -1611,8 +1611,8 @@ export default function ChatPage() {
                       setSelectedContact(null);
                       setDatabaseMessages([]);
                     }
-                    setConversationToDelete(null);
-                    setIsDeleteDialogOpen(false);
+                  setConversationToDelete(null);
+                  setIsDeleteDialogOpen(false);
                   }
                 }
               }}
