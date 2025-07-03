@@ -60,6 +60,11 @@ export const useWASender = ({
 }: UseWASenderOptions) => {
   const { toast } = useToast()
   
+  // Debug logging for selectedConversation changes
+  console.log('🔧 useWASender: selectedContact:', selectedContact)
+  console.log('🔧 useWASender: selectedConversation:', selectedConversation)
+  console.log('🔧 useWASender: selectedConversation?.remoteJid:', selectedConversation?.remoteJid)
+  
   // WhatsApp State
   const [whatsappMessages, setWhatsappMessages] = useState<WhatsAppMessage[]>([])
   const [whatsappContacts, setWhatsappContacts] = useState<WhatsAppContact[]>([])
