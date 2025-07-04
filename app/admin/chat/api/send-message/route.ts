@@ -20,6 +20,10 @@ export async function POST(req: Request) {
     if (to.includes('@s.whatsapp.net')) {
       cleanPhoneNumber = to.replace('@s.whatsapp.net', '');
     }
+    
+    // Remove any spaces, dashes, or other formatting characters
+    cleanPhoneNumber = cleanPhoneNumber.replace(/[\s\-\(\)]/g, '');
+    
     if (!cleanPhoneNumber.startsWith('+')) {
       cleanPhoneNumber = `+${cleanPhoneNumber}`;
     }
