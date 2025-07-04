@@ -1,207 +1,90 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Separator } from "@/components/ui/separator"
-import { useAdminAuth } from "@/hooks/useAdminAuth"
-import { EyeIcon, EyeOffIcon, MailIcon } from "lucide-react"
 
 export default function AdminLoginPage() {
-  console.log("🔑 AdminLoginPage: Component rendering")
+  console.log("🔑 REBUILD: Login page is executing!")
   
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [magicLinkSent, setMagicLinkSent] = useState(false)
-  
-  console.log("🔑 AdminLoginPage: About to call useAdminAuth()")
-  const { login, loginWithMagicLink, isAuthenticated, isLoading: authLoading } = useAdminAuth()
-  console.log("🔑 AdminLoginPage: useAdminAuth returned:", { isAuthenticated, authLoading })
-  
+  const [error, setError] = useState("")
   const router = useRouter()
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push("/admin")
-    }
-  }, [isAuthenticated, authLoading, router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
     setLoading(true)
+    setError("")
 
     try {
-      const success = await login(email, password)
+      console.log("🔑 REBUILD: Attempting login for:", email)
       
-      if (success) {
-        router.push("/admin")
-      } else {
-        setError("Invalid email or password, or you don't have admin access.")
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) {
+        console.error("❌ REBUILD: Login error:", error)
+        setError(error.message)
+        setLoading(false)
+        return
       }
+
+      console.log("✅ REBUILD: Login successful:", data.user?.email)
+      router.push("/admin/chat")
     } catch (err) {
-      setError("An error occurred during login. Please try again.")
-      console.error("Login error:", err)
-    } finally {
+      console.error("❌ REBUILD: Unexpected error:", err)
+      setError("An unexpected error occurred")
       setLoading(false)
     }
-  }
-
-  const handleMagicLink = async () => {
-    setError("")
-    setLoading(true)
-
-    try {
-      const success = await loginWithMagicLink(email)
-      
-      if (success) {
-        setMagicLinkSent(true)
-      } else {
-        setError("Failed to send magic link. Please try again.")
-      }
-    } catch (err) {
-      setError("An error occurred. Please try again.")
-      console.error("Magic link error:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Show loading state during auth check
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Checking authentication...</p>
-        </div>
-      </div>
-    )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">Admin Login</CardTitle>
-          <CardDescription>
-            Sign in to access the BargainB admin panel
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {magicLinkSent ? (
-            <Alert>
-              <MailIcon className="h-4 w-4" />
-              <AlertDescription>
-                Magic link sent to {email}! Check your email and click the link to sign in.
-              </AlertDescription>
-            </Alert>
-          ) : (
-            <>
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-full max-w-md p-6 bg-card rounded-lg border">
+        <h1 className="text-2xl font-bold text-center mb-6">🔄 Auth Rebuild - Login</h1>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded text-destructive text-sm">
+            {error}
+          </div>
+        )}
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@bargainb.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-input rounded-md bg-background"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-input rounded-md bg-background"
+              required
+            />
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      disabled={loading}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={loading}
-                    >
-                      {showPassword ? (
-                        <EyeOffIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator className="w-full" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-muted-foreground">
-                    Or continue with
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleMagicLink}
-                disabled={loading || !email}
-              >
-                <MailIcon className="mr-2 h-4 w-4" />
-                Send Magic Link
-              </Button>
-
-              {!email && (
-                <p className="text-xs text-muted-foreground text-center">
-                  Enter your email address to use magic link
-                </p>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+      </div>
     </div>
   )
 } 
