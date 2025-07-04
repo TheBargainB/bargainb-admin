@@ -59,7 +59,7 @@ export class WhatsAppAIService {
       // 1. Check if AI is enabled for this chat
       const { data: chatData } = await this.supabase
         .from('conversations')
-        .select('ai_enabled, ai_thread_id, ai_config, assistant_id')
+        .select('ai_enabled, ai_thread_id, ai_config, assistant_id, assistant_config, assistant_metadata, assistant_name')
         .eq('id', chatId)
         .single();
 
@@ -69,6 +69,7 @@ export class WhatsAppAIService {
       }
 
       console.log('✅ AI enabled for chat, assistant_id:', chatData.assistant_id);
+      console.log('🔍 Assistant config available:', Object.keys(chatData.assistant_config || {}).length > 0);
 
       // 2. Get or create personalized assistant for this conversation
       let assistantId = chatData.assistant_id;
@@ -94,20 +95,20 @@ export class WhatsAppAIService {
       console.log('📝 Cleaned message:', cleanMessage);
       
       const [threadId, userProfile] = await Promise.all([
-        this.getOrCreateThreadFast(chatId, userId, assistantId, chatData.ai_thread_id),
+        this.getOrCreateThreadFast(chatId, userId, assistantId ?? undefined, chatData.ai_thread_id ?? undefined),
         this.getUserProfileFast(userId) // Non-blocking, returns null if not found quickly
       ]);
 
       console.log('✅ Thread ID:', threadId);
       console.log('✅ User profile:', userProfile ? 'found' : 'not found');
 
-      // 4. Send to AI agent - optimized call
+      // 4. Send to AI agent - optimized call with stored assistant configuration
       console.log('🤖 Calling AI agent...');
       const startTime = Date.now();
       let aiResponse;
       
       try {
-        aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId);
+        aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId ?? undefined, chatData.assistant_config ?? undefined);
         console.log('✅ AI response generated:', aiResponse?.substring(0, 100) + '...');
       } catch (error) {
         console.error('❌ AI agent call failed:', error);
@@ -154,7 +155,7 @@ export class WhatsAppAIService {
   }
 
   // SPEED OPTIMIZED: Fast thread management
-  private async getOrCreateThreadFast(chatId: string, userId: string, assistantId: string, existingThreadId?: string): Promise<string> {
+  private async getOrCreateThreadFast(chatId: string, userId: string, assistantId: string | undefined, existingThreadId?: string): Promise<string> {
     if (existingThreadId) {
       console.log('🚀 Reusing existing thread:', existingThreadId);
       return existingThreadId;
@@ -191,7 +192,7 @@ export class WhatsAppAIService {
   }
 
   // SPEED OPTIMIZED: Faster AI agent call with reduced timeout
-  private async callAIAgentFast(threadId: string, message: string, userId: string, userProfile: any, aiConfig?: any, assistantId?: string): Promise<string> {
+  private async callAIAgentFast(threadId: string, message: string, userId: string, userProfile: any, aiConfig?: any, assistantId?: string | null, assistantConfig?: any): Promise<string> {
     const response = await fetch(`${this.aiConfig.baseUrl}/threads/${threadId}/runs/wait`, {
       method: 'POST',
       headers: {
@@ -222,7 +223,8 @@ export class WhatsAppAIService {
             MAX_TOOL_CALLS_PER_REQUEST: aiConfig?.max_tool_calls ?? 3, // Reduced from 5
             CUSTOM_INSTRUCTIONS: aiConfig?.custom_instructions ?? '',
             TEMPERATURE: aiConfig?.temperature ?? 0.5, // Reduced for faster responses
-            RESPONSE_STYLE: aiConfig?.response_style ?? 'concise' // Changed from 'helpful' to 'concise'
+            RESPONSE_STYLE: aiConfig?.response_style ?? 'concise', // Changed from 'helpful' to 'concise'
+            assistant_config: assistantConfig
           }
         }
       })
@@ -248,7 +250,7 @@ export class WhatsAppAIService {
     return aiResponse;
   }
 
-  private async createAIThread(userId: string, assistantId?: string): Promise<string> {
+  private async createAIThread(userId: string, assistantId?: string | null): Promise<string> {
     const response = await fetch(`${this.aiConfig.baseUrl}/threads`, {
       method: 'POST',
       headers: {
@@ -385,6 +387,7 @@ export class WhatsAppAIService {
           direction: 'outbound',
           from_me: true,
           whatsapp_status: 'pending',
+          whatsapp_message_id: '',
           raw_message_data: {
             ai_generated: true,
             from_ai: true,
@@ -442,7 +445,7 @@ export class WhatsAppAIService {
           .update({ 
             whatsapp_status: 'failed',
             raw_message_data: {
-              ...newMessage.raw_message_data,
+              ...(newMessage?.raw_message_data as Record<string, any> || {}),
               whatsapp_error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
               failed_at: new Date().toISOString()
             }
@@ -502,7 +505,7 @@ export class WhatsAppAIService {
             console.log(`✅ WASender API call successful on attempt ${attempt}`);
             break; // Success, exit retry loop
           } else {
-            const errorData = await apiResponse.json().catch(() => ({ message: apiResponse.statusText }));
+            const errorData = await apiResponse.json().catch(() => ({ message: apiResponse?.statusText || 'Unknown error' }));
             lastError = new Error(`WASender API failed (${apiResponse.status}): ${errorData.message || apiResponse.statusText}`);
             console.warn(`⚠️ Attempt ${attempt} failed:`, lastError.message);
             
@@ -537,7 +540,10 @@ export class WhatsAppAIService {
       }
 
       // At this point, apiResponse is guaranteed to be defined and successful
-      const apiData = await apiResponse!.json();
+      if (!apiResponse) {
+        throw new Error('No response received from WhatsApp API');
+      }
+      const apiData = await apiResponse.json();
       console.log('✅ AI response sent successfully via WhatsApp. Message ID:', apiData.data?.msgId);
 
       // Update the message with the actual WhatsApp message ID
@@ -602,7 +608,7 @@ export class WhatsAppAIService {
         .from('conversations')
         .update({ 
           ai_enabled: config.enabled,
-          ai_config: config 
+          ai_config: config as unknown as any
         })
         .eq('id', chatId);
 
@@ -621,7 +627,7 @@ export class WhatsAppAIService {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    return data || [];
+    return (data || []) as unknown as AIInteraction[];
   }
 
   async getAllAIStats(): Promise<{
@@ -643,14 +649,14 @@ export class WhatsAppAIService {
 
     const totalInteractions = interactions?.length || 0;
     const avgProcessingTime = totalInteractions > 0 
-      ? interactions!.reduce((sum, i) => sum + i.processing_time_ms, 0) / totalInteractions 
+      ? interactions!.reduce((sum, i) => sum + (i.processing_time_ms || 0), 0) / totalInteractions 
       : 0;
 
     return {
       totalInteractions,
       avgProcessingTime,
       totalChatsWithAI: chatsWithAI?.length || 0,
-      recentInteractions: interactions?.slice(0, 10) || []
+      recentInteractions: (interactions?.slice(0, 10) || []) as unknown as AIInteraction[]
     };
   }
 
@@ -802,14 +808,29 @@ export class WhatsAppAIService {
       let failed = 0;
       
       for (const message of failedMessages) {
+        // Type guard to ensure we have proper message structure
+        const messageData = message as any; // Cast to bypass TypeScript inference issues
+        
         try {
-          const contact = Array.isArray(message.conversations.whatsapp_contacts) 
-            ? message.conversations.whatsapp_contacts[0]
-            : message.conversations.whatsapp_contacts;
+          if (!messageData.conversations || !messageData.conversations.whatsapp_contacts) {
+            console.warn(`⚠️ Skipping message ${messageData.id} - missing contact information`);
+            failed++;
+            continue;
+          }
+
+          const contact = Array.isArray(messageData.conversations.whatsapp_contacts) 
+            ? messageData.conversations.whatsapp_contacts[0]
+            : messageData.conversations.whatsapp_contacts;
+          
+          if (!contact || !contact.phone_number) {
+            console.warn(`⚠️ Skipping message ${messageData.id} - missing phone number`);
+            failed++;
+            continue;
+          }
           
           await this.sendAIResponseToWhatsApp(
-            message.conversation_id,
-            message.content,
+            messageData.conversation_id,
+            messageData.content,
             contact.phone_number
           );
           
@@ -817,23 +838,23 @@ export class WhatsAppAIService {
           await this.supabase
             .from('messages')
             .update({ whatsapp_status: 'sent' })
-            .eq('id', message.id);
+            .eq('id', messageData.id);
           
           succeeded++;
-          console.log(`✅ Successfully retried message ${message.id}`);
+          console.log(`✅ Successfully retried message ${messageData.id}`);
           
         } catch (error) {
-          console.error(`❌ Failed to retry message ${message.id}:`, error);
+          console.error(`❌ Failed to retry message ${messageData.id}:`, error);
           failed++;
         }
       }
       
-      console.log(`🔄 Retry complete: ${succeeded} succeeded, ${failed} failed`);
+      console.log(`✅ Retry completed: ${succeeded} succeeded, ${failed} failed`);
       return { attempted: failedMessages.length, succeeded, failed };
       
     } catch (error) {
-      console.error('❌ Error in retryFailedMessages:', error);
+      console.error('❌ Error retrying failed messages:', error);
       return { attempted: 0, succeeded: 0, failed: 0 };
     }
   }
-} 
+}

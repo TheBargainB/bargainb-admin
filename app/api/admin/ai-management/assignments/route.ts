@@ -6,6 +6,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+const BB_AGENT_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
+const BB_AGENT_API_KEY = process.env.LANGSMITH_API_KEY || process.env.BB_AGENT_API_KEY || process.env.LANGGRAPH_API_KEY
+
 export async function GET() {
   try {
     const { data: assignments, error } = await supabase
@@ -95,11 +98,52 @@ export async function POST(request: NextRequest) {
       console.log('🔄 Force updating existing assignment from:', conversation.assistant_id, 'to:', assistant_id)
     }
 
-    // Update the conversation with the assistant assignment
+    // 🆕 FETCH ASSISTANT CONFIGURATION FROM BB AGENT API
+    console.log('🤖 Fetching assistant configuration from BB Agent...')
+    let assistantConfig = {}
+    let assistantMetadata = {}
+    let assistantName = 'Unknown Assistant'
+    
+    try {
+      if (!BB_AGENT_API_KEY) {
+        console.warn('⚠️ BB Agent API key not configured, skipping assistant configuration fetch')
+      } else {
+        const bbAgentResponse = await fetch(`${BB_AGENT_URL}/assistants/${assistant_id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': BB_AGENT_API_KEY
+          }
+        })
+
+        if (bbAgentResponse.ok) {
+          const assistantData = await bbAgentResponse.json()
+          console.log('✅ Retrieved assistant configuration:', assistantData.name)
+          
+          assistantConfig = assistantData.config || {}
+          assistantMetadata = assistantData.metadata || {}
+          assistantName = assistantData.name || 'Unknown Assistant'
+          
+          // Log the configuration for debugging
+          console.log('🔍 Assistant config:', JSON.stringify(assistantConfig, null, 2))
+        } else {
+          console.warn('⚠️ Failed to fetch assistant configuration from BB Agent:', bbAgentResponse.status)
+          // Continue with empty config rather than failing the assignment
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching assistant configuration:', error)
+      // Continue with empty config rather than failing the assignment
+    }
+
+    // Update the conversation with the assistant assignment AND configuration
     const { error: updateError } = await supabase
       .from('conversations')
       .update({ 
         assistant_id: assistant_id,
+        assistant_name: assistantName,
+        assistant_config: assistantConfig,
+        assistant_metadata: assistantMetadata,
         assistant_created_at: new Date().toISOString(),
         ai_enabled: true,
         updated_at: new Date().toISOString()
@@ -113,14 +157,16 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Assignment created successfully')
+    console.log('✅ Assignment created successfully with full configuration')
 
     return NextResponse.json({ 
       success: true,
       message: 'Assistant assigned successfully',
       conversation_id: conversation.id,
       contact_name: contact.display_name || contact.push_name || phone_number,
-      assistant_id
+      assistant_id,
+      assistant_name: assistantName,
+      config_stored: Object.keys(assistantConfig).length > 0
     })
 
   } catch (error) {
@@ -142,11 +188,52 @@ export async function PUT(request: NextRequest) {
 
     console.log('🔄 Updating assignment for conversation:', conversation_id, 'to assistant:', new_assistant_id)
 
-    // Update the conversation with the new assistant assignment
+    // 🆕 FETCH ASSISTANT CONFIGURATION FROM BB AGENT API
+    console.log('🤖 Fetching assistant configuration from BB Agent...')
+    let assistantConfig = {}
+    let assistantMetadata = {}
+    let assistantName = 'Unknown Assistant'
+    
+    try {
+      if (!BB_AGENT_API_KEY) {
+        console.warn('⚠️ BB Agent API key not configured, skipping assistant configuration fetch')
+      } else {
+        const bbAgentResponse = await fetch(`${BB_AGENT_URL}/assistants/${new_assistant_id}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': BB_AGENT_API_KEY
+          }
+        })
+
+        if (bbAgentResponse.ok) {
+          const assistantData = await bbAgentResponse.json()
+          console.log('✅ Retrieved assistant configuration:', assistantData.name)
+          
+          assistantConfig = assistantData.config || {}
+          assistantMetadata = assistantData.metadata || {}
+          assistantName = assistantData.name || 'Unknown Assistant'
+          
+          // Log the configuration for debugging
+          console.log('🔍 Assistant config:', JSON.stringify(assistantConfig, null, 2))
+        } else {
+          console.warn('⚠️ Failed to fetch assistant configuration from BB Agent:', bbAgentResponse.status)
+          // Continue with empty config rather than failing the assignment
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Error fetching assistant configuration:', error)
+      // Continue with empty config rather than failing the assignment
+    }
+
+    // Update the conversation with the new assistant assignment AND configuration
     const { error: updateError } = await supabase
       .from('conversations')
       .update({ 
         assistant_id: new_assistant_id,
+        assistant_name: assistantName,
+        assistant_config: assistantConfig,
+        assistant_metadata: assistantMetadata,
         assistant_created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -159,13 +246,15 @@ export async function PUT(request: NextRequest) {
       }, { status: 500 })
     }
 
-    console.log('✅ Assignment updated successfully')
+    console.log('✅ Assignment updated successfully with full configuration')
 
     return NextResponse.json({ 
       success: true,
       message: 'Assignment updated successfully',
       conversation_id,
-      new_assistant_id
+      new_assistant_id,
+      assistant_name: assistantName,
+      config_stored: Object.keys(assistantConfig).length > 0
     })
 
   } catch (error) {
