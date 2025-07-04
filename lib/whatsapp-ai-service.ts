@@ -487,10 +487,9 @@ export class WhatsAppAIService {
     try {
       // Clean and format phone number for WASender API
       let cleanPhoneNumber = phoneNumber.replace(/[^\d]/g, ''); // Remove all non-digits
-      if (!cleanPhoneNumber.startsWith('31')) {
-        // If not a Dutch number, assume it needs proper country code
-        cleanPhoneNumber = `31${cleanPhoneNumber}`;
-      }
+      
+      // Don't assume country code - preserve the original format
+      // The phone number should already include the correct country code
       cleanPhoneNumber = `+${cleanPhoneNumber}`; // Add + prefix for WASender API
 
       console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber.replace(/(\+\d{1,3})\d{4,}(\d{4})/, '$1***$2'));
