@@ -1,75 +1,87 @@
 "use client"
 
-import { useEffect } from "react"
-import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { LogOut, User, Bell } from "lucide-react"
-import { useAdminAuth } from "@/hooks/useAdminAuth"
+import { LogOut, User } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Toaster } from "@/components/ui/toaster"
-import { useGlobalNotifications } from "@/hooks/useGlobalNotifications"
-import { NotificationDropdown } from "@/components/ui/notification-dropdown"
-import Link from "next/link"
+import { supabase } from "@/lib/supabase"
 
 interface AdminLayoutProps {
   children: React.ReactNode
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  console.log("🏗️ AdminLayout: Component rendering")
+export default function SimpleAdminLayout({ children }: AdminLayoutProps) {
+  console.log("🚀 SimpleAdminLayout: Component rendering")
   const pathname = usePathname()
-  console.log("🏗️ AdminLayout: pathname =", pathname)
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   
-  // Show login page without any auth checks to prevent concurrent hooks
+  // Show login page without any auth checks
   if (pathname === "/admin/login") {
-    console.log("🏗️ AdminLayout: Returning login page without auth check")
     return <>{children}</>
   }
-  
-  console.log("🏗️ AdminLayout: About to call useAdminAuth()")
-  // Only use auth hook when NOT on login page - IMPROVED with initialCheckComplete
-  const { isAuthenticated, isLoading, adminSession, initialCheckComplete, logout } = useAdminAuth()
-  console.log("🏗️ AdminLayout: useAdminAuth returned:", { isAuthenticated, isLoading, initialCheckComplete })
-  
-  // Only initialize notifications after authentication is confirmed
-  const shouldUseNotifications = isAuthenticated && !isLoading && initialCheckComplete
-  const { unreadMessages, markAllAsRead, refreshUnreadCount } = useGlobalNotifications(shouldUseNotifications)
 
-  // IMPROVED: Show loading spinner while checking authentication - prevent flash
-  if (!initialCheckComplete || (isLoading && !adminSession)) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        console.log("🔧 SimpleAuth: Checking session...")
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session?.user) {
+          console.log("🔧 SimpleAuth: No session, redirecting to login")
+          router.replace("/admin/login")
+          return
+        }
+
+        console.log("🔧 SimpleAuth: Session found:", session.user.email)
+        setUserEmail(session.user.email || "Unknown")
+        setIsLoading(false)
+      } catch (error) {
+        console.error("❌ SimpleAuth: Error:", error)
+        router.replace("/admin/login")
+      }
+    }
+
+    // Add timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.log("🔧 SimpleAuth: Timeout reached, stopping loading")
+      setIsLoading(false)
+    }, 5000)
+
+    checkAuth().finally(() => clearTimeout(timeout))
+
+    return () => clearTimeout(timeout)
+  }, [router])
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading admin panel...</p>
-          <div className="mt-4 text-xs text-muted-foreground space-y-1 max-w-md">
-            <p>🔧 initialCheckComplete: {initialCheckComplete.toString()}</p>
-            <p>🔧 isLoading: {isLoading.toString()}</p>
-            <p>🔧 adminSession: {adminSession ? 'present' : 'null'}</p>
-            <p>🔧 isAuthenticated: {isAuthenticated.toString()}</p>
-            <p>🔧 pathname: {pathname}</p>
+          <div className="mt-4 text-xs text-muted-foreground">
+            <p>🚀 Using SimpleAdminLayout</p>
           </div>
         </div>
       </div>
     )
   }
 
-  // IMPROVED: Only redirect after initial check is complete
-  if (initialCheckComplete && !isAuthenticated) {
-    // The useAdminAuth hook will handle the redirect, just return null to prevent rendering
-    return null
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.replace("/admin/login")
   }
 
-  // Show admin interface with sidebar for authenticated users
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
-          {/* Admin Header */}
           <header className="border-b bg-background px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
@@ -77,26 +89,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 <p className="text-sm text-muted-foreground">AI platform</p>
               </div>
               
-              {/* User Info, Notifications, Theme Toggle & Logout */}
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <User className="w-4 h-4" />
-                  <span>{adminSession?.user.email}</span>
+                  <span>{userEmail}</span>
                 </div>
                 
-                {/* Notification Dropdown - IMPROVED: Clickable dropdown with recent messages */}
-                {shouldUseNotifications && (
-                  <NotificationDropdown 
-                    unreadCount={unreadMessages}
-                    onMarkAllAsRead={markAllAsRead}
-                  />
-                )}
-
                 <ThemeToggle />
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="flex items-center space-x-2"
                 >
                   <LogOut className="w-4 h-4" />
@@ -106,7 +109,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </div>
           </header>
 
-          {/* Main Content */}
           <main className="flex-1 p-6 bg-muted/20">
             {children}
           </main>
@@ -115,4 +117,4 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <Toaster />
     </SidebarProvider>
   )
-}
+} 
