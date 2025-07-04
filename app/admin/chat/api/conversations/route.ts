@@ -136,10 +136,11 @@ export async function POST(request: NextRequest) {
 
     // Ensure the contact exists in whatsapp_contacts table
     let whatsappContact;
+    const normalizedPhoneNumber = contact.phone_number.replace('+', ''); // Normalize phone number format
     const { data: existingContact, error: contactFetchError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .select('*')
-      .eq('phone_number', contact.phone_number)
+      .eq('phone_number', normalizedPhoneNumber)
       .single();
 
     if (contactFetchError && contactFetchError.code !== 'PGRST116') {
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
       const { data: newContact, error: contactCreateError } = await supabaseAdmin
         .from('whatsapp_contacts')
         .insert({
-          phone_number: contact.phone_number,
+          phone_number: normalizedPhoneNumber, // Use normalized phone number
           whatsapp_jid: whatsappJid,
           push_name: pushName,
           display_name: contactName,
