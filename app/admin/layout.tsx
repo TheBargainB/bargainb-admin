@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
+import { NotificationDropdown } from "./chat/components/NotificationDropdown"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -58,6 +59,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           
           {/* User info and logout */}
           <div className="ml-auto flex items-center space-x-4">
+            <NotificationDropdown />
             <span className="text-sm text-gray-600">
               Welcome, {user?.email}
             </span>
