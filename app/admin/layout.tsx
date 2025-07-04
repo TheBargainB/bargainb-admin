@@ -1,71 +1,77 @@
 "use client"
 
 import React from "react"
+import { useAdminAuth } from "@/hooks/useAdminAuth"
+import { useRouter } from "next/navigation"
 
 interface AdminLayoutProps {
   children: React.ReactNode
 }
 
-export default function FreshAdminLayout({ children }: AdminLayoutProps) {
-  // IMMEDIATE EXECUTION TEST
-  console.log("🔥 FRESH LAYOUT EXECUTING!")
-  console.log("🔥 Timestamp:", new Date().toISOString())
-  console.log("🔥 Multiple Supabase instances fix - bypassing global notifications")
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  console.log("🔑 ADMIN LAYOUT: Starting execution")
   
-  // Force immediate render without any async operations
-  React.useEffect(() => {
-    console.log("🔥 FRESH LAYOUT useEffect executing!")
-    console.log("🔥 This should appear in browser console immediately")
-  }, [])
+  const { isAuthenticated, isLoading, user, logout } = useAdminAuth()
+  const router = useRouter()
   
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-      {/* Success Banner */}
-      <div className="bg-green-600 text-white p-4 text-center">
-        <h1 className="text-xl font-bold">
-          🔥 FRESH LAYOUT WORKING! - Multiple Supabase Fix Applied
-        </h1>
-        <p className="text-sm">
-          Timestamp: {new Date().toLocaleString()} | No Global Notifications | No Complex Auth
-        </p>
+  console.log("🔑 ADMIN LAYOUT: Auth state:", { isAuthenticated, isLoading, user: user?.email })
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading admin panel...</p>
+        </div>
       </div>
-      
-      {/* Layout Content */}
-      <div className="p-6">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold text-blue-600 mb-4">
-            ✅ Authentication Rebuild Status
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-green-50 border border-green-200 rounded p-4">
-              <h3 className="font-semibold text-green-700">✅ FIXED</h3>
-              <ul className="text-sm text-green-600 mt-2 space-y-1">
-                <li>• Layout execution working</li>
-                <li>• Multiple Supabase instances bypassed</li>
-                <li>• Global notifications disabled</li>
-                <li>• Fresh React components</li>
-              </ul>
+    )
+  }
+  
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    console.log("🔑 ADMIN LAYOUT: Not authenticated, redirecting to login")
+    router.push("/admin/login")
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    )
+  }
+  
+  // Render authenticated admin interface
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-bold text-gray-900">
+                🚀 BargainB Admin
+              </h1>
             </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded p-4">
-              <h3 className="font-semibold text-blue-700">🔄 NEXT STEPS</h3>
-              <ul className="text-sm text-blue-600 mt-2 space-y-1">
-                <li>• Add simple authentication</li>
-                <li>• Test admin panel access</li>
-                <li>• Restore functionality gradually</li>
-                <li>• Consolidate Supabase clients</li>
-              </ul>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                Welcome, {user?.email}
+              </span>
+              <button
+                onClick={logout}
+                className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
-        
-        {/* Children Content */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Admin Panel Content:</h3>
-          {children}
-        </div>
-      </div>
+      </header>
+      
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   )
 } 

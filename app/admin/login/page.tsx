@@ -1,73 +1,140 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
+import { useAdminAuth } from "@/hooks/useAdminAuth"
+import { useRouter } from "next/navigation"
 
 // **FRESH LOGIN PAGE EXECUTING!** - Brand new login page
-export default function FreshLoginPage() {
-  console.log("🔥 FRESH LOGIN PAGE EXECUTING!")
-  console.log("🔥 Login timestamp:", new Date().toISOString())
+export default function AdminLoginPage() {
+  console.log("🔑 LOGIN PAGE: Starting execution")
   
+  const { login, isLoading, isAuthenticated } = useAdminAuth()
+  const router = useRouter()
+  
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Redirect if already authenticated
   React.useEffect(() => {
-    console.log("🔥 FRESH LOGIN useEffect executing!")
-  }, [])
+    if (isAuthenticated) {
+      console.log("🔑 LOGIN PAGE: Already authenticated, redirecting to admin")
+      router.push("/admin/chat")
+    }
+  }, [isAuthenticated, router])
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    setIsSubmitting(true)
+    
+    console.log("🔑 LOGIN PAGE: Submitting login for:", email)
+    
+    try {
+      const result = await login(email, password)
+      
+      if (result.success) {
+        console.log("🔑 LOGIN PAGE: Login successful, redirecting")
+        router.push("/admin/chat")
+      } else {
+        console.log("🔑 LOGIN PAGE: Login failed:", result.error)
+        setError(result.error || "Login failed")
+      }
+    } catch (error) {
+      console.error("🔑 LOGIN PAGE: Login exception:", error)
+      setError("An unexpected error occurred")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-blue-50">
-      <div className="w-full max-w-lg">
-        {/* Success Status */}
-        <div className="bg-green-600 text-white rounded-t-lg p-6 text-center">
-          <h1 className="text-2xl font-bold">
-            🔥 FRESH AUTH REBUILD SUCCESS!
-          </h1>
-          <p className="text-green-100 mt-2">
-            Layout executing properly at {new Date().toLocaleString()}
-          </p>
-        </div>
-        
-        {/* Status Card */}
-        <div className="bg-white rounded-b-lg shadow-lg p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            Authentication System Status
-          </h2>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-green-700 font-medium">Layout Execution: Working ✅</span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-green-50 rounded">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-green-700 font-medium">React Hooks: Working ✅</span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-blue-50 rounded">
-              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-              <span className="text-blue-700 font-medium">Multiple Supabase Fix: Applied 🔄</span>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-              <span className="text-yellow-700 font-medium">Authentication: Next Step ⏳</span>
-            </div>
-          </div>
-          
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h3 className="font-semibold text-blue-700 mb-2">Next Phase:</h3>
-            <p className="text-sm text-blue-600">
-              Now that the layout execution is confirmed working, we can add simple 
-              authentication without the complex global notifications that were causing 
-              the multiple Supabase client conflicts.
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              🚀 BargainB Admin
+            </h1>
+            <p className="text-gray-600">
+              Sign in to access the admin panel
             </p>
           </div>
           
-          <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg">
-            <h3 className="font-semibold text-gray-700 mb-2">Debug Info:</h3>
-            <p className="text-xs text-gray-500 font-mono">
-              Component: FreshLoginPage<br/>
-              Status: Executing<br/>
-              Timestamp: {new Date().toISOString()}<br/>
-              Multiple Supabase: Fixed
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+              <p className="text-sm">{error}</p>
+            </div>
+          )}
+          
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your email"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your password"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isSubmitting || !email || !password}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Signing in...
+                </div>
+              ) : (
+                "Sign In"
+              )}
+            </button>
+          </form>
+          
+          {/* Debug Info */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-md">
+            <p className="text-xs text-gray-500 text-center">
+              Debug: Login page loaded at {new Date().toLocaleString()}
             </p>
           </div>
         </div>
