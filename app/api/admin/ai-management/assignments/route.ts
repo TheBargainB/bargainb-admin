@@ -23,7 +23,7 @@ export async function GET() {
     console.error('Error in assignments API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+} 
 
 export async function POST(request: NextRequest) {
   try {

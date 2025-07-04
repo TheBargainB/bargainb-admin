@@ -641,9 +641,9 @@ export default function AIManagementPage() {
                   <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                     <DialogTrigger asChild>
                       <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Assistant
-                      </Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Assistant
+                    </Button>
                     </DialogTrigger>
                   </Dialog>
                 </CardContent>
@@ -660,34 +660,34 @@ export default function AIManagementPage() {
                               <Bot className="h-5 w-5 text-blue-600" />
                               <h3 className="text-lg font-semibold">{assistant.name}</h3>
                             </div>
-                            <Badge variant="outline">v{assistant.version}</Badge>
-                          </div>
+                        <Badge variant="outline">v{assistant.version}</Badge>
+                      </div>
                           <p className="text-gray-600 mb-4">{assistant.description}</p>
                         </div>
                         <div className="flex flex-col items-end gap-4">
                           <div className="text-right text-sm text-gray-500">
-                            <p><strong>ID:</strong> {assistant.assistant_id.slice(0, 8)}...</p>
-                            <p><strong>Graph:</strong> {assistant.graph_id}</p>
-                            <p><strong>Created:</strong> {new Date(assistant.created_at).toLocaleDateString()}</p>
-                            <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
-                          </div>
-                          <div className="flex gap-2">
+                        <p><strong>ID:</strong> {assistant.assistant_id.slice(0, 8)}...</p>
+                        <p><strong>Graph:</strong> {assistant.graph_id}</p>
+                        <p><strong>Created:</strong> {new Date(assistant.created_at).toLocaleDateString()}</p>
+                        <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
+                      </div>
+                      <div className="flex gap-2">
                             <Button variant="outline" size="sm">
                               <Eye className="h-4 w-4" />
-                              View
-                            </Button>
-                            <Button variant="outline" size="sm">
+                          View
+                        </Button>
+                        <Button variant="outline" size="sm">
                               <Edit className="h-4 w-4" />
-                              Edit
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleDeleteAssistant(assistant.assistant_id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleDeleteAssistant(assistant.assistant_id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                           </div>
                         </div>
                       </div>
@@ -701,7 +701,7 @@ export default function AIManagementPage() {
           {/* User Assignments Tab */}
           <TabsContent value="assignments" className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
+            <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
               <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
                 setIsAssignDialogOpen(open)
                 if (open) {

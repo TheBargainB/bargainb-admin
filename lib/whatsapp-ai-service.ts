@@ -418,8 +418,8 @@ export class WhatsAppAIService {
           }
         })
         .select()
-        .single();
-
+          .single();
+        
       if (messageError) {
         console.error('❌ Error storing AI response message:', messageError);
         throw new Error(`Failed to store AI response: ${messageError.message}`);
@@ -450,7 +450,7 @@ export class WhatsAppAIService {
 
       if (updateError) {
         console.warn('⚠️ Failed to update conversation stats:', updateError);
-      }
+        }
 
       // Send AI response via WhatsApp
       console.log('📤 Sending AI response via WhatsApp...');
@@ -545,17 +545,17 @@ export class WhatsAppAIService {
     processingTime: number
   ) {
     try {
-      await this.supabase
-        .from('ai_interactions')
-        .insert({
+    await this.supabase
+      .from('ai_interactions')
+      .insert({
           conversation_id: chatId,
-          user_id: userId,
-          user_message: userMessage,
+        user_id: userId,
+        user_message: userMessage,
           ai_response: aiResponse || '',
-          thread_id: threadId,
-          processing_time_ms: processingTime,
+        thread_id: threadId,
+        processing_time_ms: processingTime,
           tokens_used: (aiResponse?.length || 0) // Safe token count with null check
-        });
+      });
     } catch (error) {
       console.warn('⚠️ Failed to log AI interaction:', error);
     }
@@ -721,4 +721,4 @@ export class WhatsAppAIService {
       };
     }
   }
-}
+} 

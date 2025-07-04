@@ -100,6 +100,9 @@ export default function ChatPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   
+  // Phone number input state for manual conversation creation
+  const [manualPhoneNumber, setManualPhoneNumber] = useState("")
+  
   // Analytics functionality
   const { 
     analyticsData, 
@@ -605,6 +608,99 @@ export default function ChatPage() {
 
   // Note: Display name and conversation subtitle functions are now handled by useHelpers hook
 
+  // Handle creating conversation from manual phone number input
+  const handleCreateConversationFromPhone = async () => {
+    if (!manualPhoneNumber.trim() || !isValidPhoneNumber(manualPhoneNumber)) {
+      toast({
+        title: "Invalid phone number",
+        description: "Please enter a valid phone number with country code.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      console.log('📱 Creating conversation from manual phone number:', manualPhoneNumber)
+      
+      // Create a mock contact object for the phone number
+      const phoneContact = {
+        jid: `${manualPhoneNumber.replace('+', '')}@s.whatsapp.net`,
+        phone_number: manualPhoneNumber,
+        name: undefined,
+        notify: undefined,
+        imgUrl: undefined,
+        verifiedName: undefined,
+        status: undefined
+      }
+
+      // Use the existing startNewChat function
+      const result = await startNewChat(phoneContact)
+      
+      if (result) {
+        // Clear the phone number input and close dialog
+        setManualPhoneNumber("")
+        setIsContactsDialogOpen(false)
+        
+        toast({
+          title: "Conversation created",
+          description: `Started conversation with ${manualPhoneNumber}`,
+        })
+      }
+    } catch (error) {
+      console.error('❌ Error creating conversation from phone:', error)
+      toast({
+        title: "Failed to create conversation",
+        description: "Could not create conversation. Please try again.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Handle contact click with improved error handling and validation
+  const handleContactClick = async (contact: any) => {
+    if (isCreatingConversation) {
+      console.log('⏳ Already creating conversation, ignoring click')
+      return
+    }
+
+    try {
+      console.log('🖱️ Contact clicked:', contact)
+      
+      // Validate contact data before proceeding
+      if (!contact || (!contact.phone_number && !contact.jid)) {
+        console.error('❌ Invalid contact data:', contact)
+        toast({
+          title: "Invalid contact",
+          description: "This contact has invalid data. Please try again.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Use the existing startNewChat function with improved error handling
+      const result = await startNewChat(contact)
+      
+      if (result) {
+        // Close the dialog on success
+        setIsContactsDialogOpen(false)
+        
+        console.log('✅ Successfully created/opened conversation:', result.id)
+      } else {
+        // Handle case where startNewChat returns null (already handled in the function)
+        console.log('❌ startNewChat returned null')
+      }
+    } catch (error) {
+      console.error('❌ Error in handleContactClick:', error)
+      
+      // Show user-friendly error message
+      toast({
+        title: "Failed to start conversation",
+        description: "Could not start the conversation. The contact may have invalid data.",
+        variant: "destructive"
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header Section */}
@@ -618,147 +714,194 @@ export default function ChatPage() {
           <div className="flex gap-2 items-center">
             <Dialog open={isContactsDialogOpen} onOpenChange={setIsContactsDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleOpenContactsDialog}>
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleOpenContactsDialog}
+                  disabled={isLoadingContacts}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
                   New Chat
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      Start New Conversation
-                    </DialogTitle>
-                    <DialogDescription>
-                      Choose a contact to start a new WhatsApp conversation
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
-                    {/* Search and sync controls */}
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DialogTrigger>
+              
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Start New Conversation
+                  </DialogTitle>
+                  <DialogDescription>
+                    Choose a contact or enter a phone number to start a new WhatsApp conversation
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  {/* Phone Number Input Section */}
+                  <div className="space-y-3 p-4 bg-muted/30 rounded-lg border">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-primary" />
+                      <h4 className="font-medium text-sm">Start with Phone Number</h4>
+                    </div>
+                    <div className="space-y-2">
                       <Input
-                        placeholder="Search contacts..."
-                        className="pl-8"
-                        value={contactSearchTerm}
-                        onChange={(e) => setContactSearchTerm(e.target.value)}
+                        placeholder="Enter phone number (e.g., +31612345678)"
+                        value={manualPhoneNumber}
+                        onChange={(e) => setManualPhoneNumber(e.target.value)}
+                        className="text-sm"
                       />
-                      </div>
                       <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={syncContactsWithWASender}
-                        disabled={isSyncingContacts || isLoadingContacts}
-                        title="Sync with WASender"
+                        size="sm"
+                        onClick={handleCreateConversationFromPhone}
+                        disabled={!manualPhoneNumber.trim() || isCreatingConversation || !isValidPhoneNumber(manualPhoneNumber)}
+                        className="w-full"
                       >
-                        {isSyncingContacts ? (
-                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        {isCreatingConversation ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin h-3 w-3 border-2 border-white border-t-transparent rounded-full"></div>
+                            Creating...
+                          </div>
                         ) : (
-                          <Activity className="h-4 w-4" />
+                          <>
+                            <MessageSquare className="h-3 w-3 mr-2" />
+                            Start Conversation
+                          </>
                         )}
                       </Button>
+                      {manualPhoneNumber.trim() && !isValidPhoneNumber(manualPhoneNumber) && (
+                        <p className="text-xs text-destructive">
+                          Please enter a valid phone number with country code (e.g., +31612345678)
+                        </p>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Contact count and source info */}
-                    {!isLoadingContacts && allContacts.length > 0 && (
-                      <div className="text-xs text-muted-foreground bg-muted/30 dark:bg-muted/70 p-2 rounded border border-muted-foreground/20">
-                        📱 {allContacts.length} contacts available {contactSearchTerm && `(${filteredAllContacts.length} filtered)`}
+                  {/* Divider */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border"></div>
+                    <span className="text-xs text-muted-foreground">OR</span>
+                    <div className="flex-1 h-px bg-border"></div>
+                  </div>
+
+                  {/* Search and sync controls */}
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search contacts..."
+                      className="pl-8"
+                      value={contactSearchTerm}
+                      onChange={(e) => setContactSearchTerm(e.target.value)}
+                    />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={syncContactsWithWASender}
+                      disabled={isSyncingContacts || isLoadingContacts}
+                      title="Sync with WASender"
+                    >
+                      {isSyncingContacts ? (
+                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Activity className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Contact count and source info */}
+                  {!isLoadingContacts && allContacts.length > 0 && (
+                    <div className="text-xs text-muted-foreground bg-muted/30 dark:bg-muted/70 p-2 rounded border border-muted-foreground/20">
+                      📱 {allContacts.length} contacts available {contactSearchTerm && `(${filteredAllContacts.length} filtered)`}
+                    </div>
+                  )}
+
+                  {/* Contacts list */}
+                  <ScrollArea className="h-[300px]">
+                    {isLoadingContacts ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center">
+                          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+                          <p className="text-sm text-muted-foreground">Loading contacts...</p>
+                        </div>
+                      </div>
+                    ) : filteredAllContacts.length === 0 ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="text-center text-muted-foreground">
+                          <Users className="h-8 w-8 mx-auto mb-2" />
+                          <p className="text-sm">No contacts found</p>
+                          {contactSearchTerm && (
+                            <p className="text-xs mt-1">Try adjusting your search</p>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredAllContacts.map((contact) => (
+                          <div
+                            key={contact.jid}
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                              isCreatingConversation 
+                                ? "opacity-50 cursor-not-allowed" 
+                                : "cursor-pointer hover:bg-muted/30 dark:hover:bg-muted/60"
+                            }`}
+                            onClick={() => handleContactClick(contact)}
+                          >
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={contact.imgUrl || undefined} />
+                              <AvatarFallback>
+                                {getInitials(contact.name || contact.notify || contact.jid)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium truncate">
+                                  {contact.name || contact.notify || "Unknown"}
+                                </p>
+                                {contact.verifiedName && (
+                                  <div className="h-3 w-3 text-primary">✓</div>
+                                )}
+                              </div>
+                              {contact.verifiedName && (
+                                <p className="text-xs text-primary truncate">
+                                  {contact.verifiedName}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground truncate">
+                                {contact.phone_number || contact.jid.replace('@s.whatsapp.net', '')}
+                              </p>
+                              {contact.status && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {contact.status}
+                                </p>
+                              )}
+                              {contact.updated_at && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Updated: {new Date(contact.updated_at).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end gap-1">
+                              {isCreatingConversation ? (
+                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                              ) : (
+                                <Smartphone className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {contact.created_at && (
+                                <span className="text-xs text-muted-foreground">
+                                  💾
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
-
-                    {/* Contacts list */}
-                    <ScrollArea className="h-[300px]">
-                      {isLoadingContacts ? (
-                        <div className="flex items-center justify-center py-8">
-                          <div className="text-center">
-                            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
-                            <p className="text-sm text-muted-foreground">Loading contacts...</p>
-                          </div>
-                        </div>
-                      ) : filteredAllContacts.length === 0 ? (
-                        <div className="flex items-center justify-center py-8">
-                          <div className="text-center text-muted-foreground">
-                            <Users className="h-8 w-8 mx-auto mb-2" />
-                            <p className="text-sm">No contacts found</p>
-                            {contactSearchTerm && (
-                              <p className="text-xs mt-1">Try adjusting your search</p>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {filteredAllContacts.map((contact) => (
-                            <div
-                              key={contact.jid}
-                              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                                isCreatingConversation 
-                                  ? "opacity-50 cursor-not-allowed" 
-                                  : "cursor-pointer hover:bg-muted/30 dark:hover:bg-muted/60"
-                              }`}
-                              onClick={() => {
-                                console.log('🖱️ Contact clicked:', contact)
-                                console.log('🔄 isCreatingConversation:', isCreatingConversation)
-                                if (!isCreatingConversation) {
-                                  startNewChat(contact)
-                                }
-                              }}
-                            >
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={contact.imgUrl || undefined} />
-                                <AvatarFallback>
-                                  {getInitials(contact.name || contact.notify || contact.jid)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium truncate">
-                                    {contact.name || contact.notify || "Unknown"}
-                                  </p>
-                                  {contact.verifiedName && (
-                                    <div className="h-3 w-3 text-primary">✓</div>
-                                  )}
-                                </div>
-                                {contact.verifiedName && (
-                                  <p className="text-xs text-primary truncate">
-                                    {contact.verifiedName}
-                                  </p>
-                                )}
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {contact.phone_number || contact.jid.replace('@s.whatsapp.net', '')}
-                                </p>
-                                {contact.status && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {contact.status}
-                                  </p>
-                                )}
-                                {contact.updated_at && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Updated: {new Date(contact.updated_at).toLocaleDateString()}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                {isCreatingConversation ? (
-                                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                                ) : (
-                                  <Smartphone className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                {contact.created_at && (
-                                  <span className="text-xs text-muted-foreground">
-                                    💾
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </ScrollArea>
+                </div>
+              </DialogContent>
+            </Dialog>
         </div>
       </div>
 
