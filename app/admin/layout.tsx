@@ -3,6 +3,10 @@
 import React from "react"
 import { useAdminAuth } from "@/hooks/useAdminAuth"
 import { useRouter } from "next/navigation"
+import { AppSidebar } from "@/components/app-sidebar"
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -32,46 +36,45 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (!isAuthenticated) {
     console.log("🔑 ADMIN LAYOUT: Not authenticated, redirecting to login")
     router.push("/admin/login")
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Redirecting to login...</p>
-        </div>
-      </div>
-    )
+    return null
   }
   
-  // Render authenticated admin interface
+  // Render authenticated admin interface with sidebar
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">
-                🚀 BargainB Admin
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.email}
-              </span>
-              <button
-                onClick={logout}
-                className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        {/* Header */}
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 h-4" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage className="font-semibold">BargainB Admin Panel</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          
+          {/* User info and logout */}
+          <div className="ml-auto flex items-center space-x-4">
+            <span className="text-sm text-gray-600">
+              Welcome, {user?.email}
+            </span>
+            <button
+              onClick={logout}
+              className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
+            >
+              Logout
+            </button>
           </div>
+        </header>
+        
+        {/* Main content */}
+        <div className="flex flex-1 flex-col gap-4 p-4">
+          {children}
         </div>
-      </header>
-      
-      {/* Main content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 } 
