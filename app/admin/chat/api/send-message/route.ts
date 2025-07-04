@@ -114,7 +114,19 @@ export async function POST(req: Request) {
           // Get the request URL to construct the AI API endpoint
           const requestUrl = new URL(req.url);
           
-          // Call the AI processing API
+          // Get the correct WhatsApp contact ID for the conversation
+          const { data: conversationData } = await supabaseAdmin
+            .from('conversations')
+            .select('whatsapp_contact_id')
+            .eq('id', conversationId)
+            .single();
+          
+          if (!conversationData?.whatsapp_contact_id) {
+            console.error('❌ Could not find WhatsApp contact ID for conversation:', conversationId);
+            return;
+          }
+          
+          // Call the AI processing API with correct user ID
           const aiResponse = await fetch(`${requestUrl.origin}/api/whatsapp/ai`, {
             method: 'POST',
             headers: {
@@ -123,7 +135,7 @@ export async function POST(req: Request) {
             body: JSON.stringify({
               chatId: conversationId,
               message: text,
-              userId: conversationId // Use conversation ID as fallback for user ID
+              userId: conversationData.whatsapp_contact_id // Use correct WhatsApp contact ID
             })
           });
 
