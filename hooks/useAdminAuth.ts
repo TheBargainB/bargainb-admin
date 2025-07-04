@@ -67,7 +67,14 @@ export const useAdminAuth = () => {
     
     try {
       console.log("🔧 checkAuthSession: Getting current session from Supabase")
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      // Add timeout to session check
+      const sessionPromise = supabase.auth.getSession()
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('Session check timeout')), 8000)
+      )
+      
+      const { data: { session }, error: sessionError } = await Promise.race([sessionPromise, timeoutPromise])
       
       if (sessionError) {
         console.error("❌ checkAuthSession: Session error:", sessionError)
@@ -85,6 +92,9 @@ export const useAdminAuth = () => {
       await checkAdminAccess(session.user)
     } catch (error) {
       console.error("❌ checkAuthSession: Unexpected error:", error)
+      if (error instanceof Error && error.message === 'Session check timeout') {
+        console.error("❌ Session check timed out - this might be a Supabase connection issue")
+      }
       handleAuthFailure()
     }
   }
