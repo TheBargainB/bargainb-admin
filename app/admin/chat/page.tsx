@@ -632,10 +632,11 @@ export default function ChatPage() {
     try {
       console.log('📱 Creating conversation from manual phone number:', manualPhoneNumber, 'with name:', manualContactName)
       
-      // Create a proper contact object with name and phone number
+      // Create a proper contact object with name and phone number (normalize phone format)
+      const normalizedPhoneNumber = manualPhoneNumber.replace('+', ''); // Remove + for consistency
       const phoneContact = {
-        jid: `${manualPhoneNumber.replace('+', '')}@s.whatsapp.net`,
-        phone_number: manualPhoneNumber,
+        jid: `${normalizedPhoneNumber}@s.whatsapp.net`,
+        phone_number: normalizedPhoneNumber,
         name: manualContactName,
         notify: manualContactName,
         imgUrl: undefined,

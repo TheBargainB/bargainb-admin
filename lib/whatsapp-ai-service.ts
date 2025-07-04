@@ -452,11 +452,30 @@ export class WhatsAppAIService {
         console.warn('⚠️ Failed to update conversation stats:', updateError);
         }
 
-      // Send AI response via WhatsApp
+      // Send AI response via WhatsApp with improved error handling
       console.log('📤 Sending AI response via WhatsApp...');
-      await this.sendAIResponseToWhatsApp(chatId, aiResponse, contact.phone_number);
-
-      console.log('✅ AI response saved and sent successfully');
+      try {
+        await this.sendAIResponseToWhatsApp(chatId, aiResponse, contact.phone_number);
+        console.log('✅ AI response saved and sent successfully');
+      } catch (whatsappError) {
+        console.error('❌ Failed to send AI response via WhatsApp:', whatsappError);
+        
+        // Update message status to failed
+        await this.supabase
+          .from('messages')
+          .update({ 
+            whatsapp_status: 'failed',
+            raw_message_data: {
+              ...newMessage.raw_message_data,
+              whatsapp_error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
+              failed_at: new Date().toISOString()
+            }
+          })
+          .eq('id', newMessage.id);
+        
+        // Don't throw the error - we want the AI response to be saved even if WhatsApp sending fails
+        console.warn('⚠️ AI response saved to database but failed to send via WhatsApp');
+      }
 
     } catch (error) {
       console.error('❌ Critical error in saveAIResponseMessage:', error);
@@ -466,11 +485,13 @@ export class WhatsAppAIService {
 
   private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string, phoneNumber: string) {
     try {
-      // Clean phone number for WASender API
-      let cleanPhoneNumber = phoneNumber;
-      if (!cleanPhoneNumber.startsWith('+')) {
-        cleanPhoneNumber = `+${cleanPhoneNumber}`;
+      // Clean and format phone number for WASender API
+      let cleanPhoneNumber = phoneNumber.replace(/[^\d]/g, ''); // Remove all non-digits
+      if (!cleanPhoneNumber.startsWith('31')) {
+        // If not a Dutch number, assume it needs proper country code
+        cleanPhoneNumber = `31${cleanPhoneNumber}`;
       }
+      cleanPhoneNumber = `+${cleanPhoneNumber}`; // Add + prefix for WASender API
 
       console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber.replace(/(\+\d{1,3})\d{4,}(\d{4})/, '$1***$2'));
 
@@ -481,31 +502,67 @@ export class WhatsAppAIService {
         throw new Error(error);
       }
 
-      // Send via WASender API
-      const apiResponse = await fetch('https://www.wasenderapi.com/api/send-message', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          to: cleanPhoneNumber, 
-          text: aiResponse 
-        }),
-      });
-
-      if (!apiResponse.ok) {
-        let errorData;
+      // Send via WASender API with retry logic
+      let apiResponse: Response | undefined;
+      let lastError: Error | undefined;
+      const maxRetries = 3;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          errorData = await apiResponse.json();
-        } catch {
-          errorData = { message: apiResponse.statusText };
+          console.log(`📤 Attempt ${attempt}/${maxRetries} to send via WASender API...`);
+          
+          apiResponse = await fetch('https://www.wasenderapi.com/api/send-message', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              to: cleanPhoneNumber, 
+              text: aiResponse 
+            }),
+          });
+          
+          if (apiResponse.ok) {
+            console.log(`✅ WASender API call successful on attempt ${attempt}`);
+            break; // Success, exit retry loop
+          } else {
+            const errorData = await apiResponse.json().catch(() => ({ message: apiResponse.statusText }));
+            lastError = new Error(`WASender API failed (${apiResponse.status}): ${errorData.message || apiResponse.statusText}`);
+            console.warn(`⚠️ Attempt ${attempt} failed:`, lastError.message);
+            
+            if (attempt < maxRetries) {
+              // Wait before retry (exponential backoff)
+              const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+              console.log(`⏳ Waiting ${delay}ms before retry...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          }
+        } catch (fetchError) {
+          lastError = fetchError instanceof Error ? fetchError : new Error(String(fetchError));
+          console.warn(`⚠️ Attempt ${attempt} failed with fetch error:`, lastError.message);
+          
+          if (attempt < maxRetries) {
+            const delay = Math.pow(2, attempt - 1) * 1000;
+            console.log(`⏳ Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
         }
-        console.error('❌ WhatsApp API error:', apiResponse.status, errorData);
-        throw new Error(`WhatsApp API failed (${apiResponse.status}): ${errorData.message || apiResponse.statusText}`);
       }
 
-      const apiData = await apiResponse.json();
+      // Check if all retries failed
+      if (!apiResponse || !apiResponse.ok) {
+        if (lastError) {
+          console.error('❌ All WhatsApp API attempts failed:', lastError.message);
+          throw lastError;
+        } else {
+          console.error('❌ WhatsApp API failed with unknown error');
+          throw new Error('WhatsApp API failed after all retry attempts');
+        }
+      }
+
+      // At this point, apiResponse is guaranteed to be defined and successful
+      const apiData = await apiResponse!.json();
       console.log('✅ AI response sent successfully via WhatsApp. Message ID:', apiData.data?.msgId);
 
       // Update the message with the actual WhatsApp message ID
@@ -719,6 +776,89 @@ export class WhatsAppAIService {
         apiReachable: false,
         error: `Connection test failed: ${errorMessage}` 
       };
+    }
+  }
+
+  async retryFailedMessages(conversationId?: string): Promise<{
+    attempted: number;
+    succeeded: number;
+    failed: number;
+  }> {
+    try {
+      console.log('🔄 Retrying failed WhatsApp messages...');
+      
+      // Get failed AI messages
+      let query = this.supabase
+        .from('messages')
+        .select(`
+          id,
+          conversation_id,
+          content,
+          conversations!inner (
+            whatsapp_contact_id,
+            whatsapp_contacts!inner (
+              phone_number
+            )
+          )
+        `)
+        .eq('whatsapp_status', 'failed')
+        .eq('direction', 'outbound')
+        .contains('raw_message_data', { ai_generated: true });
+      
+      if (conversationId) {
+        query = query.eq('conversation_id', conversationId);
+      }
+      
+      const { data: failedMessages, error } = await query.limit(10);
+      
+      if (error) {
+        console.error('❌ Error fetching failed messages:', error);
+        return { attempted: 0, succeeded: 0, failed: 0 };
+      }
+      
+      if (!failedMessages || failedMessages.length === 0) {
+        console.log('✅ No failed messages to retry');
+        return { attempted: 0, succeeded: 0, failed: 0 };
+      }
+      
+      console.log(`🔄 Found ${failedMessages.length} failed messages to retry`);
+      
+      let succeeded = 0;
+      let failed = 0;
+      
+      for (const message of failedMessages) {
+        try {
+          const contact = Array.isArray(message.conversations.whatsapp_contacts) 
+            ? message.conversations.whatsapp_contacts[0]
+            : message.conversations.whatsapp_contacts;
+          
+          await this.sendAIResponseToWhatsApp(
+            message.conversation_id,
+            message.content,
+            contact.phone_number
+          );
+          
+          // Update status to sent
+          await this.supabase
+            .from('messages')
+            .update({ whatsapp_status: 'sent' })
+            .eq('id', message.id);
+          
+          succeeded++;
+          console.log(`✅ Successfully retried message ${message.id}`);
+          
+        } catch (error) {
+          console.error(`❌ Failed to retry message ${message.id}:`, error);
+          failed++;
+        }
+      }
+      
+      console.log(`🔄 Retry complete: ${succeeded} succeeded, ${failed} failed`);
+      return { attempted: failedMessages.length, succeeded, failed };
+      
+    } catch (error) {
+      console.error('❌ Error in retryFailedMessages:', error);
+      return { attempted: 0, succeeded: 0, failed: 0 };
     }
   }
 } 
