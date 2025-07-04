@@ -207,12 +207,12 @@ export const useChatActions = ({
 
       const result = await response.json()
       
-      if (result.success && result.conversation) {
+      if (result.success && result.data?.conversation) {
         console.log('✅ Conversation created successfully')
         
         // Create conversation object for UI
         const newConversation: ChatConversation = {
-          id: result.conversation.id,
+          id: result.data.conversation.id,
           user: contact.name || contact.notify || phoneNumber,
           email: contact.jid,
           avatar: contact.imgUrl || "/placeholder.svg",
@@ -223,12 +223,17 @@ export const useChatActions = ({
           type: 'whatsapp',
           aiConfidence: 0,
           remoteJid: contact.jid,
-          conversationId: result.conversation.id,
+          conversationId: result.data.conversation.id,
           phoneNumber: phoneNumber
         }
         
-        // Refresh conversations
+        // Refresh conversations immediately (multiple attempts for reliability)
         await loadConversationsFromDatabase()
+        
+        // Additional refresh after a short delay to ensure real-time sync
+        setTimeout(() => {
+          loadConversationsFromDatabase()
+        }, 200)
         
         // Select the new conversation
         setSelectedContact(newConversation.id)
@@ -248,6 +253,7 @@ export const useChatActions = ({
         
         return newConversation
       } else {
+        console.error('❌ API returned unsuccessful result:', result)
         throw new Error(result.error || 'Failed to create conversation')
       }
     } catch (error) {

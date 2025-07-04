@@ -274,6 +274,22 @@ export const useRealTimeChat = ({
         {
           event: 'INSERT',
           schema: 'public',
+          table: 'conversations'
+        },
+        async (payload) => {
+          console.log('🔔 NEW CONVERSATION CREATED - refreshing list immediately')
+          
+          // Refresh conversation list immediately when new conversation is created
+          setTimeout(() => {
+            loadConversationsFromDatabase(true)
+          }, 100)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
           table: 'messages'
         },
         async (payload) => {

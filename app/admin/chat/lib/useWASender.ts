@@ -280,15 +280,20 @@ export const useWASender = ({
 
       const result = await response.json()
       
-      if (result.success && result.conversation) {
-        console.log('✅ Conversation created successfully:', result.conversation)
+      if (result.success && result.data?.conversation) {
+        console.log('✅ Conversation created successfully:', result.data.conversation)
         
-        // Refresh conversations to show the new one
+        // Refresh conversations to show the new one immediately
         await loadConversationsFromDatabase()
+        
+        // Additional refresh after a short delay to ensure real-time sync
+        setTimeout(() => {
+          loadConversationsFromDatabase()
+        }, 200)
         
         // Call the callback if provided
         if (onConversationCreated) {
-          onConversationCreated(result.conversation)
+          onConversationCreated(result.data.conversation)
         }
         
         toast({
@@ -296,8 +301,9 @@ export const useWASender = ({
           description: `Started conversation with ${contact.name || contact.notify || contact.phone_number}`
         })
         
-        return result.conversation
+        return result.data.conversation
       } else {
+        console.error('❌ API returned unsuccessful result:', result)
         throw new Error(result.error || 'Failed to create conversation')
       }
     } catch (error) {
@@ -369,14 +375,19 @@ export const useWASender = ({
 
       const result = await response.json()
       
-      if (result.success && result.conversation) {
-        console.log('✅ New chat created successfully:', result.conversation)
+      if (result.success && result.data?.conversation) {
+        console.log('✅ New chat created successfully:', result.data.conversation)
         
-        // Refresh conversations list
+        // Refresh conversations list immediately
         await loadConversationsFromDatabase()
         
+        // Additional refresh after a short delay to ensure real-time sync
+        setTimeout(() => {
+          loadConversationsFromDatabase()
+        }, 200)
+        
         const newConversation = {
-          id: result.conversation.id,
+          id: result.data.conversation.id,
           user: contact.name || contact.notify || phoneNumber,
           email: contact.jid,
           avatar: contact.imgUrl || "/placeholder.svg",
@@ -387,7 +398,7 @@ export const useWASender = ({
           type: 'whatsapp',
           aiConfidence: 0,
           remoteJid: contact.jid,
-          conversationId: result.conversation.id,
+          conversationId: result.data.conversation.id,
           phoneNumber: phoneNumber
         }
         
@@ -404,6 +415,7 @@ export const useWASender = ({
 
         return newConversation
       } else {
+        console.error('❌ API returned unsuccessful result:', result)
         throw new Error(result.error || 'Failed to create conversation')
       }
     } catch (error) {
