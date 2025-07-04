@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from './supabase';
 import { getOrCreateAssistantForConversation } from './assistant-service';
 
 export interface AIAgentConfig {
@@ -44,32 +44,8 @@ export class WhatsAppAIService {
       throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for server-side operations');
     }
 
-    // Enhanced Supabase client configuration for serverless environments
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role for server-side operations
-      {
-        auth: {
-          persistSession: false, // Don't persist sessions in serverless functions
-          autoRefreshToken: false, // Don't auto-refresh tokens in serverless
-        },
-        global: {
-          headers: {
-            'User-Agent': 'BargainB-Admin/1.0',
-          },
-        },
-        // Add fetch options for better serverless compatibility
-        db: {
-          schema: 'public',
-        },
-        // Configure realtime (disable for serverless performance)
-        realtime: {
-          params: {
-            eventsPerSecond: 1,
-          },
-        },
-      }
-    );
+    // Use the centralized admin client instead of creating a new one
+    this.supabase = supabaseAdmin;
   }
 
   async processAIMessage(chatId: string, message: string, userId: string): Promise<{
