@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter()
   
   console.log("🔑 ADMIN LAYOUT: Auth state:", { isAuthenticated, isLoading, user: user?.email })
-  
+
   // Show loading state
   if (isLoading) {
     return (
@@ -32,18 +32,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
     )
   }
-  
+
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     console.log("🔑 ADMIN LAYOUT: Not authenticated, redirecting to login")
     router.push("/admin/login")
     return null
   }
-  
+
   // Render authenticated admin interface with sidebar
   return (
     <SidebarProvider>
-      <AppSidebar />
+        <AppSidebar />
       <SidebarInset>
         {/* Header */}
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          
+              
           {/* User info and logout */}
           <div className="ml-auto flex items-center space-x-4">
             <NotificationDropdown />
@@ -64,19 +64,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               Welcome, {user?.email}
             </span>
             <button
-              onClick={logout}
+                  onClick={logout}
               className="text-sm bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors"
-            >
+                >
               Logout
             </button>
-          </div>
-        </header>
-        
+            </div>
+          </header>
+
         {/* Main content */}
         <div className="flex flex-1 flex-col gap-4 p-4">
-          {children}
+            {children}
         </div>
       </SidebarInset>
     </SidebarProvider>
   )
-} 
+}

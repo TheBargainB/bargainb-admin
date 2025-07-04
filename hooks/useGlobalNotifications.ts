@@ -120,7 +120,7 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
 
         // DISABLED: Initial load
         // DISABLED: Backup polling
-        
+
         isSubscriptionSetup = true
         console.log('🚨 DEBUG: Global notifications setup SKIPPED (disabled for debugging)')
         

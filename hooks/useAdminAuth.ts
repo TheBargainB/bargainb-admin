@@ -38,11 +38,11 @@ export const useAdminAuth = (): UseAdminAuthReturn => {
                  if (authUser?.email) {
            // Check if user is admin
            const { data: adminUser, error } = await supabase
-             .from('admin_users')
-             .select('*')
+        .from('admin_users')
+        .select('*')
              .eq('email', authUser.email)
-             .single()
-          
+        .single()
+      
           if (adminUser && !error) {
             console.log('🔑 SIMPLE AUTH: Admin user found:', adminUser.email)
             setUser({
@@ -67,7 +67,7 @@ export const useAdminAuth = (): UseAdminAuthReturn => {
         setUser(null)
         setIsAuthenticated(false)
       } finally {
-        setIsLoading(false)
+      setIsLoading(false)
       }
     }
 
@@ -84,7 +84,7 @@ export const useAdminAuth = (): UseAdminAuthReturn => {
         email,
         password
       })
-
+      
       if (authError) {
         console.error('🔑 SIMPLE AUTH: Login error:', authError)
         setIsLoading(false)
@@ -108,15 +108,15 @@ export const useAdminAuth = (): UseAdminAuthReturn => {
             isAdmin: true
           })
           setIsAuthenticated(true)
-          setIsLoading(false)
+        setIsLoading(false)
           return { success: true }
         } else {
           console.log('🔑 SIMPLE AUTH: User not an admin')
           await supabase.auth.signOut()
-          setIsLoading(false)
+      setIsLoading(false)
           return { success: false, error: 'Not authorized as admin' }
-        }
-      }
+    }
+  }
 
       setIsLoading(false)
       return { success: false, error: 'Login failed' }
