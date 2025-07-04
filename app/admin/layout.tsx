@@ -19,15 +19,20 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  console.log("🏗️ AdminLayout: Component rendering")
   const pathname = usePathname()
+  console.log("🏗️ AdminLayout: pathname =", pathname)
   
   // Show login page without any auth checks to prevent concurrent hooks
   if (pathname === "/admin/login") {
+    console.log("🏗️ AdminLayout: Returning login page without auth check")
     return <>{children}</>
   }
   
+  console.log("🏗️ AdminLayout: About to call useAdminAuth()")
   // Only use auth hook when NOT on login page - IMPROVED with initialCheckComplete
   const { isAuthenticated, isLoading, adminSession, initialCheckComplete, logout } = useAdminAuth()
+  console.log("🏗️ AdminLayout: useAdminAuth returned:", { isAuthenticated, isLoading, initialCheckComplete })
   
   // Only initialize notifications after authentication is confirmed
   const shouldUseNotifications = isAuthenticated && !isLoading && initialCheckComplete

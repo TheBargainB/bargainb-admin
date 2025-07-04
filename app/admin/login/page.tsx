@@ -12,13 +12,19 @@ import { useAdminAuth } from "@/hooks/useAdminAuth"
 import { EyeIcon, EyeOffIcon, MailIcon } from "lucide-react"
 
 export default function AdminLoginPage() {
+  console.log("🔑 AdminLoginPage: Component rendering")
+  
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [magicLinkSent, setMagicLinkSent] = useState(false)
+  
+  console.log("🔑 AdminLoginPage: About to call useAdminAuth()")
   const { login, loginWithMagicLink, isAuthenticated, isLoading: authLoading } = useAdminAuth()
+  console.log("🔑 AdminLoginPage: useAdminAuth returned:", { isAuthenticated, authLoading })
+  
   const router = useRouter()
 
   // Redirect if already authenticated

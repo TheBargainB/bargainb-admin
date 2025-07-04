@@ -22,6 +22,8 @@ interface AdminSession {
 }
 
 export const useAdminAuth = () => {
+  console.log("🚀 useAdminAuth: Hook function called")
+  
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [adminSession, setAdminSession] = useState<AdminSession | null>(null)
@@ -29,12 +31,20 @@ export const useAdminAuth = () => {
   const router = useRouter()
   const hasCheckedSession = useRef(false)
 
-  console.log("🔧 useAdminAuth: Hook initialized")
+  console.log("🔧 useAdminAuth: Hook initialized with state:", {
+    isAuthenticated,
+    isLoading,
+    initialCheckComplete,
+    hasCheckedSession: hasCheckedSession.current
+  })
 
   // Check for existing session on mount - IMPROVED to prevent flash
   useEffect(() => {
+    console.log("🔥 useAdminAuth: useEffect ENTRY - hasCheckedSession:", hasCheckedSession.current)
+    
     // Prevent duplicate session checks
     if (hasCheckedSession.current) {
+      console.log("🔧 useAdminAuth: Skipping - session already checked")
       return
     }
     
