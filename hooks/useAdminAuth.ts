@@ -51,8 +51,18 @@ export const useAdminAuth = () => {
     console.log("🔧 useAdminAuth: useEffect triggered - checking session")
     hasCheckedSession.current = true
     
+    // Set up a safety timeout that forces completion after 8 seconds
+    const safetyTimeout = setTimeout(() => {
+      console.error("❌ SAFETY TIMEOUT: Forcing initialCheckComplete to true after 8 seconds")
+      setInitialCheckComplete(true)
+      setIsLoading(false)
+    }, 8000)
+    
     // Check session immediately without delay
-    checkAuthSession()
+    checkAuthSession().finally(() => {
+      // Clear safety timeout if auth check completes normally
+      clearTimeout(safetyTimeout)
+    })
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -69,6 +79,7 @@ export const useAdminAuth = () => {
     return () => {
       subscription.unsubscribe()
       hasCheckedSession.current = false
+      clearTimeout(safetyTimeout) // Cleanup safety timeout
     }
   }, [])
 
@@ -169,10 +180,11 @@ export const useAdminAuth = () => {
 
   // IMPROVED auth failure handling to prevent flash
   const handleAuthFailure = () => {
+    console.log("🔧 handleAuthFailure: Setting auth state to failed")
     setIsAuthenticated(false)
     setAdminSession(null)
     setIsLoading(false)
-    setInitialCheckComplete(true)
+    setInitialCheckComplete(true) // CRITICAL: Always complete initial check
     
     // Only redirect to login if we're not already there
     if (typeof window !== 'undefined' && !window.location.pathname.includes('/admin/login')) {
