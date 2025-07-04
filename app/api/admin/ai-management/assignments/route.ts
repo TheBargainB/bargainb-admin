@@ -127,4 +127,94 @@ export async function POST(request: NextRequest) {
     console.error('Error in assignment creation:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { conversation_id, new_assistant_id } = body
+
+    if (!conversation_id || !new_assistant_id) {
+      return NextResponse.json({ 
+        error: 'Conversation ID and new assistant ID are required' 
+      }, { status: 400 })
+    }
+
+    console.log('🔄 Updating assignment for conversation:', conversation_id, 'to assistant:', new_assistant_id)
+
+    // Update the conversation with the new assistant assignment
+    const { error: updateError } = await supabase
+      .from('conversations')
+      .update({ 
+        assistant_id: new_assistant_id,
+        assistant_created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', conversation_id)
+
+    if (updateError) {
+      console.error('❌ Error updating assignment:', updateError)
+      return NextResponse.json({ 
+        error: 'Failed to update assignment' 
+      }, { status: 500 })
+    }
+
+    console.log('✅ Assignment updated successfully')
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Assignment updated successfully',
+      conversation_id,
+      new_assistant_id
+    })
+
+  } catch (error) {
+    console.error('Error in assignment update:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { conversation_id } = body
+
+    if (!conversation_id) {
+      return NextResponse.json({ 
+        error: 'Conversation ID is required' 
+      }, { status: 400 })
+    }
+
+    console.log('🗑️ Removing assignment for conversation:', conversation_id)
+
+    // Remove the assistant assignment from the conversation
+    const { error: updateError } = await supabase
+      .from('conversations')
+      .update({ 
+        assistant_id: null,
+        assistant_created_at: null,
+        ai_enabled: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', conversation_id)
+
+    if (updateError) {
+      console.error('❌ Error removing assignment:', updateError)
+      return NextResponse.json({ 
+        error: 'Failed to remove assignment' 
+      }, { status: 500 })
+    }
+
+    console.log('✅ Assignment removed successfully')
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Assignment removed successfully',
+      conversation_id
+    })
+
+  } catch (error) {
+    console.error('Error in assignment deletion:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
 } 

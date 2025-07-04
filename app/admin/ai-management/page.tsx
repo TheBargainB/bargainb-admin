@@ -154,6 +154,16 @@ export default function AIManagementPage() {
     assistant_id: ''
   })
 
+  // States for viewing and editing user assignments
+  const [selectedAssignment, setSelectedAssignment] = useState<UserAssignment | null>(null)
+  const [isAssignmentDetailsOpen, setIsAssignmentDetailsOpen] = useState(false)
+  const [isEditAssignmentOpen, setIsEditAssignmentOpen] = useState(false)
+  const [editAssignmentForm, setEditAssignmentForm] = useState({
+    conversation_id: '',
+    assistant_id: '',
+    current_assistant_id: ''
+  })
+
   // Fetch all data
   const fetchData = async () => {
     setLoading(true)
@@ -378,7 +388,109 @@ export default function AIManagementPage() {
     }
   }
 
+  // Handle viewing assignment details
+  const handleViewAssignment = (assignment: UserAssignment) => {
+    setSelectedAssignment(assignment)
+    setIsAssignmentDetailsOpen(true)
+  }
 
+  // Handle editing assignment
+  const handleEditAssignment = (assignment: UserAssignment) => {
+    setSelectedAssignment(assignment)
+    setEditAssignmentForm({
+      conversation_id: assignment.conversation_id,
+      assistant_id: assignment.assistant_id,
+      current_assistant_id: assignment.assistant_id
+    })
+    fetchAvailableContacts() // Load contacts for editing
+    setIsEditAssignmentOpen(true)
+  }
+
+  // Handle updating assignment
+  const handleUpdateAssignment = async () => {
+    try {
+      const selectedAssistant = bbAssistants.find(a => a.assistant_id === editAssignmentForm.assistant_id)
+      
+      if (!selectedAssistant) {
+        toast({
+          title: "Invalid selection",
+          description: "Please select a valid assistant.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      const response = await fetch('/api/admin/ai-management/assignments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: editAssignmentForm.conversation_id,
+          new_assistant_id: editAssignmentForm.assistant_id
+        })
+      })
+
+      if (response.ok) {
+        setIsEditAssignmentOpen(false)
+        setEditAssignmentForm({ conversation_id: '', assistant_id: '', current_assistant_id: '' })
+        fetchData()
+        toast({
+          title: "Assignment updated",
+          description: `Assistant changed to "${selectedAssistant.name}".`,
+        })
+      } else {
+        const result = await response.json()
+        toast({
+          title: "Error updating assignment",
+          description: result.error || "Failed to update assignment.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Failed to update assignment:', error)
+      toast({
+        title: "Error updating assignment",
+        description: "Failed to update assignment.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Handle deleting assignment
+  const handleDeleteAssignment = async (conversationId: string, displayName: string) => {
+    if (!confirm(`Are you sure you want to remove the AI assistant assignment for ${displayName}?`)) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/admin/ai-management/assignments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: conversationId })
+      })
+
+      if (response.ok) {
+        fetchData()
+        toast({
+          title: "Assignment removed",
+          description: `AI assistant assignment removed for ${displayName}.`,
+        })
+      } else {
+        const result = await response.json()
+        toast({
+          title: "Error removing assignment",
+          description: result.error || "Failed to remove assignment.",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error('Failed to delete assignment:', error)
+      toast({
+        title: "Error removing assignment",
+        description: "Failed to remove assignment.",
+        variant: "destructive"
+      })
+    }
+  }
 
   const filteredAssistants = bbAssistants.filter(assistant =>
     assistant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -810,11 +922,30 @@ export default function AIManagementPage() {
                         <TableCell>{new Date(assignment.assistant_created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleViewAssignment(assignment)}
+                              title="View Assignment Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleEditAssignment(assignment)}
+                              title="Edit Assignment"
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
-                              <Settings className="h-4 w-4" />
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleDeleteAssignment(assignment.conversation_id, assignment.display_name)}
+                              className="text-red-600 hover:text-red-700"
+                              title="Remove Assignment"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -1034,6 +1165,146 @@ export default function AIManagementPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Assignment Details Dialog */}
+        {selectedAssignment && (
+          <Dialog open={isAssignmentDetailsOpen} onOpenChange={setIsAssignmentDetailsOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Assignment Details</DialogTitle>
+                <DialogDescription>
+                  {selectedAssignment.display_name} - {selectedAssignment.assistant_name}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <label className="font-medium">User</label>
+                    <p className="text-gray-600">{selectedAssignment.display_name}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Phone Number</label>
+                    <p className="text-gray-600">{selectedAssignment.phone_number}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Assistant Name</label>
+                    <p className="text-gray-600">{selectedAssignment.assistant_name}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Assistant ID</label>
+                    <p className="text-gray-600 font-mono">{selectedAssignment.assistant_id}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Conversation ID</label>
+                    <p className="text-gray-600 font-mono">{selectedAssignment.conversation_id}</p>
+                  </div>
+                  <div>
+                    <label className="font-medium">Assignment Created</label>
+                    <p className="text-gray-600">{new Date(selectedAssignment.assistant_created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {selectedAssignment.assistant_config && Object.keys(selectedAssignment.assistant_config).length > 0 && (
+                  <div>
+                    <label className="font-medium">Assistant Configuration</label>
+                    <pre className="text-xs bg-gray-100 p-3 rounded mt-1 overflow-auto max-h-48">
+                      {JSON.stringify(selectedAssignment.assistant_config, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                {selectedAssignment.assistant_metadata && Object.keys(selectedAssignment.assistant_metadata).length > 0 && (
+                  <div>
+                    <label className="font-medium">Assistant Metadata</label>
+                    <pre className="text-xs bg-gray-100 p-3 rounded mt-1 overflow-auto max-h-48">
+                      {JSON.stringify(selectedAssignment.assistant_metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setIsAssignmentDetailsOpen(false)
+                      handleEditAssignment(selectedAssignment)
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Assignment
+                  </Button>
+                  <Button onClick={() => setIsAssignmentDetailsOpen(false)}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Edit Assignment Dialog */}
+        <Dialog open={isEditAssignmentOpen} onOpenChange={setIsEditAssignmentOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Assignment</DialogTitle>
+              <DialogDescription>
+                Change the assistant assigned to {selectedAssignment?.display_name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Current User</Label>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedAssignment?.display_name} ({selectedAssignment?.phone_number})
+                </p>
+              </div>
+              
+              <div>
+                <Label>Current Assistant</Label>
+                <p className="text-sm text-gray-600 mt-1">{selectedAssignment?.assistant_name}</p>
+              </div>
+
+              <div>
+                <Label htmlFor="new-assistant">New Assistant</Label>
+                <Select 
+                  value={editAssignmentForm.assistant_id} 
+                  onValueChange={(value) => setEditAssignmentForm({ ...editAssignmentForm, assistant_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a new assistant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bbAssistants.map((assistant) => (
+                      <SelectItem key={assistant.assistant_id} value={assistant.assistant_id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{assistant.name}</span>
+                          <span className="text-sm text-gray-500">{assistant.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={() => setIsEditAssignmentOpen(false)} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateAssignment}
+                  disabled={!editAssignmentForm.assistant_id || editAssignmentForm.assistant_id === editAssignmentForm.current_assistant_id}
+                  className="flex-1"
+                >
+                  Update Assignment
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>
