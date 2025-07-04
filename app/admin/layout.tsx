@@ -45,6 +45,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading admin panel...</p>
+          <div className="mt-4 text-xs text-muted-foreground space-y-1 max-w-md">
+            <p>🔧 initialCheckComplete: {initialCheckComplete.toString()}</p>
+            <p>🔧 isLoading: {isLoading.toString()}</p>
+            <p>🔧 adminSession: {adminSession ? 'present' : 'null'}</p>
+            <p>🔧 isAuthenticated: {isAuthenticated.toString()}</p>
+            <p>🔧 pathname: {pathname}</p>
+          </div>
         </div>
       </div>
     )
