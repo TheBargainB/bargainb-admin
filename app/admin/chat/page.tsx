@@ -101,7 +101,8 @@ export default function ChatPage() {
   const [conversationToDelete, setConversationToDelete] = useState<string | null>(null)
   
   // Phone number input state for manual conversation creation
-  const [manualPhoneNumber, setManualPhoneNumber] = useState("")
+  const [manualPhoneNumber, setManualPhoneNumber] = useState('')
+  const [manualContactName, setManualContactName] = useState('')
   
   // Analytics functionality
   const { 
@@ -619,31 +620,41 @@ export default function ChatPage() {
       return
     }
 
+    if (!manualContactName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for this contact.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
-      console.log('📱 Creating conversation from manual phone number:', manualPhoneNumber)
+      console.log('📱 Creating conversation from manual phone number:', manualPhoneNumber, 'with name:', manualContactName)
       
-      // Create a mock contact object for the phone number
+      // Create a proper contact object with name and phone number
       const phoneContact = {
         jid: `${manualPhoneNumber.replace('+', '')}@s.whatsapp.net`,
         phone_number: manualPhoneNumber,
-        name: undefined,
-        notify: undefined,
+        name: manualContactName,
+        notify: manualContactName,
         imgUrl: undefined,
         verifiedName: undefined,
         status: undefined
       }
 
-      // Use the existing startNewChat function
-      const result = await startNewChat(phoneContact)
+      // Use the startConversationWithContact function which handles API creation better
+      const result = await startConversationWithContact(phoneContact)
       
       if (result) {
-        // Clear the phone number input and close dialog
+        // Clear the inputs and close dialog
         setManualPhoneNumber("")
+        setManualContactName("")
         setIsContactsDialogOpen(false)
         
         toast({
           title: "Conversation created",
-          description: `Started conversation with ${manualPhoneNumber}`,
+          description: `Started conversation with ${manualContactName} (${manualPhoneNumber})`,
         })
       }
     } catch (error) {
@@ -745,16 +756,24 @@ export default function ChatPage() {
                       <h4 className="font-medium text-sm">Start with Phone Number</h4>
                     </div>
                     <div className="space-y-2">
-                      <Input
-                        placeholder="Enter phone number (e.g., +31612345678)"
-                        value={manualPhoneNumber}
-                        onChange={(e) => setManualPhoneNumber(e.target.value)}
-                        className="text-sm"
-                      />
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Contact name (e.g., John Doe)"
+                          value={manualContactName}
+                          onChange={(e) => setManualContactName(e.target.value)}
+                          className="text-sm"
+                        />
+                        <Input
+                          placeholder="Enter phone number (e.g., +31612345678)"
+                          value={manualPhoneNumber}
+                          onChange={(e) => setManualPhoneNumber(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
                       <Button
                         size="sm"
                         onClick={handleCreateConversationFromPhone}
-                        disabled={!manualPhoneNumber.trim() || isCreatingConversation || !isValidPhoneNumber(manualPhoneNumber)}
+                        disabled={!manualPhoneNumber.trim() || !manualContactName.trim() || isCreatingConversation || !isValidPhoneNumber(manualPhoneNumber)}
                         className="w-full"
                       >
                         {isCreatingConversation ? (
@@ -772,6 +791,11 @@ export default function ChatPage() {
                       {manualPhoneNumber.trim() && !isValidPhoneNumber(manualPhoneNumber) && (
                         <p className="text-xs text-destructive">
                           Please enter a valid phone number with country code (e.g., +31612345678)
+                        </p>
+                      )}
+                      {(!manualContactName.trim() && manualPhoneNumber.trim()) && (
+                        <p className="text-xs text-muted-foreground">
+                          Contact name is required
                         </p>
                       )}
                     </div>

@@ -181,16 +181,22 @@ export async function POST(request: NextRequest) {
         ? contact.phone_number 
         : `${contact.phone_number.replace('+', '')}@s.whatsapp.net`;
 
+      // Provide better fallbacks for contact data
+      const contactName = contact.name || contact.notify || `Contact ${contact.phone_number}`;
+      const pushName = contact.notify || contact.name || contact.phone_number;
+
       const { data: newContact, error: contactCreateError } = await supabaseAdmin
         .from('whatsapp_contacts')
         .insert({
           phone_number: contact.phone_number,
           whatsapp_jid: whatsappJid,
-          push_name: contact.notify || contact.name,
-          display_name: contact.name || contact.notify,
-          profile_picture_url: contact.img_url,
+          push_name: pushName,
+          display_name: contactName,
+          profile_picture_url: contact.img_url || null,
           whatsapp_status: 'available',
-          is_active: true
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -198,36 +204,40 @@ export async function POST(request: NextRequest) {
       if (contactCreateError) {
         console.error('Error creating WhatsApp contact:', contactCreateError);
         return NextResponse.json({ 
-          error: 'Failed to create WhatsApp contact in CRM system' 
+          error: `Failed to create WhatsApp contact in CRM system: ${contactCreateError.message}` 
         }, { status: 500 });
       }
 
       whatsappContact = newContact;
       console.log('✅ Created new WhatsApp contact:', whatsappContact.id);
 
-      // Also create CRM profile for the new contact
+      // Also create CRM profile for the new contact with better data
       try {
         const { error: crmProfileError } = await supabaseAdmin
           .from('crm_profiles')
           .insert({
             whatsapp_contact_id: whatsappContact.id, // Link to whatsapp_contacts
-            full_name: contact.name,
-            preferred_name: contact.notify || contact.name,
+            full_name: contactName,
+            preferred_name: pushName,
             lifecycle_stage: 'prospect',
             shopping_persona: null,
             preferred_stores: [],
             dietary_restrictions: [],
             engagement_status: 'active',
-            engagement_score: 50
+            engagement_score: 50,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           });
 
         if (crmProfileError) {
           console.warn('⚠️ Could not create CRM profile for contact:', crmProfileError);
+          // Don't fail the entire operation if CRM profile creation fails
         } else {
           console.log('✅ Created CRM profile for new contact');
         }
       } catch (error) {
         console.warn('⚠️ Error creating CRM profile:', error);
+        // Don't fail the entire operation if CRM profile creation fails
       }
     }
 
