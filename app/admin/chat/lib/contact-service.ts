@@ -1,6 +1,17 @@
 import { supabase } from '@/lib/supabase'
 import type { WhatsAppContact } from './types'
 
+// Phone number normalization helper - ensures consistent format
+export const normalizePhoneNumber = (phoneNumber: string): string => {
+  if (!phoneNumber) return '';
+  
+  // Remove all non-digit characters including spaces, dashes, parentheses, and + signs
+  const cleanNumber = phoneNumber.replace(/[^\d]/g, '');
+  
+  // Return clean number without + prefix for consistent storage
+  return cleanNumber;
+};
+
 // Database schema types (match actual database structure)
 export type WhatsAppContactDB = {
   id: string
@@ -107,11 +118,12 @@ export class ContactService {
       console.log('📝 Upserting contact to CRM structure:', phoneNumber, wasenderData)
 
       const now = new Date().toISOString()
-      const whatsappJid = `${phoneNumber.replace('+', '')}@s.whatsapp.net`
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
+      const whatsappJid = `${normalizedPhoneNumber}@s.whatsapp.net`
 
       // Prepare WhatsApp contact data using correct schema
       const whatsappContactData: WhatsAppContactInsert = {
-        phone_number: phoneNumber,
+        phone_number: normalizedPhoneNumber,
         whatsapp_jid: whatsappJid,
         push_name: wasenderData.name,
         display_name: wasenderData.notify || wasenderData.name,
@@ -236,13 +248,14 @@ export class ContactService {
    */
   static async getContactByPhone(phoneNumber: string): Promise<Contact | null> {
     try {
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
       const { data, error } = await supabase
         .from('whatsapp_contacts')
         .select(`
           *,
           crm_profiles (*)
         `)
-        .eq('phone_number', phoneNumber)
+        .eq('phone_number', normalizedPhoneNumber)
         .single()
 
       if (error) {
@@ -450,9 +463,9 @@ export class ContactService {
    */
   static async createContact(jid: string, pushName?: string): Promise<Contact> {
     try {
-      // Extract phone number from JID
+      // Extract phone number from JID and normalize it
       const phoneNumber = jid.split('@')[0]
-      const formattedPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`
+      const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber)
       
       const wasenderData: WASenderContact = {
         id: jid,
@@ -460,7 +473,7 @@ export class ContactService {
         notify: pushName
       }
 
-      const contact = await this.upsertContact(formattedPhoneNumber, wasenderData)
+      const contact = await this.upsertContact(normalizedPhoneNumber, wasenderData)
       
       if (!contact) {
         throw new Error('Failed to create contact')

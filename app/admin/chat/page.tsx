@@ -88,7 +88,7 @@ export default function ChatPage() {
   const [databaseMessages, setDatabaseMessages] = useState<ChatMessage[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [aiEnabled, setAiEnabled] = useState(false)
+  // Remove hardcoded aiEnabled state - calculate from conversation data
   const [autoResponse, setAutoResponse] = useState(true)
   const [responseDelay, setResponseDelay] = useState([2])
   const [confidenceThreshold, setConfidenceThreshold] = useState([75])
@@ -1439,17 +1439,23 @@ export default function ChatPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  {aiEnabled ? (
-                    <div className="flex items-center gap-1.5">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-xs font-medium text-green-600">AI Active</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                    <XCircle className="h-4 w-4 text-red-500" />
-                      <span className="text-xs font-medium text-red-600">AI Disabled</span>
-                    </div>
-                  )}
+                  {/* Calculate AI status from actual conversation data */}
+                  {(() => {
+                    const currentConversation = databaseConversations.find(conv => conv.id === selectedContact);
+                    const isAiEnabled = (currentConversation?.aiConfidence ?? 0) > 0;
+                    
+                    return isAiEnabled ? (
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-xs font-medium text-green-600">AI Active</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <XCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-xs font-medium text-red-600">AI Disabled</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

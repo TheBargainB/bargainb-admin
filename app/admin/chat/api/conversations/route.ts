@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { normalizePhoneNumber } from '../../lib/contact-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure the contact exists in whatsapp_contacts table
     let whatsappContact;
-    const normalizedPhoneNumber = contact.phone_number.replace('+', ''); // Normalize phone number format
+    const normalizedPhoneNumber = normalizePhoneNumber(contact.phone_number); // Normalize phone number format
     const { data: existingContact, error: contactFetchError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .select('*')
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       console.log('🆕 Creating new WhatsApp contact in CRM system');
       const whatsappJid = contact.phone_number.includes('@') 
         ? contact.phone_number 
-        : `${contact.phone_number.replace('+', '')}@s.whatsapp.net`;
+        : `${normalizedPhoneNumber}@s.whatsapp.net`;
 
       // Provide better fallbacks for contact data
       const contactName = contact.name || contact.notify || `Contact ${contact.phone_number}`;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { normalizePhoneNumber } from '../../lib/contact-service';
 
 type Message = {
   id: string;
@@ -62,9 +63,9 @@ function getStatusName(status: number): string {
 // Helper function to get or create WhatsApp contact in CRM system
 async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) {
   try {
-    // Extract phone number from remoteJid
+    // Extract phone number from remoteJid and normalize it
     const phoneNumber = remoteJid.replace('@s.whatsapp.net', '');
-    const formattedPhoneNumber = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+    const normalizedPhoneNumber = normalizePhoneNumber(phoneNumber);
 
     // First, try to find existing contact by whatsapp_jid (most reliable)
     const { data: existingContactByJid, error: fetchByJidError } = await supabaseAdmin
@@ -120,7 +121,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
     // If not found by JID, try by phone number variations
     const phoneVariations = [
       phoneNumber,           // Raw: 31614539919
-      formattedPhoneNumber,  // With +: +31614539919
+      normalizedPhoneNumber, // Normalized: 31614539919
     ];
 
     let existingContactByPhone = null;
@@ -173,7 +174,7 @@ async function getOrCreateWhatsAppContact(remoteJid: string, pushName?: string) 
     const { data: newContact, error: createError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .upsert({
-        phone_number: phoneNumber,  // Store without + prefix for consistency
+        phone_number: normalizedPhoneNumber,  // Store normalized phone number for consistency
         whatsapp_jid: remoteJid,
         push_name: pushName,
         display_name: pushName,
