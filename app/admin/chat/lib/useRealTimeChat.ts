@@ -160,18 +160,14 @@ export const useRealTimeChat = ({
               return updatedMessages
             })
             
-            // Auto-scroll to new message if user is at bottom
-            setTimeout(() => {
-              if (messagesEndRef.current && isAtBottom()) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
-                console.log('📍 Auto-scrolled to new message')
-              }
-            }, 100)
+            // Auto-scroll to new message if user is at bottom (immediate)
+            if (messagesEndRef.current && isAtBottom()) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' })
+              console.log('📍 Auto-scrolled to new message')
+            }
             
-            // Also refresh conversation list to update last message
-            setTimeout(() => {
-              loadConversationsFromDatabase(true)
-            }, 200)
+            // Immediately refresh conversation list to update last message
+            loadConversationsFromDatabase(false)
           }
         }
       )
@@ -280,9 +276,7 @@ export const useRealTimeChat = ({
           console.log('🔔 NEW CONVERSATION CREATED - refreshing list immediately')
           
           // Refresh conversation list immediately when new conversation is created
-          setTimeout(() => {
-            loadConversationsFromDatabase(true)
-          }, 100)
+          loadConversationsFromDatabase(false)
         }
       )
       .on(
@@ -295,10 +289,8 @@ export const useRealTimeChat = ({
         async (payload) => {
           console.log('🔔 New message globally - updating conversation list')
           
-          // Update conversation list to show new last message
-          setTimeout(() => {
-            loadConversationsFromDatabase(true)
-          }, 300)
+          // Update conversation list to show new last message immediately
+          loadConversationsFromDatabase(false)
         }
       )
       .on(
@@ -311,9 +303,8 @@ export const useRealTimeChat = ({
         async (payload) => {
           console.log('🔔 Conversation updated - refreshing list')
           
-          setTimeout(() => {
-            loadConversationsFromDatabase(true)
-          }, 500)
+          // Refresh immediately for updates
+          loadConversationsFromDatabase(false)
         }
       )
       .subscribe((status) => {

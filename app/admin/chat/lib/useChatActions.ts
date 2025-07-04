@@ -227,13 +227,8 @@ export const useChatActions = ({
           phoneNumber: phoneNumber
         }
         
-        // Refresh conversations immediately (multiple attempts for reliability)
+        // Refresh conversations immediately
         await loadConversationsFromDatabase()
-        
-        // Additional refresh after a short delay to ensure real-time sync
-        setTimeout(() => {
-          loadConversationsFromDatabase()
-        }, 200)
         
         // Select the new conversation
         setSelectedContact(newConversation.id)

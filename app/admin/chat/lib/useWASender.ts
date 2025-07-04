@@ -286,11 +286,6 @@ export const useWASender = ({
         // Refresh conversations to show the new one immediately
         await loadConversationsFromDatabase()
         
-        // Additional refresh after a short delay to ensure real-time sync
-        setTimeout(() => {
-          loadConversationsFromDatabase()
-        }, 200)
-        
         // Call the callback if provided
         if (onConversationCreated) {
           onConversationCreated(result.data.conversation)
@@ -380,11 +375,6 @@ export const useWASender = ({
         
         // Refresh conversations list immediately
         await loadConversationsFromDatabase()
-        
-        // Additional refresh after a short delay to ensure real-time sync
-        setTimeout(() => {
-          loadConversationsFromDatabase()
-        }, 200)
         
         const newConversation = {
           id: result.data.conversation.id,

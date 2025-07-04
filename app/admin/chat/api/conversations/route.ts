@@ -4,6 +4,8 @@ import { normalizePhoneNumber } from '../../lib/contact-service';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('💬 Loading conversations with optimized single query...');
+
     // Fetch all active conversations with their WhatsApp contacts and last messages
     const { data: conversations, error } = await supabaseAdmin
       .from('conversations')
@@ -66,8 +68,8 @@ export async function GET(request: NextRequest) {
           console.warn(`⚠️ Conversation ${conv.id} has no associated WhatsApp contact`);
           return null;
         }
-
-        // Calculate display name priority: display_name > push_name > phone_number
+      
+              // Calculate display name priority: display_name > push_name > phone_number
         const displayName = contact.display_name || contact.push_name || contact.phone_number || 'Unknown';
         
         // Use whatsapp_jid or construct from phone number
@@ -106,6 +108,8 @@ export async function GET(request: NextRequest) {
 
     // Filter out null conversations (those without contacts)
     const validConversations = conversationsWithDetails.filter(conv => conv !== null);
+
+    console.log(`✅ Loaded ${validConversations.length} conversations from database`);
 
     return NextResponse.json({
       success: true,

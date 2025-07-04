@@ -141,9 +141,9 @@ export const useDatabase = ({
           onConversationsUpdate(conversations)
         }
         
-        // Refresh global unread count when conversations are loaded (but don't spam)
+        // Refresh global unread count when conversations are loaded
         if (!silent) {
-          setTimeout(() => refreshGlobalUnreadCount(), 300)
+          refreshGlobalUnreadCount()
         }
         
         return conversations
@@ -186,8 +186,8 @@ export const useDatabase = ({
       if (response.ok) {
         console.log('✅ Conversation marked as read')
         
-        // Refresh global unread count
-        setTimeout(() => refreshGlobalUnreadCount(), 300)
+        // Refresh global unread count immediately
+        refreshGlobalUnreadCount()
         
         return true
       } else {
