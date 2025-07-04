@@ -19,7 +19,10 @@ let globalPollingInterval: NodeJS.Timeout | null = null
 let isSubscriptionSetup = false
 
 export const useGlobalNotifications = (enabled: boolean = true): GlobalNotifications => {
-  const [unreadMessages, setUnreadMessages] = useState(globalUnreadCount)
+  console.log("🚨 GLOBAL NOTIFICATIONS HOOK CALLED - WHO IS CALLING THIS?")
+  console.log("🚨 Stack trace:", new Error().stack)
+  
+  const [unreadMessages, setUnreadMessages] = useState(0) // Disable global count
   const [isLoading, setIsLoading] = useState(false)
   const subscribedRef = useRef(false)
 
@@ -99,86 +102,27 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
     }
   }, [refreshUnreadCount, enabled])
 
-  // Set up real-time subscriptions at the global level (only once)
+  // DISABLED FOR DEBUG - Set up real-time subscriptions at the global level (only once)
   useEffect(() => {
+    console.log("🚨 GLOBAL NOTIFICATIONS useEffect CALLED")
+    console.log("🚨 enabled:", enabled, "isSubscriptionSetup:", isSubscriptionSetup)
+    
     if (!enabled || isSubscriptionSetup) return
 
     const setupRealTimeSubscriptions = async () => {
       try {
-        console.log('🔔 Setting up global notifications subscriptions...')
+        console.log('🚨 DEBUG: Global notifications setup DISABLED for debugging')
+        console.log('🚨 SKIPPING ALL SUPABASE SUBSCRIPTIONS TO PREVENT MULTIPLE INSTANCES')
         
-        // Clean up existing subscriptions first
-        if (globalMessageSubscription) {
-          supabase.removeChannel(globalMessageSubscription)
-        }
-        if (globalConversationSubscription) {
-          supabase.removeChannel(globalConversationSubscription)
-        }
-        if (globalPollingInterval) {
-          clearInterval(globalPollingInterval)
-        }
+        // DISABLED: Clean up existing subscriptions first
+        // DISABLED: Subscribe to new messages
+        // DISABLED: Subscribe to conversation updates
+
+        // DISABLED: Initial load
+        // DISABLED: Backup polling
         
-        // Subscribe to new messages in the new 'messages' table with better error handling
-        globalMessageSubscription = supabase
-          .channel('global-chat-messages-notifications')
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'messages'
-            },
-            (payload) => {
-              console.log('🔔 New message detected, refreshing unread count')
-              // Debounce refresh to prevent excessive calls
-              setTimeout(() => refreshUnreadCount(), 1000)
-            }
-          )
-          .subscribe((status) => {
-            console.log('🔔 Messages subscription status:', status)
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ Global messages subscription active')
-            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.warn('⚠️ Messages subscription failed, will rely on polling')
-            }
-          })
-
-        // Subscribe to conversation updates (for read status changes)
-        globalConversationSubscription = supabase
-          .channel('global-chat-conversations-notifications')
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'conversations'
-            },
-            (payload) => {
-              console.log('🔔 Conversation updated, refreshing unread count')
-              // Debounce refresh to prevent excessive calls
-              setTimeout(() => refreshUnreadCount(), 800)
-            }
-          )
-          .subscribe((status) => {
-            console.log('🔔 Conversations subscription status:', status)
-            if (status === 'SUBSCRIBED') {
-              console.log('✅ Global conversations subscription active')
-            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-              console.warn('⚠️ Conversations subscription failed, will rely on polling')
-            }
-          })
-
-        // Initial load
-        await refreshUnreadCount()
-
-        // Reduced polling frequency - only refresh every 60 seconds as backup
-        globalPollingInterval = setInterval(() => {
-          console.log('🔄 Backup polling for unread count')
-          refreshUnreadCount()
-        }, 60000) // Increased from 30 seconds to 60 seconds
-
         isSubscriptionSetup = true
-        console.log('✅ Global notifications setup complete')
+        console.log('🚨 DEBUG: Global notifications setup SKIPPED (disabled for debugging)')
         
       } catch (error) {
         console.error('❌ Error setting up global real-time subscriptions:', error)
