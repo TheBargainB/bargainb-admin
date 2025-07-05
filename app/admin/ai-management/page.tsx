@@ -784,11 +784,28 @@ export default function AIManagementPage() {
                         <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
                       </div>
                       <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setSelectedAssistant(assistant)}
+                        >
                               <Eye className="h-4 w-4" />
                           View
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedAssistant(assistant)
+                            setFormData({
+                              name: assistant.name,
+                              description: assistant.description || '',
+                              recursion_limit: assistant.config.recursion_limit,
+                              configurable: JSON.stringify(assistant.config.configurable || {}, null, 2)
+                            })
+                            setIsCreateDialogOpen(true)
+                          }}
+                        >
                               <Edit className="h-4 w-4" />
                           Edit
                         </Button>
