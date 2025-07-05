@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase'
 
 const BB_AGENT_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
 const BB_AGENT_API_KEY = process.env.LANGSMITH_API_KEY || process.env.BB_AGENT_API_KEY || process.env.LANGGRAPH_API_KEY
 
 export async function GET() {
   try {
-    const { data: assignments, error } = await supabase
-      .from('conversation_assistants')
-      .select('*')
-      .order('assistant_created_at', { ascending: false })
+    const { data: assignments, error } = await supabaseAdmin
+      .from('conversations')
+      .select(`
+        id, 
+        assistant_id, 
+        assistant_name, 
+        assistant_config, 
+        assistant_created_at,
+        whatsapp_contact_id,
+        whatsapp_contacts!inner(
+          phone_number,
+          display_name,
+          push_name
+        )
+      `)
+      .not('assistant_id', 'is', null)
 
     if (error) {
       console.error('Error fetching user assignments:', error)
@@ -45,7 +52,7 @@ export async function POST(request: NextRequest) {
     const phoneWithoutPlus = phone_number.replace('+', '')
     console.log('🔍 Looking for contact with phone:', phoneWithoutPlus)
     
-    const { data: contact, error: contactError } = await supabase
+    const { data: contact, error: contactError } = await supabaseAdmin
       .from('whatsapp_contacts')
       .select('id, phone_number, display_name, push_name')
       .eq('phone_number', phoneWithoutPlus)
@@ -63,7 +70,7 @@ export async function POST(request: NextRequest) {
     // Find the conversation for this contact
     console.log('🔍 Looking for conversation with whatsapp_contact_id:', contact.id)
     
-    const { data: conversation, error: conversationError } = await supabase
+    const { data: conversation, error: conversationError } = await supabaseAdmin
       .from('conversations')
       .select('id, assistant_id, whatsapp_contact_id')
       .eq('whatsapp_contact_id', contact.id)
@@ -73,7 +80,7 @@ export async function POST(request: NextRequest) {
       console.error('❌ Conversation not found for contact ID:', contact.id, 'Error:', conversationError)
       
       // Let's also try to find ANY conversation for debugging
-      const { data: allConversations } = await supabase
+      const { data: allConversations } = await supabaseAdmin
         .from('conversations')
         .select('id, whatsapp_contact_id')
         .limit(5)
@@ -137,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the conversation with the assistant assignment AND configuration
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('conversations')
       .update({ 
         assistant_id: assistant_id,
@@ -227,7 +234,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update the conversation with the new assistant assignment AND configuration
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('conversations')
       .update({ 
         assistant_id: new_assistant_id,
@@ -277,7 +284,7 @@ export async function DELETE(request: NextRequest) {
     console.log('🗑️ Removing assignment for conversation:', conversation_id)
 
     // Remove the assistant assignment from the conversation
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('conversations')
       .update({ 
         assistant_id: null,

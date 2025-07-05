@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase'
 import { headers } from 'next/headers'
 import crypto from 'crypto'
 import type { GitHubWebhookPayload } from '@/types/qa-testing'
@@ -27,21 +27,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    
     // Handle different GitHub events
     switch (payload.action) {
       case 'push':
-        await handlePushEvent(supabase, payload)
+        await handlePushEvent(payload)
         break
       case 'pull_request':
-        await handlePullRequestEvent(supabase, payload)
+        await handlePullRequestEvent(payload)
         break
       case 'deployment':
-        await handleDeploymentEvent(supabase, payload)
+        await handleDeploymentEvent(payload)
         break
       default:
         console.log(`Unhandled GitHub event: ${payload.action}`)
@@ -62,11 +57,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handlePushEvent(supabase: any, payload: GitHubWebhookPayload) {
+async function handlePushEvent(payload: GitHubWebhookPayload) {
   console.log('Processing push event for:', payload.repository.full_name)
   
   // Get active CI triggers that match this push event
-  const { data: triggers, error: triggersError } = await supabase
+  const { data: triggers, error: triggersError } = await supabaseAdmin
     .from('qa_ci_triggers')
     .select('*')
     .eq('is_active', true)
@@ -80,7 +75,7 @@ async function handlePushEvent(supabase: any, payload: GitHubWebhookPayload) {
 
   // Process each matching trigger
   for (const trigger of triggers || []) {
-    await executeTrigger(supabase, trigger, {
+    await executeTrigger(trigger, {
       trigger_event_type: 'git_push',
       event_metadata: {
         repository: payload.repository.full_name,
@@ -98,13 +93,13 @@ async function handlePushEvent(supabase: any, payload: GitHubWebhookPayload) {
   }
 }
 
-async function handlePullRequestEvent(supabase: any, payload: GitHubWebhookPayload) {
+async function handlePullRequestEvent(payload: GitHubWebhookPayload) {
   if (!payload.pull_request) return
   
   console.log('Processing PR event:', payload.pull_request.number)
   
   // Get triggers for pull requests
-  const { data: triggers, error: triggersError } = await supabase
+  const { data: triggers, error: triggersError } = await supabaseAdmin
     .from('qa_ci_triggers')
     .select('*')
     .eq('is_active', true)
@@ -118,7 +113,7 @@ async function handlePullRequestEvent(supabase: any, payload: GitHubWebhookPaylo
 
   // Process each matching trigger
   for (const trigger of triggers || []) {
-    await executeTrigger(supabase, trigger, {
+    await executeTrigger(trigger, {
       trigger_event_type: 'pull_request',
       event_metadata: {
         repository: payload.repository.full_name,
@@ -133,13 +128,13 @@ async function handlePullRequestEvent(supabase: any, payload: GitHubWebhookPaylo
   }
 }
 
-async function handleDeploymentEvent(supabase: any, payload: GitHubWebhookPayload) {
+async function handleDeploymentEvent(payload: GitHubWebhookPayload) {
   if (!payload.deployment) return
   
   console.log('Processing deployment event:', payload.deployment.id)
   
   // Get deployment triggers
-  const { data: triggers, error: triggersError } = await supabase
+  const { data: triggers, error: triggersError } = await supabaseAdmin
     .from('qa_ci_triggers')
     .select('*')
     .eq('is_active', true)
@@ -153,7 +148,7 @@ async function handleDeploymentEvent(supabase: any, payload: GitHubWebhookPayloa
 
   // Process each matching trigger
   for (const trigger of triggers || []) {
-    await executeTrigger(supabase, trigger, {
+    await executeTrigger(trigger, {
       trigger_event_type: 'deployment',
       event_metadata: {
         repository: payload.repository.full_name,
@@ -166,12 +161,12 @@ async function handleDeploymentEvent(supabase: any, payload: GitHubWebhookPayloa
   }
 }
 
-async function executeTrigger(supabase: any, trigger: any, executionData: any) {
+async function executeTrigger(trigger: any, executionData: any) {
   console.log(`Executing trigger: ${trigger.name}`)
   
   try {
     // Create trigger execution record
-    const { data: execution, error: executionError } = await supabase
+    const { data: execution, error: executionError } = await supabaseAdmin
       .from('qa_trigger_executions')
       .insert({
         trigger_id: trigger.id,
@@ -190,7 +185,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
     }
 
     // Get scripts to run
-    const { data: scripts, error: scriptsError } = await supabase
+    const { data: scripts, error: scriptsError } = await supabaseAdmin
       .from('qa_test_scripts')
       .select('*')
       .in('id', trigger.scripts_to_run)
@@ -207,7 +202,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
     for (const script of scripts || []) {
       try {
         // Get next run number
-        const { data: lastRun } = await supabase
+        const { data: lastRun } = await supabaseAdmin
           .from('qa_test_runs')
           .select('run_number')
           .eq('script_id', script.id)
@@ -218,7 +213,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
         const nextRunNumber = (lastRun?.run_number || 0) + 1
 
         // Create test run
-        const { data: testRun, error: runError } = await supabase
+        const { data: testRun, error: runError } = await supabaseAdmin
           .from('qa_test_runs')
           .insert({
             script_id: script.id,
@@ -258,7 +253,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
         setTimeout(async () => {
           const success = Math.random() > 0.3 // 70% success rate
           
-          await supabase
+          await supabaseAdmin
             .from('qa_test_runs')
             .update({
               status: success ? 'passed' : 'failed',
@@ -280,7 +275,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
     }
 
     // Update trigger execution with test run IDs
-    await supabase
+    await supabaseAdmin
       .from('qa_trigger_executions')
       .update({
         test_run_ids: testRunIds,
@@ -293,7 +288,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
     // Simulate completion of trigger execution
     setTimeout(async () => {
       // Get latest status of all test runs
-      const { data: completedRuns } = await supabase
+      const { data: completedRuns } = await supabaseAdmin
         .from('qa_test_runs')
         .select('status')
         .in('id', testRunIds)
@@ -301,7 +296,7 @@ async function executeTrigger(supabase: any, trigger: any, executionData: any) {
       const allPassed = completedRuns?.every((run: any) => run.status === 'passed') || false
       const failedCount = completedRuns?.filter((run: any) => run.status === 'failed').length || 0
 
-      await supabase
+      await supabaseAdmin
         .from('qa_trigger_executions')
         .update({
           status: 'completed',
@@ -352,7 +347,7 @@ async function sendNotification(trigger: any, execution: any, success: boolean, 
   console.log('Notification:', notification)
   
   // Store notification in database for tracking
-  // await supabase.from('qa_notifications').insert(notification)
+  // await supabaseAdmin.from('qa_notifications').insert(notification)
 }
 
 function getBranchFromRef(ref: string): string {

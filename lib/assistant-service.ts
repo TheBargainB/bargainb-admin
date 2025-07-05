@@ -3,10 +3,8 @@
 // Phase 2: Assistant Creation and Management Logic
 // ===================================================
 
-import { supabase } from './supabase'
-import { Json } from './database.types'
-import { createClient } from '@supabase/supabase-js'
-import { Database } from './database.types'
+import { supabase } from '@/lib/supabase'
+import { Json, Database } from './database.types'
 
 // Types based on LangGraph API documentation
 export interface AssistantConfig {
