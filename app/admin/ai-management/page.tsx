@@ -43,8 +43,14 @@ import {
   Trash2,
   Search,
   Edit,
-  Link
+  Link,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react'
+import { AssistantConfigForm } from './components/AssistantConfigForm'
 
 // Real BB Agent Assistant interface
 interface BBAssistant {
@@ -162,6 +168,28 @@ export default function AIManagementPage() {
     conversation_id: '',
     assistant_id: '',
     current_assistant_id: ''
+  })
+
+  // Enhanced form modal states
+  const [isConfigFormOpen, setIsConfigFormOpen] = useState(false)
+  const [configFormMode, setConfigFormMode] = useState<'create' | 'edit' | 'view'>('create')
+  const [selectedAssistantForForm, setSelectedAssistantForForm] = useState<BBAssistant | null>(null)
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState({
+    assistants: 1,
+    assignments: 1,
+    interactions: 1,
+    analytics: 1
+  })
+  const itemsPerPage = 10
+
+  // Enhanced analytics state
+  const [costMetrics, setCostMetrics] = useState({
+    totalCost: 0,
+    avgCostPerInteraction: 0,
+    monthlyCost: 0,
+    projectedMonthlyCost: 0
   })
 
   // Fetch all data
@@ -492,6 +520,188 @@ export default function AIManagementPage() {
     }
   }
 
+  // Enhanced form handlers
+  const handleViewAssistant = (assistant: BBAssistant) => {
+    setSelectedAssistantForForm(assistant)
+    setConfigFormMode('view')
+    setIsConfigFormOpen(true)
+  }
+
+  const handleEditAssistant = (assistant: BBAssistant) => {
+    setSelectedAssistantForForm(assistant)
+    setConfigFormMode('edit')
+    setIsConfigFormOpen(true)
+  }
+
+  const handleCreateNewAssistant = () => {
+    setSelectedAssistantForForm(null)
+    setConfigFormMode('create')
+    setIsConfigFormOpen(true)
+  }
+
+  const handleConfigFormSave = async (config: any) => {
+    try {
+      const url = configFormMode === 'create' 
+        ? '/api/admin/ai-management/bb-assistants'
+        : `/api/admin/ai-management/bb-assistants/${selectedAssistantForForm?.assistant_id}`
+      
+      const method = configFormMode === 'create' ? 'POST' : 'PUT'
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: config.name,
+          description: config.description,
+          config: {
+            recursion_limit: config.recursion_limit,
+            configurable: {
+              core: {
+                language: config.language,
+                debug: config.debug,
+                source: config.source,
+                version: config.version
+              },
+              user: config.user,
+              assistant: config.assistant
+            }
+          }
+        })
+      })
+
+      if (response.ok) {
+        setIsConfigFormOpen(false)
+        fetchData()
+        toast({
+          title: configFormMode === 'create' ? "Assistant created" : "Assistant updated",
+          description: `${config.name} has been ${configFormMode === 'create' ? 'created' : 'updated'} successfully.`,
+        })
+      } else {
+        const result = await response.json()
+        toast({
+          title: `Error ${configFormMode === 'create' ? 'creating' : 'updating'} assistant`,
+          description: result.error || `Failed to ${configFormMode} assistant.`,
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      console.error(`Failed to ${configFormMode} assistant:`, error)
+      toast({
+        title: `Error ${configFormMode === 'create' ? 'creating' : 'updating'} assistant`,
+        description: `Failed to ${configFormMode} assistant.`,
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Calculate cost metrics
+  const calculateCostMetrics = () => {
+    const totalTokens = interactions.reduce((sum, interaction) => sum + (interaction.tokens_used || 0), 0)
+    const avgTokensPerInteraction = interactions.length > 0 ? totalTokens / interactions.length : 0
+    
+    // Rough cost calculation (adjust based on actual pricing)
+    const costPerThousandTokens = 0.002 // $0.002 per 1K tokens (example rate)
+    const totalCost = (totalTokens / 1000) * costPerThousandTokens
+    const avgCostPerInteraction = avgTokensPerInteraction * costPerThousandTokens / 1000
+    
+    // Monthly projection based on current usage
+    const interactionsThisMonth = interactions.filter(interaction => {
+      const interactionDate = new Date(interaction.created_at)
+      const currentDate = new Date()
+      return interactionDate.getMonth() === currentDate.getMonth() && 
+             interactionDate.getFullYear() === currentDate.getFullYear()
+    }).length
+    
+    const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+    const currentDayOfMonth = new Date().getDate()
+    const projectedMonthlyCost = (totalCost / currentDayOfMonth) * daysInMonth
+    
+    setCostMetrics({
+      totalCost,
+      avgCostPerInteraction,
+      monthlyCost: totalCost,
+      projectedMonthlyCost
+    })
+  }
+
+  // Calculate pagination
+  const getPaginatedData = (data: any[], page: number) => {
+    const startIndex = (page - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return data.slice(startIndex, endIndex)
+  }
+
+  const getTotalPages = (dataLength: number) => {
+    return Math.ceil(dataLength / itemsPerPage)
+  }
+
+  const changePage = (type: 'assistants' | 'assignments' | 'interactions' | 'analytics', newPage: number) => {
+    setCurrentPage(prev => ({
+      ...prev,
+      [type]: newPage
+    }))
+  }
+
+  // Pagination component
+  const PaginationControls = ({ type, dataLength }: { type: 'assistants' | 'assignments' | 'interactions' | 'analytics', dataLength: number }) => {
+    const totalPages = getTotalPages(dataLength)
+    const currentPageNum = currentPage[type]
+    
+    if (totalPages <= 1) return null
+
+    return (
+      <div className="flex items-center justify-between px-2 py-4">
+        <div className="text-sm text-gray-700">
+          Showing {((currentPageNum - 1) * itemsPerPage) + 1} to {Math.min(currentPageNum * itemsPerPage, dataLength)} of {dataLength} entries
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changePage(type, 1)}
+            disabled={currentPageNum === 1}
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changePage(type, currentPageNum - 1)}
+            disabled={currentPageNum === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">
+            Page {currentPageNum} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changePage(type, currentPageNum + 1)}
+            disabled={currentPageNum === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => changePage(type, totalPages)}
+            disabled={currentPageNum === totalPages}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Calculate enhanced analytics
+  useEffect(() => {
+    if (interactions.length > 0) {
+      calculateCostMetrics()
+    }
+  }, [interactions])
+
   const filteredAssistants = bbAssistants.filter(assistant =>
     (assistant.name && assistant.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (assistant.assistant_id && assistant.assistant_id.includes(searchTerm)) ||
@@ -603,7 +813,7 @@ export default function AIManagementPage() {
         </Card>
 
         {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -651,6 +861,19 @@ export default function AIManagementPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Monthly Cost</p>
+                  <p className="text-2xl font-bold text-gray-900">${costMetrics.projectedMonthlyCost.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500">${costMetrics.avgCostPerInteraction.toFixed(4)}/interaction</p>
+                </div>
+                <DollarSign className="h-8 w-8 text-orange-600" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Main Content */}
@@ -678,14 +901,88 @@ export default function AIManagementPage() {
           <TabsContent value="assistants" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">BB Agent Assistants</h2>
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button>
+              <Button onClick={handleCreateNewAssistant} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Assistant
+              </Button>
+            </div>
+
+            {filteredAssistants.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Bot className="h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No BB Assistants</h3>
+                  <p className="text-gray-600 text-center mb-4">
+                    Create your first BB Agent assistant to get started.
+                  </p>
+                  <Button onClick={handleCreateNewAssistant}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Assistant
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {getPaginatedData(filteredAssistants, currentPage.assistants).map((assistant) => (
+                  <Card key={assistant.assistant_id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-2">
+                              <Bot className="h-5 w-5 text-blue-600" />
+                              <h3 className="text-lg font-semibold">{assistant.name}</h3>
+                            </div>
+                            <Badge variant="outline">v{assistant.version}</Badge>
+                          </div>
+                          <p className="text-gray-600 mb-4">{assistant.description}</p>
+                          <div className="text-sm text-gray-500 space-y-1">
+                            <p><strong>ID:</strong> {assistant.assistant_id.slice(0, 8)}...</p>
+                            <p><strong>Graph:</strong> {assistant.graph_id}</p>
+                            <p><strong>Created:</strong> {new Date(assistant.created_at).toLocaleDateString()}</p>
+                            <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewAssistant(assistant)}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEditAssistant(assistant)}
+                            className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+                          >
+                            <Edit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleDeleteAssistant(assistant.assistant_id)}
+                            className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                <PaginationControls type="assistants" dataLength={filteredAssistants.length} />
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Dialog for old create form - kept for backward compatibility but hidden */}
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Create BB Agent Assistant</DialogTitle>
                     <DialogDescription>
@@ -740,97 +1037,11 @@ export default function AIManagementPage() {
                   </div>
                 </DialogContent>
               </Dialog>
-            </div>
-
-            {filteredAssistants.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <Bot className="h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No BB Assistants</h3>
-                  <p className="text-gray-600 text-center mb-4">
-                    Create your first BB Agent assistant to get started.
-                  </p>
-                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Assistant
-                    </Button>
-                    </DialogTrigger>
-                  </Dialog>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6">
-                {filteredAssistants.map((assistant) => (
-                  <Card key={assistant.assistant_id}>
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="flex items-center gap-2">
-                              <Bot className="h-5 w-5 text-blue-600" />
-                              <h3 className="text-lg font-semibold">{assistant.name}</h3>
-                            </div>
-                        <Badge variant="outline">v{assistant.version}</Badge>
-                      </div>
-                          <p className="text-gray-600 mb-4">{assistant.description}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-4">
-                          <div className="text-right text-sm text-gray-500">
-                        <p><strong>ID:</strong> {assistant.assistant_id.slice(0, 8)}...</p>
-                        <p><strong>Graph:</strong> {assistant.graph_id}</p>
-                        <p><strong>Created:</strong> {new Date(assistant.created_at).toLocaleDateString()}</p>
-                        <p><strong>Recursion Limit:</strong> {assistant.config.recursion_limit}</p>
-                      </div>
-                      <div className="flex gap-2">
-                            <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setSelectedAssistant(assistant)}
-                        >
-                              <Eye className="h-4 w-4" />
-                          View
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedAssistant(assistant)
-                            setFormData({
-                              name: assistant.name,
-                              description: assistant.description || '',
-                              recursion_limit: assistant.config.recursion_limit,
-                              configurable: JSON.stringify(assistant.config.configurable || {}, null, 2)
-                            })
-                            setIsCreateDialogOpen(true)
-                          }}
-                        >
-                              <Edit className="h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDeleteAssistant(assistant.assistant_id)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
 
           {/* User Assignments Tab */}
           <TabsContent value="assignments" className="space-y-6">
             <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
+              <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
               <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
                 setIsAssignDialogOpen(open)
                 if (open) {
@@ -838,7 +1049,7 @@ export default function AIManagementPage() {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Create Assignment
                   </Button>
@@ -928,9 +1139,9 @@ export default function AIManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAssignments.length > 0 ? (
-                      filteredAssignments.map((assignment, index) => (
-                        <TableRow key={assignment.conversation_id || `assignment-${index}`}>
+                    {getPaginatedData(filteredAssignments, currentPage.assignments).length > 0 ? (
+                      getPaginatedData(filteredAssignments, currentPage.assignments).map((assignment, index) => (
+                        <TableRow key={assignment.conversation_id || `assignment-${index}`} className="hover:bg-gray-50">
                           <TableCell className="font-medium">{assignment.display_name}</TableCell>
                           <TableCell>{assignment.phone_number}</TableCell>
                           <TableCell>{assignment.assistant_name}</TableCell>
@@ -944,23 +1155,27 @@ export default function AIManagementPage() {
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleViewAssignment(assignment)}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                                 title="View Assignment Details"
                               >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
                               </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleEditAssignment(assignment)}
+                                className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
                                 title="Edit Assignment"
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
                               </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => handleDeleteAssignment(assignment.conversation_id, assignment.display_name)}
-                                className="text-red-600 hover:text-red-700"
+                                className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
                                 title="Remove Assignment"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -978,15 +1193,25 @@ export default function AIManagementPage() {
                     )}
                   </TableBody>
                 </Table>
+                <PaginationControls type="assignments" dataLength={filteredAssignments.length} />
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Interactions Tab */}
           <TabsContent value="interactions" className="space-y-6">
-            <h2 className="text-xl font-semibold">Recent AI Interactions</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">AI Interactions</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{interactions.length} total interactions</Badge>
+              </div>
+            </div>
             
             <Card>
+              <CardHeader>
+                <CardTitle>Recent Interactions</CardTitle>
+                <CardDescription>Latest AI-powered WhatsApp conversations and their performance metrics</CardDescription>
+              </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
@@ -1000,28 +1225,44 @@ export default function AIManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {interactions.length > 0 ? (
-                      interactions.slice(0, 20).map((interaction, index) => (
-                        <TableRow key={interaction.id || `interaction-${index}`}>
+                    {getPaginatedData(interactions, currentPage.interactions).length > 0 ? (
+                      getPaginatedData(interactions, currentPage.interactions).map((interaction, index) => (
+                        <TableRow key={interaction.id || `interaction-${index}`} className="hover:bg-gray-50">
                           <TableCell className="text-sm">
                             {new Date(interaction.created_at).toLocaleString()}
                           </TableCell>
-                          <TableCell className="text-sm">{interaction.user_id.slice(0, 8)}...</TableCell>
+                          <TableCell className="text-sm font-mono bg-gray-50 rounded px-2 py-1">
+                            {interaction.user_id.slice(0, 8)}...
+                          </TableCell>
                           <TableCell className="max-w-md truncate text-sm">
-                            {interaction.user_message}
+                            <span className="line-clamp-2" title={interaction.user_message}>
+                              {interaction.user_message}
+                            </span>
                           </TableCell>
                           <TableCell className="text-sm">
-                            {interaction.processing_time_ms ? `${interaction.processing_time_ms}ms` : '-'}
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              interaction.processing_time_ms 
+                                ? interaction.processing_time_ms < 1000 
+                                  ? 'bg-green-100 text-green-800'
+                                  : interaction.processing_time_ms < 3000
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {interaction.processing_time_ms ? `${interaction.processing_time_ms}ms` : 'N/A'}
+                            </span>
                           </TableCell>
                           <TableCell className="text-sm">
-                            {interaction.tokens_used || '-'}
+                            <span className="px-2 py-1 bg-blue-50 text-blue-800 rounded text-xs">
+                              {interaction.tokens_used?.toLocaleString() || '0'} tokens
+                            </span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={interaction.success ? "default" : "destructive"}>
+                            <Badge variant={interaction.success ? "default" : "destructive"} className="flex items-center gap-1 w-fit">
                               {interaction.success ? (
-                                <CheckCircle className="h-3 w-3 mr-1" />
+                                <CheckCircle className="h-3 w-3" />
                               ) : (
-                                <XCircle className="h-3 w-3 mr-1" />
+                                <XCircle className="h-3 w-3" />
                               )}
                               {interaction.success ? "Success" : "Failed"}
                             </Badge>
@@ -1031,22 +1272,33 @@ export default function AIManagementPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                          No interactions data available
+                          <div className="flex flex-col items-center">
+                            <MessageSquare className="h-12 w-12 text-gray-300 mb-2" />
+                            <p>No interactions data available</p>
+                            <p className="text-sm text-gray-400">Interactions will appear here once users start chatting with AI assistants</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                <PaginationControls type="interactions" dataLength={interactions.length} />
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            <h2 className="text-xl font-semibold">AI Usage Analytics</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">AI Usage Analytics</h2>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{analytics.length} days of data</Badge>
+                <Badge variant="secondary">Live Metrics</Badge>
+              </div>
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              <Card className="border-l-4 border-l-blue-500">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1056,13 +1308,17 @@ export default function AIManagementPage() {
                           ? Math.round(recentAnalytics.reduce((sum, day) => sum + day.avg_processing_time_ms, 0) / recentAnalytics.length)
                           : 0}ms
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {recentAnalytics.length > 0 && recentAnalytics[0].avg_processing_time_ms < 2000 ? '⚡ Fast' : 
+                         recentAnalytics.length > 0 && recentAnalytics[0].avg_processing_time_ms < 5000 ? '⚖️ Normal' : '🐌 Slow'}
+                      </p>
                     </div>
                     <Timer className="h-8 w-8 text-blue-600" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-yellow-500">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1070,13 +1326,16 @@ export default function AIManagementPage() {
                       <p className="text-2xl font-bold text-gray-900">
                         {recentAnalytics.reduce((sum, day) => sum + day.total_tokens_used, 0).toLocaleString()}
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Avg: {recentAnalytics.length > 0 ? Math.round(recentAnalytics.reduce((sum, day) => sum + day.total_tokens_used, 0) / recentAnalytics.length).toLocaleString() : 0}/day
+                      </p>
                     </div>
                     <Zap className="h-8 w-8 text-yellow-600" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-purple-500">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1084,13 +1343,16 @@ export default function AIManagementPage() {
                       <p className="text-2xl font-bold text-gray-900">
                         {recentAnalytics.reduce((sum, day) => sum + day.unique_users, 0)}
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {recentAnalytics.length > 0 ? `+${recentAnalytics[0].unique_users} today` : 'No data today'}
+                      </p>
                     </div>
                     <Users className="h-8 w-8 text-purple-600" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-green-500">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1098,8 +1360,28 @@ export default function AIManagementPage() {
                       <p className="text-2xl font-bold text-gray-900">
                         {recentAnalytics.reduce((sum, day) => sum + day.unique_chats, 0)}
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {recentAnalytics.length > 0 ? `${recentAnalytics[0].unique_chats} active today` : 'No chats today'}
+                      </p>
                     </div>
                     <MessageSquare className="h-8 w-8 text-green-600" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-orange-500">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Estimated Cost</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${costMetrics.projectedMonthlyCost.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        ${costMetrics.avgCostPerInteraction.toFixed(4)}/interaction
+                      </p>
+                    </div>
+                    <DollarSign className="h-8 w-8 text-orange-600" />
                   </div>
                 </CardContent>
               </Card>
@@ -1107,8 +1389,11 @@ export default function AIManagementPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Daily Analytics</CardTitle>
-                <CardDescription>Performance metrics over the last 7 days</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Daily Analytics
+                </CardTitle>
+                <CardDescription>Detailed performance metrics and trends over time</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -1120,33 +1405,72 @@ export default function AIManagementPage() {
                       <TableHead>Tokens Used</TableHead>
                       <TableHead>Success Rate</TableHead>
                       <TableHead>Unique Users</TableHead>
+                      <TableHead>Cost Estimate</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentAnalytics.length > 0 ? (
-                      recentAnalytics.map((day, index) => (
-                        <TableRow key={day.id || `analytics-${index}`}>
-                          <TableCell>{new Date(day.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{day.total_interactions}</TableCell>
-                          <TableCell>{Math.round(day.avg_processing_time_ms)}ms</TableCell>
-                          <TableCell>{day.total_tokens_used.toLocaleString()}</TableCell>
+                    {getPaginatedData(recentAnalytics, currentPage.analytics).length > 0 ? (
+                      getPaginatedData(recentAnalytics, currentPage.analytics).map((day, index) => (
+                        <TableRow key={day.id || `analytics-${index}`} className="hover:bg-gray-50">
+                          <TableCell className="font-medium">
+                            {new Date(day.date).toLocaleDateString('en-US', { 
+                              weekday: 'short', 
+                              month: 'short', 
+                              day: 'numeric' 
+                            })}
+                          </TableCell>
                           <TableCell>
-                            <Badge variant={day.success_rate >= 90 ? "default" : day.success_rate >= 75 ? "secondary" : "destructive"}>
+                            <span className="px-2 py-1 bg-blue-50 text-blue-800 rounded text-sm font-medium">
+                              {day.total_interactions}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded text-sm ${
+                              day.avg_processing_time_ms < 1000 
+                                ? 'bg-green-100 text-green-800'
+                                : day.avg_processing_time_ms < 3000
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                            }`}>
+                              {Math.round(day.avg_processing_time_ms)}ms
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 bg-purple-50 text-purple-800 rounded text-sm">
+                              {day.total_tokens_used.toLocaleString()}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={day.success_rate >= 90 ? "default" : day.success_rate >= 75 ? "secondary" : "destructive"} className="font-medium">
                               {day.success_rate.toFixed(1)}%
                             </Badge>
                           </TableCell>
-                          <TableCell>{day.unique_users}</TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 bg-green-50 text-green-800 rounded text-sm">
+                              {day.unique_users} users
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 bg-orange-50 text-orange-800 rounded text-sm font-mono">
+                              ${((day.total_tokens_used / 1000) * 0.002).toFixed(3)}
+                            </span>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                          No analytics data available
+                        <TableCell colSpan={7} className="text-center text-gray-500 py-8">
+                          <div className="flex flex-col items-center">
+                            <BarChart3 className="h-12 w-12 text-gray-300 mb-2" />
+                            <p>No analytics data available</p>
+                            <p className="text-sm text-gray-400">Analytics will appear here once AI interactions begin</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
+                <PaginationControls type="analytics" dataLength={recentAnalytics.length} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -1346,6 +1670,15 @@ export default function AIManagementPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Enhanced Assistant Configuration Form */}
+        <AssistantConfigForm
+          assistant={selectedAssistantForForm}
+          isOpen={isConfigFormOpen}
+          onClose={() => setIsConfigFormOpen(false)}
+          onSave={handleConfigFormSave}
+          mode={configFormMode}
+        />
 
       </div>
     </div>
