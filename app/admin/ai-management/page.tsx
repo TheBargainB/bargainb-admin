@@ -493,15 +493,15 @@ export default function AIManagementPage() {
   }
 
   const filteredAssistants = bbAssistants.filter(assistant =>
-    assistant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assistant.assistant_id.includes(searchTerm) ||
+    (assistant.name && assistant.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (assistant.assistant_id && assistant.assistant_id.includes(searchTerm)) ||
     (assistant.description && assistant.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   const filteredAssignments = userAssignments.filter(assignment =>
-    assignment.phone_number.includes(searchTerm) ||
-    assignment.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assignment.assistant_name.toLowerCase().includes(searchTerm.toLowerCase())
+    (assignment.phone_number && assignment.phone_number.includes(searchTerm)) ||
+    (assignment.display_name && assignment.display_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (assignment.assistant_name && assignment.assistant_name.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   const recentAnalytics = analytics.slice(0, 7) // Last 7 days
@@ -911,46 +911,54 @@ export default function AIManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAssignments.map((assignment) => (
-                      <TableRow key={assignment.conversation_id}>
-                        <TableCell className="font-medium">{assignment.display_name}</TableCell>
-                        <TableCell>{assignment.phone_number}</TableCell>
-                        <TableCell>{assignment.assistant_name}</TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {assignment.assistant_id.slice(0, 8)}...
-                        </TableCell>
-                        <TableCell>{new Date(assignment.assistant_created_at).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleViewAssignment(assignment)}
-                              title="View Assignment Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleEditAssignment(assignment)}
-                              title="Edit Assignment"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleDeleteAssignment(assignment.conversation_id, assignment.display_name)}
-                              className="text-red-600 hover:text-red-700"
-                              title="Remove Assignment"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                    {filteredAssignments.length > 0 ? (
+                      filteredAssignments.map((assignment, index) => (
+                        <TableRow key={assignment.conversation_id || `assignment-${index}`}>
+                          <TableCell className="font-medium">{assignment.display_name}</TableCell>
+                          <TableCell>{assignment.phone_number}</TableCell>
+                          <TableCell>{assignment.assistant_name}</TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {assignment.assistant_id.slice(0, 8)}...
+                          </TableCell>
+                          <TableCell>{new Date(assignment.assistant_created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleViewAssignment(assignment)}
+                                title="View Assignment Details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleEditAssignment(assignment)}
+                                title="Edit Assignment"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDeleteAssignment(assignment.conversation_id, assignment.display_name)}
+                                className="text-red-600 hover:text-red-700"
+                                title="Remove Assignment"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                          No assignments found
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -975,33 +983,41 @@ export default function AIManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {interactions.slice(0, 20).map((interaction) => (
-                      <TableRow key={interaction.id}>
-                        <TableCell className="text-sm">
-                          {new Date(interaction.created_at).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-sm">{interaction.user_id.slice(0, 8)}...</TableCell>
-                        <TableCell className="max-w-md truncate text-sm">
-                          {interaction.user_message}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {interaction.processing_time_ms ? `${interaction.processing_time_ms}ms` : '-'}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {interaction.tokens_used || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={interaction.success ? "default" : "destructive"}>
-                            {interaction.success ? (
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                            ) : (
-                              <XCircle className="h-3 w-3 mr-1" />
-                            )}
-                            {interaction.success ? "Success" : "Failed"}
-                          </Badge>
+                    {interactions.length > 0 ? (
+                      interactions.slice(0, 20).map((interaction, index) => (
+                        <TableRow key={interaction.id || `interaction-${index}`}>
+                          <TableCell className="text-sm">
+                            {new Date(interaction.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-sm">{interaction.user_id.slice(0, 8)}...</TableCell>
+                          <TableCell className="max-w-md truncate text-sm">
+                            {interaction.user_message}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {interaction.processing_time_ms ? `${interaction.processing_time_ms}ms` : '-'}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {interaction.tokens_used || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={interaction.success ? "default" : "destructive"}>
+                              {interaction.success ? (
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                              ) : (
+                                <XCircle className="h-3 w-3 mr-1" />
+                              )}
+                              {interaction.success ? "Success" : "Failed"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                          No interactions data available
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -1090,20 +1106,28 @@ export default function AIManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentAnalytics.map((day) => (
-                      <TableRow key={day.id}>
-                        <TableCell>{new Date(day.date).toLocaleDateString()}</TableCell>
-                        <TableCell>{day.total_interactions}</TableCell>
-                        <TableCell>{Math.round(day.avg_processing_time_ms)}ms</TableCell>
-                        <TableCell>{day.total_tokens_used.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant={day.success_rate >= 90 ? "default" : day.success_rate >= 75 ? "secondary" : "destructive"}>
-                            {day.success_rate.toFixed(1)}%
-                          </Badge>
+                    {recentAnalytics.length > 0 ? (
+                      recentAnalytics.map((day, index) => (
+                        <TableRow key={day.id || `analytics-${index}`}>
+                          <TableCell>{new Date(day.date).toLocaleDateString()}</TableCell>
+                          <TableCell>{day.total_interactions}</TableCell>
+                          <TableCell>{Math.round(day.avg_processing_time_ms)}ms</TableCell>
+                          <TableCell>{day.total_tokens_used.toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={day.success_rate >= 90 ? "default" : day.success_rate >= 75 ? "secondary" : "destructive"}>
+                              {day.success_rate.toFixed(1)}%
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{day.unique_users}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                          No analytics data available
                         </TableCell>
-                        <TableCell>{day.unique_users}</TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

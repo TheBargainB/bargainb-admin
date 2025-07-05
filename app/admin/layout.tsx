@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { Separator } from "@/components/ui/separator"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
 import { NotificationDropdown } from "./chat/components/NotificationDropdown"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -86,6 +87,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           <div className="ml-auto flex items-center gap-2 px-4">
             <NotificationDropdown />
+            <ThemeToggle />
             <span className="text-sm text-gray-600">Welcome, {user.email}</span>
             <button
               onClick={handleLogout}
