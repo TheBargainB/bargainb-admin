@@ -1,8 +1,8 @@
 "use client"
 
-import React from "react"
+import React, { useEffect } from "react"
 import { useAdminAuth } from "@/hooks/useAdminAuth"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -18,8 +18,20 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   
   const { isAuthenticated, isLoading, user, logout } = useAdminAuth()
   const router = useRouter()
+  const pathname = usePathname()
   
   console.log("🔑 ADMIN LAYOUT: Auth state:", { isAuthenticated, isLoading, user: user?.email })
+
+  // Check if we're on the login page
+  const isLoginPage = pathname === "/admin/login"
+
+  // Handle redirect to login when not authenticated (except when already on login page)
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !isLoginPage) {
+      console.log("🔑 ADMIN LAYOUT: Not authenticated, redirecting to login")
+      router.push("/admin/login")
+    }
+  }, [isLoading, isAuthenticated, isLoginPage, router])
 
   // Show loading state
   if (isLoading) {
@@ -33,11 +45,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     )
   }
 
-  // Redirect to login if not authenticated
+  // If on login page, render it directly without authentication checks
+  if (isLoginPage) {
+    return <>{children}</>
+  }
+
+  // Show loading state while redirecting (only for non-login pages)
   if (!isAuthenticated) {
-    console.log("🔑 ADMIN LAYOUT: Not authenticated, redirecting to login")
-    router.push("/admin/login")
-    return null
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    )
   }
 
   // Render authenticated admin interface with sidebar
