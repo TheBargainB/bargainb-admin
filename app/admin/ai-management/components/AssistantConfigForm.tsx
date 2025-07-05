@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { X, Plus, Save, Eye, Settings, User, Bot, Globe, Zap } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -302,29 +303,27 @@ export const AssistantConfigForm: React.FC<AssistantConfigFormProps> = ({
 
   const isReadOnly = mode === 'view'
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center gap-3">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             {mode === 'view' ? <Eye className="h-5 w-5 text-blue-600" /> : 
              mode === 'edit' ? <Settings className="h-5 w-5 text-orange-600" /> : 
              <Plus className="h-5 w-5 text-green-600" />}
-            <h2 className="text-xl font-semibold">
-              {mode === 'view' ? 'View Assistant Configuration' :
-               mode === 'edit' ? 'Edit Assistant Configuration' :
-               'Create New Assistant'}
-            </h2>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+            {mode === 'view' ? 'View Assistant Configuration' :
+             mode === 'edit' ? 'Edit Assistant Configuration' :
+             'Create New Assistant'}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === 'view' ? 'View assistant configuration details' :
+             mode === 'edit' ? 'Modify assistant configuration settings' :
+             'Configure a new AI assistant with form-based inputs'}
+          </DialogDescription>
+        </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)]">
-          <div className="p-6 space-y-6">
+        <ScrollArea className="h-[calc(95vh-8rem)] px-1">
+          <div className="space-y-6 pr-4">
             
             {/* Basic Information */}
             <Card>
@@ -1153,7 +1152,7 @@ export const AssistantConfigForm: React.FC<AssistantConfigFormProps> = ({
         </ScrollArea>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+        <div className="flex items-center justify-end gap-3 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
@@ -1164,7 +1163,7 @@ export const AssistantConfigForm: React.FC<AssistantConfigFormProps> = ({
             </Button>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 } 

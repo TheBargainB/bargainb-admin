@@ -51,6 +51,7 @@ import {
   ChevronsRight
 } from 'lucide-react'
 import { AssistantConfigForm } from './components/AssistantConfigForm'
+import { AssignmentConfigForm } from './components/AssignmentConfigForm'
 
 // Real BB Agent Assistant interface
 interface BBAssistant {
@@ -175,6 +176,11 @@ export default function AIManagementPage() {
   const [configFormMode, setConfigFormMode] = useState<'create' | 'edit' | 'view'>('create')
   const [selectedAssistantForForm, setSelectedAssistantForForm] = useState<BBAssistant | null>(null)
 
+  // Enhanced assignment form modal states
+  const [isAssignmentFormOpen, setIsAssignmentFormOpen] = useState(false)
+  const [assignmentFormMode, setAssignmentFormMode] = useState<'create' | 'edit' | 'view'>('create')
+  const [selectedAssignmentForForm, setSelectedAssignmentForForm] = useState<UserAssignment | null>(null)
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState({
     assistants: 1,
@@ -205,14 +211,28 @@ export default function AIManagementPage() {
       setUserAssignments(assignmentsData)
 
       // Fetch recent interactions
-      const interactionsRes = await fetch('/api/admin/ai-management/interactions?limit=50')
+      const interactionsRes = await fetch('/api/admin/ai-management/interactions?limit=100')
       const interactionsData = await interactionsRes.json()
       setInteractions(interactionsData)
 
-      // Fetch analytics
+      // Fetch analytics from database
       const analyticsRes = await fetch('/api/admin/ai-management/analytics')
       const analyticsData = await analyticsRes.json()
       setAnalytics(analyticsData)
+
+      // Fetch real-time AI stats from interactions
+      const aiStatsRes = await fetch('/api/ai/stats')
+      const aiStatsData = await aiStatsRes.json()
+      
+      // Update real-time metrics if available
+      if (aiStatsData && !aiStatsData.error) {
+        setCostMetrics(prev => ({
+          ...prev,
+          totalCost: (aiStatsData.totalInteractions || 0) * 0.002, // Rough estimate
+          avgCostPerInteraction: 0.002,
+          projectedMonthlyCost: ((aiStatsData.totalInteractions || 0) * 0.002) * 30 / Math.max(1, new Date().getDate())
+        }))
+      }
 
     } catch (error) {
       console.error('Failed to fetch AI management data:', error)
@@ -348,36 +368,29 @@ export default function AIManagementPage() {
     }
   }
 
-  const handleCreateAssignment = async () => {
+  const handleCreateAssignment = async (config: any) => {
     try {
-      const selectedContact = availableContacts.find(c => c.id === assignmentForm.contact_id)
-      const selectedAssistant = bbAssistants.find(a => a.assistant_id === assignmentForm.assistant_id)
-      
-      if (!selectedContact || !selectedAssistant) {
-        toast({
-          title: "Invalid selection",
-          description: "Please select both a contact and an assistant.",
-          variant: "destructive"
-        })
-        return
-      }
-
       const response = await fetch('/api/admin/ai-management/assignments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone_number: selectedContact.phone_number,
-          assistant_id: assignmentForm.assistant_id
+          phone_number: config.contact.phone_number,
+          assistant_id: config.assistant.assistant_id,
+          priority: config.assignment.priority,
+          auto_enable: config.assignment.auto_enable,
+          notification_settings: config.assignment.notification_settings,
+          schedule: config.assignment.schedule,
+          custom_config: config.assignment.custom_config,
+          notes: config.notes
         })
       })
 
       if (response.ok) {
-        setIsAssignDialogOpen(false)
-        setAssignmentForm({ contact_id: '', assistant_id: '' })
+        setIsAssignmentFormOpen(false)
         fetchData()
         toast({
           title: "Assignment created",
-          description: `Assistant "${selectedAssistant.name}" has been assigned to ${selectedContact.display_name || selectedContact.phone_number}.`,
+          description: `Assistant "${config.assistant.name}" has been assigned to ${config.contact.display_name || config.contact.phone_number}.`,
         })
       } else {
         const result = await response.json()
@@ -418,52 +431,52 @@ export default function AIManagementPage() {
 
   // Handle viewing assignment details
   const handleViewAssignment = (assignment: UserAssignment) => {
-    setSelectedAssignment(assignment)
-    setIsAssignmentDetailsOpen(true)
+    setSelectedAssignmentForForm(assignment)
+    setAssignmentFormMode('view')
+    fetchAvailableContacts() // Load contacts for viewing
+    setIsAssignmentFormOpen(true)
   }
 
   // Handle editing assignment
   const handleEditAssignment = (assignment: UserAssignment) => {
-    setSelectedAssignment(assignment)
-    setEditAssignmentForm({
-      conversation_id: assignment.conversation_id,
-      assistant_id: assignment.assistant_id,
-      current_assistant_id: assignment.assistant_id
-    })
+    setSelectedAssignmentForForm(assignment)
+    setAssignmentFormMode('edit')
     fetchAvailableContacts() // Load contacts for editing
-    setIsEditAssignmentOpen(true)
+    setIsAssignmentFormOpen(true)
+  }
+
+  // Handle creating new assignment
+  const handleCreateNewAssignment = () => {
+    setSelectedAssignmentForForm(null)
+    setAssignmentFormMode('create')
+    fetchAvailableContacts() // Load contacts for creating
+    setIsAssignmentFormOpen(true)
   }
 
   // Handle updating assignment
-  const handleUpdateAssignment = async () => {
+  const handleUpdateAssignment = async (config: any) => {
     try {
-      const selectedAssistant = bbAssistants.find(a => a.assistant_id === editAssignmentForm.assistant_id)
-      
-      if (!selectedAssistant) {
-        toast({
-          title: "Invalid selection",
-          description: "Please select a valid assistant.",
-          variant: "destructive"
-        })
-        return
-      }
-
       const response = await fetch('/api/admin/ai-management/assignments', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          conversation_id: editAssignmentForm.conversation_id,
-          new_assistant_id: editAssignmentForm.assistant_id
+          conversation_id: selectedAssignmentForForm?.conversation_id,
+          new_assistant_id: config.assistant.assistant_id,
+          priority: config.assignment.priority,
+          auto_enable: config.assignment.auto_enable,
+          notification_settings: config.assignment.notification_settings,
+          schedule: config.assignment.schedule,
+          custom_config: config.assignment.custom_config,
+          notes: config.notes
         })
       })
 
       if (response.ok) {
-        setIsEditAssignmentOpen(false)
-        setEditAssignmentForm({ conversation_id: '', assistant_id: '', current_assistant_id: '' })
+        setIsAssignmentFormOpen(false)
         fetchData()
         toast({
           title: "Assignment updated",
-          description: `Assistant changed to "${selectedAssistant.name}".`,
+          description: `Assistant changed to "${config.assistant.name}".`,
         })
       } else {
         const result = await response.json()
@@ -594,6 +607,14 @@ export default function AIManagementPage() {
     }
   }
 
+  const handleAssignmentFormSave = async (config: any) => {
+    if (assignmentFormMode === 'create') {
+      await handleCreateAssignment(config)
+    } else if (assignmentFormMode === 'edit') {
+      await handleUpdateAssignment(config)
+    }
+  }
+
   // Calculate cost metrics
   const calculateCostMetrics = () => {
     const totalTokens = interactions.reduce((sum, interaction) => sum + (interaction.tokens_used || 0), 0)
@@ -715,10 +736,37 @@ export default function AIManagementPage() {
   )
 
   const recentAnalytics = analytics.slice(0, 7) // Last 7 days
-  const totalInteractions = analytics.reduce((sum, day) => sum + day.total_interactions, 0)
-  const avgSuccessRate = analytics.length > 0 
-    ? analytics.reduce((sum, day) => sum + day.success_rate, 0) / analytics.length 
-    : 0
+  
+  // Calculate real-time metrics from interactions data
+  const totalInteractions = interactions.length
+  const successfulInteractions = interactions.filter(i => i.success).length
+  const avgSuccessRate = totalInteractions > 0 ? (successfulInteractions / totalInteractions) * 100 : 0
+  
+  // Calculate processing time metrics  
+  const processingTimes = interactions.filter(i => i.processing_time_ms != null).map(i => i.processing_time_ms!)
+  const avgProcessingTime = processingTimes.length > 0 ? 
+    processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length : 0
+  
+  // Calculate daily interactions for current week
+  const last7Days = Array.from({length: 7}, (_, i) => {
+    const date = new Date()
+    date.setDate(date.getDate() - i)
+    return date.toISOString().split('T')[0]
+  }).reverse()
+  
+  const dailyInteractionCounts = last7Days.map(date => {
+    const dayInteractions = interactions.filter(i => i.created_at.startsWith(date))
+    return {
+      date,
+      count: dayInteractions.length,
+      success: dayInteractions.filter(i => i.success).length
+    }
+  })
+  
+  const todayInteractions = dailyInteractionCounts[dailyInteractionCounts.length - 1]?.count || 0
+  const yesterdayInteractions = dailyInteractionCounts[dailyInteractionCounts.length - 2]?.count || 0
+  const interactionsTrend = yesterdayInteractions > 0 ? 
+    ((todayInteractions - yesterdayInteractions) / yesterdayInteractions) * 100 : 0
 
   if (loading) {
     return (
@@ -814,61 +862,95 @@ export default function AIManagementPage() {
 
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <Card>
+          <Card className="border-blue-200 bg-blue-50/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">BB Assistants</p>
-                  <p className="text-2xl font-bold text-gray-900">{bbAssistants.length}</p>
+                  <p className="text-sm font-medium text-blue-600">BB Assistants</p>
+                  <p className="text-2xl font-bold text-blue-900">{bbAssistants.length}</p>
+                  <p className="text-xs text-blue-700">Active assistants</p>
                 </div>
                 <Brain className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-purple-200 bg-purple-50/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">User Assignments</p>
-                  <p className="text-2xl font-bold text-gray-900">{userAssignments.length}</p>
+                  <p className="text-sm font-medium text-purple-600">User Assignments</p>
+                  <p className="text-2xl font-bold text-purple-900">{userAssignments.length}</p>
+                  <p className="text-xs text-purple-700">Active assignments</p>
                 </div>
                 <UserCheck className="h-8 w-8 text-purple-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-green-200 bg-green-50/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Interactions</p>
-                  <p className="text-2xl font-bold text-gray-900">{totalInteractions}</p>
+                  <p className="text-sm font-medium text-green-600">Total Interactions</p>
+                  <p className="text-2xl font-bold text-green-900">{totalInteractions}</p>
+                  <p className="text-xs text-green-700">
+                    Today: {todayInteractions} 
+                    {interactionsTrend !== 0 && (
+                      <span className={`ml-1 ${interactionsTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ({interactionsTrend > 0 ? '+' : ''}{interactionsTrend.toFixed(1)}%)
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <MessageSquare className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-yellow-200 bg-yellow-50/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Success Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{avgSuccessRate.toFixed(1)}%</p>
+                  <p className="text-sm font-medium text-yellow-600">Success Rate</p>
+                  <p className="text-2xl font-bold text-yellow-900">{avgSuccessRate.toFixed(1)}%</p>
+                  <p className="text-xs text-yellow-700">
+                    {avgProcessingTime > 0 ? 
+                      `${Math.round(avgProcessingTime)}ms avg` : 
+                      'No processing data'
+                    }
+                    {avgProcessingTime > 0 && (
+                      <span className={`ml-1 ${
+                        avgProcessingTime < 1000 ? 'text-green-600' : 
+                        avgProcessingTime < 3000 ? 'text-yellow-600' : 
+                        'text-red-600'
+                      }`}>
+                        {avgProcessingTime < 1000 ? '⚡ Fast' : 
+                         avgProcessingTime < 3000 ? '⚖️ Normal' : 
+                         '🐌 Slow'}
+                      </span>
+                    )}
+                  </p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-green-600" />
+                <TrendingUp className="h-8 w-8 text-yellow-600" />
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-orange-200 bg-orange-50/50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Cost</p>
-                  <p className="text-2xl font-bold text-gray-900">${costMetrics.projectedMonthlyCost.toFixed(2)}</p>
-                  <p className="text-xs text-gray-500">${costMetrics.avgCostPerInteraction.toFixed(4)}/interaction</p>
+                  <p className="text-sm font-medium text-orange-600">Monthly Cost</p>
+                  <p className="text-2xl font-bold text-orange-900">${costMetrics.projectedMonthlyCost.toFixed(2)}</p>
+                  <p className="text-xs text-orange-700">
+                    ${costMetrics.avgCostPerInteraction.toFixed(4)}/interaction
+                    {totalInteractions > 0 && (
+                      <span className="block text-xs text-orange-600 mt-1">
+                        Total: ${costMetrics.totalCost.toFixed(2)}
+                      </span>
+                    )}
+                  </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-orange-600" />
               </div>
@@ -1042,83 +1124,13 @@ export default function AIManagementPage() {
           <TabsContent value="assignments" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">User Assistant Assignments</h2>
-              <Dialog open={isAssignDialogOpen} onOpenChange={(open) => {
-                setIsAssignDialogOpen(open)
-                if (open) {
-                  fetchAvailableContacts()
-                }
-              }}>
-                <DialogTrigger asChild>
-                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Create Assignment
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create Assistant Assignment</DialogTitle>
-                    <DialogDescription>
-                      Assign a BB Agent assistant to a WhatsApp contact
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="contact">WhatsApp Contact</Label>
-                      {isLoadingContacts ? (
-                        <div className="flex items-center justify-center py-4">
-                          <div className="text-sm text-gray-500">Loading contacts...</div>
-                        </div>
-                      ) : (
-                        <Select value={assignmentForm.contact_id} onValueChange={(value) => setAssignmentForm({ ...assignmentForm, contact_id: value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a contact" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableContacts.map((contact) => (
-                              <SelectItem key={contact.id} value={contact.id}>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">
-                                    {contact.display_name || contact.push_name || contact.phone_number}
-                                  </span>
-                                  <span className="text-sm text-gray-500">
-                                    ({contact.phone_number})
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="assistant">BB Agent Assistant</Label>
-                      <Select value={assignmentForm.assistant_id} onValueChange={(value) => setAssignmentForm({ ...assignmentForm, assistant_id: value })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select an assistant" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bbAssistants.map((assistant) => (
-                            <SelectItem key={assistant.assistant_id} value={assistant.assistant_id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{assistant.name}</span>
-                                <span className="text-sm text-gray-500">{assistant.description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => setIsAssignDialogOpen(false)} variant="outline">
-                        Cancel
-                      </Button>
-                      <Button onClick={handleCreateAssignment}>
-                        Create Assignment
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                onClick={handleCreateNewAssignment} 
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Create Assignment
+              </Button>
             </div>
             
             <Card>
@@ -1678,6 +1690,18 @@ export default function AIManagementPage() {
           onClose={() => setIsConfigFormOpen(false)}
           onSave={handleConfigFormSave}
           mode={configFormMode}
+        />
+
+        {/* Enhanced Assignment Configuration Form */}
+        <AssignmentConfigForm
+          assignment={selectedAssignmentForForm}
+          isOpen={isAssignmentFormOpen}
+          onClose={() => setIsAssignmentFormOpen(false)}
+          onSave={handleAssignmentFormSave}
+          mode={assignmentFormMode}
+          availableContacts={availableContacts}
+          availableAssistants={bbAssistants}
+          isLoadingContacts={isLoadingContacts}
         />
 
       </div>
