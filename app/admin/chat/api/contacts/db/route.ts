@@ -5,7 +5,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = parseInt(searchParams.get('offset') || '0')
     const query = searchParams.get('search')
 
     console.log(`📋 Fetching contacts from database${query ? ` with search: "${query}"` : ''}`)

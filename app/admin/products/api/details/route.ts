@@ -13,12 +13,12 @@ type Ingredient = Database['public']['Tables']['ingredients']['Row']
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
     const gtin = searchParams.get('gtin')
 
     if (!gtin) {
       return NextResponse.json(
-        { success: false, error: 'GTIN parameter is required' },
+        { success: false, error: 'GTIN is required' },
         { status: 400 }
       )
     }
