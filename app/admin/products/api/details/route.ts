@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { Database } from '@/types/database.types'
 
+export const dynamic = 'force-dynamic'
+
 type Product = Database['public']['Tables']['products']['Row']
 type Manufacturer = Database['public']['Tables']['manufacturers']['Row']
 type Category = Database['public']['Tables']['categories']['Row']
