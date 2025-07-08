@@ -75,7 +75,7 @@ const SidebarProvider = React.forwardRef<
     const [_open, _setOpen] = React.useState(defaultOpen)
     const open = openProp ?? _open
     const setOpen = React.useCallback(
-      (value: boolean | ((value: boolean) => boolean)) => {
+      async (value: boolean | ((value: boolean) => boolean)) => {
         const openState = typeof value === "function" ? value(open) : value
         if (setOpenProp) {
           setOpenProp(openState)
@@ -83,11 +83,37 @@ const SidebarProvider = React.forwardRef<
           _setOpen(openState)
         }
 
-        // This sets the cookie to keep the sidebar state.
+        // Save state to cookie and server
         document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+        
+        try {
+          await fetch('/admin/changed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: openState ? 'expanded' : 'collapsed' })
+          })
+        } catch (error) {
+          console.warn('Failed to persist sidebar state:', error)
+        }
       },
       [setOpenProp, open]
     )
+
+    // Load initial state
+    React.useEffect(() => {
+      const loadState = async () => {
+        try {
+          const response = await fetch('/admin/changed')
+          const data = await response.json()
+          if (data.success && data.data?.state) {
+            _setOpen(data.data.state === 'expanded')
+          }
+        } catch (error) {
+          console.warn('Failed to load sidebar state:', error)
+        }
+      }
+      loadState()
+    }, [])
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
