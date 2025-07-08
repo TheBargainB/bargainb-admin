@@ -73,12 +73,12 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="transition-all duration-300 ease-in-out">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/admin">
+              <Link href="/admin" className="flex items-center gap-3">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                   <Package className="size-4" />
                 </div>
@@ -98,10 +98,15 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.description}>
-                    <Link href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={pathname === item.url} 
+                    tooltip={item.description}
+                    className="transition-colors duration-200"
+                  >
+                    <Link href={item.url} className="flex items-center gap-3 w-full">
+                      <item.icon className="size-4 flex-shrink-0" />
+                      <span className="truncate flex-1">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -113,13 +118,13 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton>
-              <Activity className="size-4" />
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium">System Status</span>
+            <SidebarMenuButton className="transition-colors duration-200">
+              <Activity className="size-4 flex-shrink-0" />
+              <div className="flex flex-col gap-0.5 flex-1">
+                <span className="text-xs font-medium truncate">System Status</span>
                 <div className="flex items-center gap-1">
-                  <div className="size-2 rounded-full bg-green-500" />
-                  <span className="text-xs text-muted-foreground">Online</span>
+                  <div className="size-2 rounded-full bg-green-500 flex-shrink-0" />
+                  <span className="text-xs text-muted-foreground truncate">Online</span>
                 </div>
               </div>
             </SidebarMenuButton>

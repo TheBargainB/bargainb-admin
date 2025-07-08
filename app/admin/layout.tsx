@@ -120,10 +120,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (!isLoading && !isCheckingAdmin && user && isAdmin) {
     return (
       <SidebarProvider>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
-          <div className="flex-1">
-            <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex-1 flex flex-col min-h-screen w-full transition-[margin] duration-300 ease-in-out">
+            <div className="sticky top-0 z-10 w-full flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <Breadcrumb>
@@ -147,7 +147,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </Button>
               </div>
             </div>
-            <main className="p-4">{children}</main>
+            <main className="flex-1 w-full p-4 overflow-auto">
+              <div className="container mx-auto max-w-[2560px]">
+                {children}
+              </div>
+            </main>
           </div>
         </div>
       </SidebarProvider>
