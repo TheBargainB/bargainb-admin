@@ -2,154 +2,151 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
-import { Search, MoreHorizontal, Package, RefreshCw, Download, AlertTriangle, CheckCircle, Loader2 } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Loader2, Search, Package, Filter, Barcode, Image, FileText, CheckCircle2 } from "lucide-react"
 import { ProductDetailsModal } from "./components/ProductDetailsModal"
+import { useToast } from "@/hooks/use-toast"
+import { Pagination } from "@/components/ui/pagination"
 
 interface Product {
   id: string
   title: string
-  store: string
-  storeCode: string
   gtin: string
   category: string
   subCategory: string
-  price: number
-  oldPrice: number
-  discount: number
-  discountRate: number
   brand: string
-  status: 'available' | 'unavailable'
-  availability: 'in_stock' | 'out_of_stock'
-  offer: string | null
-  link: string
-  imagePath: string
-  lastUpdated: string
+  description: string
+  image: string
+  additives: string | null
+  preparation: string | null
+  storage: string | null
+  recycling: string | null
+  status: 'variant' | 'base'
+  createdAt: string
+  updatedAt: string
 }
 
-interface ProductStats {
+interface Category {
+  id: string
+  level_1: string
+}
+
+interface Stats {
   totalProducts: number
-  availableProducts: number
-  averageDiscount: number
-  pendingReview: number
+  noGtin: number
+  noImages: number
+  noDescription: number
 }
 
-interface Store {
-  id: number
-  identifier: string
-  name: string
+interface ProductsResponse {
+  success: boolean
+  error?: string
+  data: {
+    products: Product[]
+    stats: Stats
+    pagination: {
+      total: number
+      limit: number
+      offset: number
+      hasMore: boolean
+    }
+  }
 }
+
+const PRODUCTS_PER_PAGE = 50
 
 const statusColors = {
-  available: "bg-green-100 text-green-800",
-  unavailable: "bg-red-100 text-red-800",
-}
-
-const availabilityColors = {
-  in_stock: "bg-green-100 text-green-800",
-  out_of_stock: "bg-red-100 text-red-800",
+  variant: "bg-purple-100 text-purple-800",
+  base: "bg-blue-100 text-blue-800",
 }
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
-  const [stats, setStats] = useState<ProductStats>({
-    totalProducts: 0,
-    availableProducts: 0,
-    averageDiscount: 0,
-    pendingReview: 0
-  })
-  const [stores, setStores] = useState<Store[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Product Details Modal
+  const [categories, setCategories] = useState<Category[]>([])
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  
-  // Filters
-  const [searchTerm, setSearchTerm] = useState("")
-  const [storeFilter, setStoreFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-
-  const fetchStores = async () => {
-    try {
-      const response = await fetch('/admin/products/api', {
-        method: 'POST',
-      })
-      const result = await response.json()
-      
-      if (result.success) {
-        setStores(result.data.stores)
-      }
-    } catch (error) {
-      console.error('Failed to fetch stores:', error)
-    }
-  }
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalProducts, setTotalProducts] = useState(0)
+  const [stats, setStats] = useState<Stats>({
+    totalProducts: 0,
+    noGtin: 0,
+    noImages: 0,
+    noDescription: 0
+  })
+  const { toast } = useToast()
 
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      setError(null)
-      
+      const offset = (currentPage - 1) * PRODUCTS_PER_PAGE
       const params = new URLSearchParams({
-        search: searchTerm,
-        store: storeFilter,
-        status: statusFilter,
-        limit: '100',
-        offset: '0'
+        search: searchQuery,
+        category: selectedCategory,
+        limit: PRODUCTS_PER_PAGE.toString(),
+        offset: offset.toString()
       })
 
       const response = await fetch(`/admin/products/api?${params}`)
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to fetch products')
-      }
+      const result: ProductsResponse = await response.json()
 
       if (result.success) {
         setProducts(result.data.products)
         setStats(result.data.stats)
+        setTotalProducts(result.data.stats.totalProducts)
       } else {
         throw new Error(result.error || 'Failed to fetch products')
       }
     } catch (error) {
-      console.error('❌ Failed to fetch products:', error)
-      setError(error instanceof Error ? error.message : 'Failed to fetch products')
+      console.error('Failed to fetch products:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load products",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  // Initial data fetch
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/admin/products/api', {
+        method: 'POST'
+      })
+      const result = await response.json()
+
+      if (result.success) {
+        setCategories(result.data.categories)
+      }
+    } catch (error) {
+      console.error('Failed to fetch categories:', error)
+    }
+  }
+
   useEffect(() => {
-    fetchStores()
-    fetchProducts()
+    fetchCategories()
   }, [])
 
-  // Refetch when filters change
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchProducts()
-    }, 500) // Debounce search
+    setCurrentPage(1) // Reset to first page when filters change
+  }, [searchQuery, selectedCategory])
 
-    return () => clearTimeout(timeoutId)
-  }, [searchTerm, storeFilter, statusFilter])
-
-  const handleRefresh = () => {
+  useEffect(() => {
     fetchProducts()
+  }, [searchQuery, selectedCategory, currentPage])
+
+  const totalPages = Math.ceil(totalProducts / PRODUCTS_PER_PAGE)
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleProductClick = (product: Product) => {
@@ -157,368 +154,238 @@ export default function ProductsPage() {
     setModalOpen(true)
   }
 
-  const handleCloseModal = () => {
-    setModalOpen(false)
-    setSelectedProduct(null)
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-            <p className="text-muted-foreground">Manage product catalog, enrichment, and validation</p>
-          </div>
-        </div>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              <span>Error loading products: {error}</span>
-            </div>
-            <Button onClick={handleRefresh} className="mt-4">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
-        
-        {/* Product Details Modal */}
-        <ProductDetailsModal
-          product={selectedProduct}
-          open={modalOpen}
-          onOpenChange={handleCloseModal}
-        />
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 p-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Products</h2>
-          <p className="text-muted-foreground">Manage product catalog, enrichment, and validation</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" disabled={loading}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" onClick={handleRefresh} disabled={loading}>
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Sync Products
-          </Button>
-          <Button disabled={loading}>
-            <Package className="mr-2 h-4 w-4" />
-            Bulk Enrich
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold">Products</h1>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Total Products
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.totalProducts.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">Repository products</p>
+            <div className="text-2xl font-bold">{stats.totalProducts}</div>
+            <p className="text-xs text-muted-foreground">
+              Total number of products
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Available Products</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Barcode className="h-4 w-4" />
+              Missing GTIN
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.availableProducts.toLocaleString()}
-            </div>
-            <div className="mt-2">
-              <Progress 
-                value={stats.totalProducts > 0 ? (stats.availableProducts / stats.totalProducts) * 100 : 0} 
-                className="h-2" 
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.totalProducts > 0 ? Math.round((stats.availableProducts / stats.totalProducts) * 100) : 0}% with pricing data
-              </p>
-            </div>
+            <div className="text-2xl font-bold">{stats.noGtin}</div>
+            <p className="text-xs text-muted-foreground">
+              Products without GTIN ({Math.round((stats.noGtin / stats.totalProducts) * 100)}%)
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Avg Discount</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Image className="h-4 w-4" />
+              Missing Images
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : `${stats.averageDiscount}%`}
-            </div>
-            <p className="text-xs text-muted-foreground">Across available products</p>
+            <div className="text-2xl font-bold">{stats.noImages}</div>
+            <p className="text-xs text-muted-foreground">
+              Products without images ({Math.round((stats.noImages / stats.totalProducts) * 100)}%)
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Unavailable</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Missing Description
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats.pendingReview.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">No pricing data</p>
+            <div className="text-2xl font-bold">{stats.noDescription}</div>
+            <p className="text-xs text-muted-foreground">
+              Products without description ({Math.round((stats.noDescription / stats.totalProducts) * 100)}%)
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Enrichment Pipeline Status */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Store Integration Status</CardTitle>
-            <CardDescription>Current data availability by store</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">Albert Heijn</span>
-              </div>
-              <Badge variant="secondary">~30k products</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">Dirk</span>
-              </div>
-              <Badge variant="secondary">Active</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm">Jumbo</span>
-              </div>
-              <Badge variant="secondary">~400 products</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 text-blue-500" />
-                <span className="text-sm">Price Sync</span>
-              </div>
-              <Badge>Live</Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Store Distribution</CardTitle>
-            <CardDescription>Products by store availability</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Albert Heijn</span>
-                <span>~30,000 products</span>
-              </div>
-              <Progress value={85} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Dirk</span>
-                <span>Limited catalog</span>
-              </div>
-              <Progress value={10} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Jumbo</span>
-                <span>~400 products</span>
-              </div>
-              <Progress value={5} className="h-2" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Product Table */}
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Product Catalog</CardTitle>
-          <CardDescription>View and manage all products in the system</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+          <CardDescription>
+            Search and filter products by category
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products or GTIN..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-                disabled={loading}
-              />
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by GTIN, title or description..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
-            <Select value={storeFilter} onValueChange={setStoreFilter} disabled={loading}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by store" />
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stores</SelectItem>
-                {stores.map((store) => (
-                  <SelectItem key={store.identifier} value={store.identifier}>
-                    {store.name}
+              <SelectContent className="max-h-[300px] overflow-y-auto">
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem 
+                    key={category.id} 
+                    value={category.id}
+                    className="truncate"
+                  >
+                    {category.level_1}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter} disabled={loading}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="unavailable">Unavailable</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
+        </CardContent>
+      </Card>
 
-          {loading && (
+      {/* Products Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Products
+          </CardTitle>
+          <CardDescription>
+            Showing {products.length} of {totalProducts} products
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin" />
               <span className="ml-2">Loading products...</span>
             </div>
-          )}
-
-          {!loading && products.length === 0 && (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">No products found matching your criteria.</p>
-            </div>
-          )}
-
-          {!loading && products.length > 0 && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Store</TableHead>
-                  <TableHead>GTIN</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Availability</TableHead>
-                  <TableHead className="w-[70px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow 
-                    key={product.id} 
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleProductClick(product)}
-                  >
-                    <TableCell>
-                      <div className="max-w-[200px]">
-                        <div className="font-medium truncate" title={product.title}>
-                          {product.title}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {product.brand && `${product.brand} • `}
-                          {product.category}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{product.store}</TableCell>
-                    <TableCell className="font-mono text-sm">{product.gtin}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-medium">€{product.price.toFixed(2)}</span>
-                        {product.oldPrice > 0 && product.oldPrice !== product.price && (
-                          <span className="text-sm text-muted-foreground line-through">
-                            €{product.oldPrice.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {product.discountRate > 0 ? (
-                        <Badge variant="outline">{product.discountRate}% off</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[product.status]}>
-                        {product.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={availabilityColors[product.availability]}>
-                        {product.availability.replace("_", " ")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => e.stopPropagation()}
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>GTIN</TableHead>
+                      <TableHead>Brand</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Last Updated</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {products.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {product.image ? (
+                              <div className="h-8 w-8 rounded bg-gray-100">
+                                <img
+                                  src={product.image}
+                                  alt={product.title}
+                                  className="h-full w-full object-contain"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                    e.currentTarget.nextElementSibling?.classList.remove('hidden')
+                                  }}
+                                />
+                                <div className="hidden h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                                  No img
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center text-muted-foreground text-xs">
+                                No img
+                              </div>
+                            )}
+                            <span className="font-medium">{product.title}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-mono text-sm">{product.gtin}</span>
+                        </TableCell>
+                        <TableCell>{product.brand}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div>{product.category}</div>
+                            {product.subCategory && (
+                              <div className="text-sm text-muted-foreground">
+                                {product.subCategory}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={statusColors[product.status]}>
+                            {product.status === 'variant' ? 'Variant' : 'Base'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">
+                            {new Date(product.updatedAt).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleProductClick(product)}
                           >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleProductClick(product)}>
                             View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleProductClick(product)}>
-                            View Price History
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleProductClick(product)}>
-                            Check Other Stores
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              navigator.clipboard.writeText(product.gtin)
-                            }}
-                          >
-                            Copy GTIN
-                          </DropdownMenuItem>
-                          {product.link && (
-                            <DropdownMenuItem>
-                              <a href={product.link} target="_blank" rel="noopener noreferrer">
-                                View on Store
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-4 flex justify-center">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
-      
-      {/* Product Details Modal */}
+
       <ProductDetailsModal
         product={selectedProduct}
         open={modalOpen}
-        onOpenChange={handleCloseModal}
+        onOpenChange={setModalOpen}
       />
     </div>
   )

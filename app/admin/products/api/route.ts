@@ -5,46 +5,47 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get('search') || ''
-    const store = searchParams.get('store') || 'all'
-    const status = searchParams.get('status') || 'all'
+    const category = searchParams.get('category') || 'all'
     const limit = parseInt(searchParams.get('limit') || '50')
     const offset = parseInt(searchParams.get('offset') || '0')
 
-    // Build main query from repo_products
+    // Build main query from products table
     let query = supabaseAdmin
-      .from('repo_products')
+      .from('products')
       .select(`
-        gtin,
-        id,
-        title_original,
-        title,
-        description,
-        image,
-        repo_brands:brand_id (
-          brand_id,
+        *,
+        manufacturers (
+          id,
           name
         ),
-        repo_subcategories:subcategory_id (
-          subcategory_id,
-          name,
-          repo_categories:category_id (
-            category_id,
-            name
-          )
+        categories (
+          id,
+          level_1,
+          level_2,
+          level_3,
+          level_4
+        ),
+        images (
+          url
         )
       `)
 
     // Apply search filter
     if (search) {
-      query = query.or(`gtin.ilike.%${search}%,title.ilike.%${search}%,title_original.ilike.%${search}%`)
+      query = query.or(`gtin.ilike.%${search}%,title.ilike.%${search}%,description.ilike.%${search}%`)
+    }
+
+    // Apply category filter
+    if (category !== 'all') {
+      query = query.eq('category_id', parseInt(category))
     }
 
     // Add pagination and ordering
     query = query
-      .order('gtin', { ascending: true })
+      .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
-    const { data: repoProducts, error } = await query
+    const { data: products, error } = await query
 
     if (error) {
       console.error('❌ Product fetch error:', error)
@@ -54,170 +55,71 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Now get pricing data for these products from store-specific tables
-    const gtins = repoProducts?.map(p => p.gtin).filter(Boolean) || []
-    
-    let pricingData: any[] = []
-    
-    if (gtins.length > 0) {
-      // Fetch from different store pricing tables based on filter
-      const storeQueries = []
-      
-      if (store === 'all' || store === 'albert') {
-        const albertQuery = supabaseAdmin
-          .from('albert_prices')
-          .select('gtin, price_current, price_original, is_available, offer_description, last_updated')
-          .in('gtin', gtins)
-          .then(result => ({ store: 'Albert Heijn', storeCode: 'albert', ...result }))
-        storeQueries.push(albertQuery)
-      }
-      
-      if (store === 'all' || store === 'dirk') {
-        const dirkQuery = supabaseAdmin
-          .from('dirk_prices')
-          .select('gtin, price_current, price_original, is_available, offer_description, last_updated')
-          .in('gtin', gtins)
-          .then(result => ({ store: 'Dirk', storeCode: 'dirk', ...result }))
-        storeQueries.push(dirkQuery)
-      }
-      
-      if (store === 'all' || store === 'jumbo') {
-        const jumboQuery = supabaseAdmin
-          .from('jumbo_prices')
-          .select('gtin, price_current, price_promo, is_available, last_updated')
-          .in('gtin', gtins)
-          .then(result => ({ store: 'Jumbo', storeCode: 'jumbo', ...result }))
-        storeQueries.push(jumboQuery)
-      }
-
-      const storeResults = await Promise.all(storeQueries)
-      
-      // Combine all pricing data
-      storeResults.forEach(result => {
-        if (result.data) {
-          result.data.forEach((priceItem: any) => {
-            pricingData.push({
-              ...priceItem,
-              store: result.store,
-              storeCode: result.storeCode
-            })
-          })
-        }
-      })
-    }
-
-    // Transform and combine data
-    const products: any[] = []
-    
-    repoProducts?.forEach((product: any) => {
-      // Get pricing for this product from all stores
-      const productPrices = pricingData.filter(p => p.gtin === product.gtin)
-      
-      if (productPrices.length === 0) {
-        // No pricing data - show as unavailable
-        products.push({
-          id: product.gtin,
-          title: product.title || product.title_original || 'Unknown Product',
-          store: 'N/A',
-          storeCode: '',
-          gtin: product.gtin,
-          category: product.repo_subcategories?.repo_categories?.name || '',
-          subCategory: product.repo_subcategories?.name || '',
-          price: 0,
-          oldPrice: 0,
-          discount: 0,
-          discountRate: 0,
-          brand: product.repo_brands?.name || '',
-          status: 'unavailable',
-          availability: 'out_of_stock',
-          offer: null,
-          link: '',
-          imagePath: product.image || '',
-          lastUpdated: '',
-          createdAt: '',
-          updatedAt: ''
-        })
-      } else {
-        // Create entry for each store that has this product
-        productPrices.forEach((priceData: any) => {
-          const currentPrice = parseFloat(priceData.price_current || priceData.price_promo || 0)
-          const originalPrice = parseFloat(priceData.price_original || 0)
-          const discount = originalPrice > currentPrice ? originalPrice - currentPrice : 0
-          const discountRate = originalPrice > 0 ? Math.round((discount / originalPrice) * 100) : 0
-
-          products.push({
-            id: `${product.gtin}-${priceData.storeCode}`,
-            title: product.title || product.title_original || 'Unknown Product',
-            store: priceData.store,
-            storeCode: priceData.storeCode,
-            gtin: product.gtin,
-            category: product.repo_subcategories?.repo_categories?.name || '',
-            subCategory: product.repo_subcategories?.name || '',
-            price: currentPrice,
-            oldPrice: originalPrice,
-            discount: discount,
-            discountRate: discountRate,
-            brand: product.repo_brands?.name || '',
-            status: priceData.is_available ? 'available' : 'unavailable',
-            availability: priceData.is_available ? 'in_stock' : 'out_of_stock',
-            offer: priceData.offer_description || null,
-            link: '',
-            imagePath: product.image || '',
-            lastUpdated: priceData.last_updated?.split('T')[0] || '',
-            createdAt: '',
-            updatedAt: priceData.last_updated || ''
-          })
-        })
-      }
-    })
-
-    // Apply status filter after transformation
-    let filteredProducts = products
-    if (status === 'available') {
-      filteredProducts = products.filter(p => p.status === 'available')
-    } else if (status === 'unavailable') {
-      filteredProducts = products.filter(p => p.status === 'unavailable')
-    }
+    // Transform the products data
+    const transformedProducts = products?.map(product => ({
+      id: product.id,
+      title: product.title,
+      gtin: product.gtin,
+      brand: product.manufacturers?.name || '',
+      category: product.categories?.level_1 || '',
+      subCategory: product.categories?.level_2 || '',
+      description: product.description,
+      image: product.images?.[0]?.url,
+      additives: product.additives,
+      preparation: product.preparation_usage,
+      storage: product.storage_info,
+      recycling: product.recycling_info,
+      status: product.is_variant ? 'variant' : 'base',
+      createdAt: product.created_at,
+      updatedAt: product.created_at // Use created_at since updated_at doesn't exist
+    })) || []
 
     // Get total counts for stats
     const totalProductsQuery = await supabaseAdmin
-      .from('repo_products')
-      .select('gtin', { count: 'exact', head: true })
+      .from('products')
+      .select('id', { count: 'exact', head: true })
 
-    const albertCountQuery = await supabaseAdmin
-      .from('albert_prices')
-      .select('gtin', { count: 'exact', head: true })
-      .eq('is_available', true)
+    const noGtinQuery = await supabaseAdmin
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .is('gtin', null)
 
-    const dirkCountQuery = await supabaseAdmin
-      .from('dirk_prices')
-      .select('gtin', { count: 'exact', head: true })
-      .eq('is_available', true)
+    // Count products without images by checking for products that don't have matching images
+    const noImagesQuery = await supabaseAdmin
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .not('gtin', 'is', null) // Only count products that have a GTIN
+      .not('gtin', 'in', 
+        supabaseAdmin
+          .from('images')
+          .select('distinct gtin')
+          .not('gtin', 'is', null)
+      )
 
-    const jumboCountQuery = await supabaseAdmin
-      .from('jumbo_prices')
-      .select('gtin', { count: 'exact', head: true })
-      .eq('is_available', true)
+    const noDescriptionQuery = await supabaseAdmin
+      .from('products')
+      .select('id', { count: 'exact', head: true })
+      .is('description', null)
+
+    const totalProducts = totalProductsQuery.count || 0
 
     const stats = {
-      totalProducts: totalProductsQuery.count || 0,
-      availableProducts: (albertCountQuery.count || 0) + (dirkCountQuery.count || 0) + (jumboCountQuery.count || 0),
-      averageDiscount: Math.round(
-        filteredProducts.reduce((sum, p) => sum + p.discountRate, 0) / Math.max(filteredProducts.length, 1)
-      ),
-      pendingReview: filteredProducts.filter(p => p.status === 'unavailable').length
+      totalProducts,
+      noGtin: noGtinQuery.count || 0,
+      noImages: noImagesQuery.count || 0,
+      noDescription: noDescriptionQuery.count || 0
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        products: filteredProducts,
+        products: transformedProducts,
         stats,
         pagination: {
-          total: filteredProducts.length,
+          total: totalProducts,
           limit,
           offset,
-          hasMore: (offset + limit) < filteredProducts.length
+          hasMore: (offset + limit) < totalProducts
         }
       }
     })
@@ -231,22 +133,50 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// GET stores for filter dropdown
+// GET categories for filter dropdown
 export async function POST(request: NextRequest) {
   try {
-    const stores = [
-      { id: 1, identifier: 'albert', name: 'Albert Heijn' },
-      { id: 2, identifier: 'dirk', name: 'Dirk' },
-      { id: 3, identifier: 'jumbo', name: 'Jumbo' }
-    ]
+    // Get all unique categories from products table
+    const { data: products, error } = await supabaseAdmin
+      .from('products')
+      .select(`
+        id,
+        categories (
+          id,
+          level_1
+        )
+      `)
+      .not('categories.level_1', 'is', null)
+
+    if (error) throw error
+
+    // Extract categories and deduplicate by name
+    const categoriesMap = new Map()
+    products?.forEach(product => {
+      if (product.categories && product.categories.level_1) {
+        const category = product.categories
+        const normalizedName = category.level_1?.trim().toLowerCase()
+        
+        // Only keep one instance of each category name
+        if (normalizedName && !categoriesMap.has(normalizedName)) {
+          categoriesMap.set(normalizedName, {
+            id: category.id.toString(),
+            level_1: category.level_1?.trim() || ''
+          })
+        }
+      }
+    })
+
+    const uniqueCategories = Array.from(categoriesMap.values())
+      .sort((a, b) => a.level_1.toLowerCase().localeCompare(b.level_1.toLowerCase()))
 
     return NextResponse.json({
       success: true,
-      data: { stores }
+      data: { categories: uniqueCategories }
     })
 
   } catch (error) {
-    console.error('❌ Stores API Error:', error)
+    console.error('❌ Categories API Error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
