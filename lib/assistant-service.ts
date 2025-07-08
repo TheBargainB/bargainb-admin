@@ -50,7 +50,7 @@ export interface AssistantResponse {
 
 // Environment variables
 const AI_API_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
-const AI_API_KEY = process.env.BARGAINB_AI_AGENT_API_KEY || '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'
+const AI_API_KEY = process.env.LANGSMITH_API_KEY || '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'
 
 /**
  * Create a new assistant for a specific conversation/user

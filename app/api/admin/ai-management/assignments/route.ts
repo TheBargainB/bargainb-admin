@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const BB_AGENT_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
-const BB_AGENT_API_KEY = process.env.LANGSMITH_API_KEY || process.env.BB_AGENT_API_KEY || process.env.LANGGRAPH_API_KEY
+const LANGSMITH_API_KEY = process.env.LANGSMITH_API_KEY
 
 export async function GET() {
   try {
@@ -112,14 +112,14 @@ export async function POST(request: NextRequest) {
     let assistantName = 'Unknown Assistant'
     
     try {
-      if (!BB_AGENT_API_KEY) {
+      if (!LANGSMITH_API_KEY) {
         console.warn('⚠️ BB Agent API key not configured, skipping assistant configuration fetch')
       } else {
         const bbAgentResponse = await fetch(`${BB_AGENT_URL}/assistants/${assistant_id}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'X-Api-Key': BB_AGENT_API_KEY
+            'X-Api-Key': LANGSMITH_API_KEY
           }
         })
 
@@ -202,14 +202,14 @@ export async function PUT(request: NextRequest) {
     let assistantName = 'Unknown Assistant'
     
     try {
-      if (!BB_AGENT_API_KEY) {
+      if (!LANGSMITH_API_KEY) {
         console.warn('⚠️ BB Agent API key not configured, skipping assistant configuration fetch')
       } else {
         const bbAgentResponse = await fetch(`${BB_AGENT_URL}/assistants/${new_assistant_id}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'X-Api-Key': BB_AGENT_API_KEY
+            'X-Api-Key': LANGSMITH_API_KEY
           }
         })
 

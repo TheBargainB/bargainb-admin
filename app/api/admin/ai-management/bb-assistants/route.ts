@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const BB_AGENT_URL = 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app'
-const BB_AGENT_API_KEY = process.env.LANGSMITH_API_KEY || process.env.BB_AGENT_API_KEY || process.env.LANGGRAPH_API_KEY
+const LANGSMITH_API_KEY = process.env.LANGSMITH_API_KEY
 
 export async function GET() {
   try {
-    if (!BB_AGENT_API_KEY) {
+    if (!LANGSMITH_API_KEY) {
       return NextResponse.json({ 
         success: false,
-        error: 'BB Agent API key not configured' 
+        error: 'LANGSMITH_API_KEY not configured' 
       }, { status: 500 })
     }
 
@@ -17,7 +17,7 @@ export async function GET() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': BB_AGENT_API_KEY
+        'X-Api-Key': LANGSMITH_API_KEY
       },
       body: JSON.stringify({
         metadata: {},
@@ -55,10 +55,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!BB_AGENT_API_KEY) {
+    if (!LANGSMITH_API_KEY) {
       return NextResponse.json({ 
         success: false,
-        error: 'BB Agent API key not configured' 
+        error: 'LANGSMITH_API_KEY not configured' 
       }, { status: 500 })
     }
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': BB_AGENT_API_KEY
+        'X-Api-Key': LANGSMITH_API_KEY
       },
       body: JSON.stringify({
         graph_id: "product_retrieval_agent",
