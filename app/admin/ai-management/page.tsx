@@ -202,44 +202,76 @@ export default function AIManagementPage() {
 
   // Fetch all data
   const fetchData = async () => {
-    if (loading) return // Prevent multiple fetches
-    
     setLoading(true)
     try {
       // Test BB Agent connection and fetch assistants
       await testBBAgentConnection()
       
-      // Fetch user assignments from database
-      const assignmentsRes = await fetch('/api/admin/ai-management/assignments')
-      if (!assignmentsRes.ok) throw new Error('Failed to fetch assignments')
-      const assignmentsData = await assignmentsRes.json()
-      setUserAssignments(assignmentsData)
+      // Fetch user assignments from database (graceful failure)
+      try {
+        const assignmentsRes = await fetch('/api/admin/ai-management/assignments')
+        if (assignmentsRes.ok) {
+          const assignmentsData = await assignmentsRes.json()
+          setUserAssignments(assignmentsData)
+        } else {
+          console.warn('Failed to fetch assignments:', assignmentsRes.status)
+          setUserAssignments([])
+        }
+      } catch (error) {
+        console.error('Error fetching assignments:', error)
+        setUserAssignments([])
+      }
 
-      // Fetch recent interactions
-      const interactionsRes = await fetch('/api/admin/ai-management/interactions?limit=100')
-      if (!interactionsRes.ok) throw new Error('Failed to fetch interactions')
-      const interactionsData = await interactionsRes.json()
-      setInteractions(interactionsData)
+      // Fetch recent interactions (graceful failure)
+      try {
+        const interactionsRes = await fetch('/api/admin/ai-management/interactions?limit=100')
+        if (interactionsRes.ok) {
+          const interactionsData = await interactionsRes.json()
+          setInteractions(interactionsData)
+        } else {
+          console.warn('Failed to fetch interactions:', interactionsRes.status)
+          setInteractions([])
+        }
+      } catch (error) {
+        console.error('Error fetching interactions:', error)
+        setInteractions([])
+      }
 
-      // Fetch analytics from database
-      const analyticsRes = await fetch('/api/admin/ai-management/analytics')
-      if (!analyticsRes.ok) throw new Error('Failed to fetch analytics')
-      const analyticsData = await analyticsRes.json()
-      setAnalytics(analyticsData)
+      // Fetch analytics from database (graceful failure)
+      try {
+        const analyticsRes = await fetch('/api/admin/ai-management/analytics')
+        if (analyticsRes.ok) {
+          const analyticsData = await analyticsRes.json()
+          setAnalytics(analyticsData)
+        } else {
+          console.warn('Failed to fetch analytics:', analyticsRes.status)
+          setAnalytics([])
+        }
+      } catch (error) {
+        console.error('Error fetching analytics:', error)
+        setAnalytics([])
+      }
 
-      // Fetch real-time AI stats from interactions
-      const aiStatsRes = await fetch('/api/ai/stats')
-      if (!aiStatsRes.ok) throw new Error('Failed to fetch AI stats')
-      const aiStatsData = await aiStatsRes.json()
-      
-      // Update real-time metrics if available
-      if (aiStatsData && !aiStatsData.error) {
-        setCostMetrics(prev => ({
-          ...prev,
-          totalCost: (aiStatsData.totalInteractions || 0) * 0.002, // Rough estimate
-          avgCostPerInteraction: 0.002,
-          projectedMonthlyCost: ((aiStatsData.totalInteractions || 0) * 0.002) * 30 / Math.max(1, new Date().getDate())
-        }))
+      // Fetch real-time AI stats from interactions (graceful failure)
+      try {
+        const aiStatsRes = await fetch('/api/ai/stats')
+        if (aiStatsRes.ok) {
+          const aiStatsData = await aiStatsRes.json()
+          
+          // Update real-time metrics if available
+          if (aiStatsData && !aiStatsData.error) {
+            setCostMetrics(prev => ({
+              ...prev,
+              totalCost: (aiStatsData.totalInteractions || 0) * 0.002, // Rough estimate
+              avgCostPerInteraction: 0.002,
+              projectedMonthlyCost: ((aiStatsData.totalInteractions || 0) * 0.002) * 30 / Math.max(1, new Date().getDate())
+            }))
+          }
+        } else {
+          console.warn('Failed to fetch AI stats:', aiStatsRes.status)
+        }
+      } catch (error) {
+        console.error('Error fetching AI stats:', error)
       }
 
       toast({
@@ -334,10 +366,6 @@ export default function AIManagementPage() {
       setConnectionError(error instanceof Error ? error.message : 'Connection failed')
     }
   }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const handleCreateAssistant = async () => {
     try {
