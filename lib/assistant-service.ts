@@ -3,8 +3,9 @@
 // Phase 2: Assistant Creation and Management Logic
 // ===================================================
 
-import { supabase } from '@/lib/supabase'
-import { Json, Database } from './database.types'
+
+import { supabaseAdmin } from './supabase'
+import { Json, Database } from '../types/database.types'
 
 // Types based on LangGraph API documentation
 export interface AssistantConfig {
@@ -127,7 +128,7 @@ export const createUserAssistant = async (
     console.log('✅ Assistant created successfully:', assistant.assistant_id)
     
     // Store assistant info in database
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('conversations')
       .update({
         assistant_config: assistantConfig as unknown as Json,
@@ -166,7 +167,7 @@ export const getAssistantForConversation = async (
 ): Promise<string | null> => {
   try {
     // Check if conversation already has an assistant
-    const { data: conversation, error } = await supabase
+    const { data: conversation, error } = await supabaseAdmin
       .from('conversations')
       .select('assistant_id, whatsapp_contact_id')
       .eq('id', conversationId)
@@ -207,7 +208,7 @@ export const getOrCreateAssistantForConversation = async (
     }
     
     // Get contact info for assistant creation
-    const { data: conversation, error: conversationError } = await supabase
+    const { data: conversation, error: conversationError } = await supabaseAdmin
       .from('conversations')
       .select(`
         whatsapp_contact_id,
@@ -273,7 +274,7 @@ export const updateAssistantConfig = async (
     }
     
     // Update database record
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseAdmin
       .from('conversations')
       .update({
         assistant_config: config,
@@ -315,7 +316,7 @@ export const deleteAssistant = async (assistantId: string): Promise<boolean> => 
     }
     
     // Update database to remove assistant reference
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseAdmin
       .from('conversations')
       .update({
         assistant_id: null,

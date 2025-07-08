@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Database } from './database.types'
+import type { Database } from '../types/database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -8,53 +8,72 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-// Singleton pattern to prevent multiple client instances
+// Create a singleton instance for the regular client
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null
 
 const getSupabaseClient = () => {
+  if (typeof window === "undefined") {
+    // Server-side: Create new instance each time
+    return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    })
+  }
+
+  // Client-side: Use singleton pattern
   if (!supabaseInstance) {
     supabaseInstance = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-})
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    })
   }
   return supabaseInstance
 }
 
 export const supabase = getSupabaseClient()
 
-// Admin client for server-side operations (requires service role key)
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91bWhwcnN4eXhub2NnYnpvc3ZoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODUwOTkxMiwiZXhwIjoyMDY0MDg1OTEyfQ.IBgTilAos3LC1ZoDKRWcu1F0mcOiAAFTFInQMhE2Bt0'
-
-// Singleton pattern for admin client too
-let supabaseAdminInstance: ReturnType<typeof createClient<Database>> | null = null
-
-const getSupabaseAdminClient = () => {
-  if (!supabaseAdminInstance) {
-    supabaseAdminInstance = createClient<Database>(
-      supabaseUrl, 
-      supabaseServiceKey,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+// Admin client is only for server-side API routes
+const createAdminClient = () => {
+  if (typeof window !== "undefined") {
+    // Return regular client for client-side code
+    return supabase
   }
-  return supabaseAdminInstance
+
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseServiceKey) {
+    console.warn('Missing Supabase service role key, falling back to regular client')
+    return supabase
+  }
+
+  return createClient<Database>(
+    supabaseUrl, 
+    supabaseServiceKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  )
 }
 
-export const supabaseAdmin = getSupabaseAdminClient()
+export const supabaseAdmin = createAdminClient()
 
 // Export types for convenience
-export type { Database } from './database.types' 
+export type { Database } from '../types/database.types' 

@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { Database } from '@/types/database.types'
+
+type Product = Database['public']['Tables']['products']['Row']
+type Manufacturer = Database['public']['Tables']['manufacturers']['Row']
+type Category = Database['public']['Tables']['categories']['Row']
+type Nutrition = Database['public']['Tables']['nutrition']['Row']
+type Image = Database['public']['Tables']['images']['Row']
+type Ingredient = Database['public']['Tables']['ingredients']['Row']
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,111 +21,78 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch product details from repo_products
-    const { data: productData, error: productError } = await supabaseAdmin
-      .from('repo_products')
+    // If we have multiple products, prefer the base product over variants
+    const { data: products, error: productError } = await supabaseAdmin
+      .from('products')
       .select(`
-        gtin,
-        id,
-        title_original,
-        title,
-        description,
-        image,
-        repo_brands:brand_id (
-          brand_id,
+        *,
+        manufacturers (
+          id,
           name
         ),
-        repo_subcategories:subcategory_id (
-          subcategory_id,
-          name,
-          repo_categories:category_id (
-            category_id,
-            name
-          )
-        )
+        categories (
+          id,
+          level_1,
+          level_2,
+          level_3,
+          level_4
+        ),
+        nutrition (*),
+        images (*),
+        ingredients (*)
       `)
       .eq('gtin', gtin)
-      .single()
+      .order('is_variant', { ascending: true }) // Put base products first
+      .limit(1) // Take only the first one
 
     if (productError) {
       console.error('❌ Product details fetch error:', productError)
+      return NextResponse.json(
+        { success: false, error: productError.message },
+        { status: 404 }
+      )
+    }
+
+    if (!products || products.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Product not found' },
         { status: 404 }
       )
     }
 
-    // Fetch pricing from all store tables
-    const pricingQueries = [
-      supabaseAdmin
-        .from('albert_prices')
-        .select('gtin, price_current, price_original, is_available, offer_description, last_updated')
-        .eq('gtin', gtin)
-        .then(result => ({ store: 'Albert Heijn', storeCode: 'albert', ...result })),
-      
-      supabaseAdmin
-        .from('dirk_prices')
-        .select('gtin, price_current, price_original, is_available, offer_description, last_updated')
-        .eq('gtin', gtin)
-        .then(result => ({ store: 'Dirk', storeCode: 'dirk', ...result })),
-      
-      supabaseAdmin
-        .from('jumbo_prices')
-        .select('gtin, price_current, price_promo, is_available, last_updated')
-        .eq('gtin', gtin)
-        .then(result => ({ store: 'Jumbo', storeCode: 'jumbo', ...result }))
-    ]
+    const productData = products[0] as Product & {
+      manufacturers: Manufacturer | null
+      categories: Category | null
+      nutrition: Nutrition | null
+      images: Image[]
+      ingredients: Ingredient[]
+    }
 
-    const storeResults = await Promise.all(pricingQueries)
-    
-    // Process pricing data
-    const pricingData: any[] = []
-    
-    storeResults.forEach(result => {
-      if (result.data && result.data.length > 0) {
-        result.data.forEach((priceItem: any) => {
-          const currentPrice = parseFloat(priceItem.price_current || priceItem.price_promo || 0)
-          const originalPrice = parseFloat(priceItem.price_original || 0)
-          const discount = originalPrice > currentPrice ? originalPrice - currentPrice : 0
-          const discountRate = originalPrice > 0 ? Math.round((discount / originalPrice) * 100) : 0
-
-          pricingData.push({
-            gtin: priceItem.gtin,
-            store: result.store,
-            storeCode: result.storeCode,
-            price: currentPrice,
-            oldPrice: originalPrice > 0 ? originalPrice : undefined,
-            isAvailable: priceItem.is_available || false,
-            offer: priceItem.offer_description || null,
-            lastUpdated: priceItem.last_updated?.split('T')[0] || '',
-            discountRate: discountRate
-          })
-        })
-      }
-    })
-
-    // Transform product details
+    // Transform the data into a more friendly format
     const details = {
+      id: productData.id,
       gtin: productData.gtin,
-      title: productData.title || productData.title_original,
-      titleOriginal: productData.title_original,
+      title: productData.title,
       description: productData.description,
-      brand: productData.repo_brands?.name,
-      category: productData.repo_subcategories?.repo_categories?.name,
-      subCategory: productData.repo_subcategories?.name,
-      image: productData.image
+      brand: productData.manufacturers?.name || '',
+      category: productData.categories?.level_1 || '',
+      subCategory: productData.categories?.level_2 || '',
+      image: productData.images?.[0]?.url || '',
+      nutrition: productData.nutrition || null,
+      ingredients: productData.ingredients?.map(i => i.ingredient) || [],
+      additives: productData.additives,
+      preparation: productData.preparation_usage,
+      storage: productData.storage_info,
+      recycling: productData.recycling_info
     }
 
     return NextResponse.json({
       success: true,
-      data: {
-        details,
-        pricing: pricingData
-      }
+      data: { details }
     })
 
   } catch (error) {
-    console.error('❌ Product details API error:', error)
+    console.error('❌ API Error:', error)
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

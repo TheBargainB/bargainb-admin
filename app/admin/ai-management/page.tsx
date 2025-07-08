@@ -48,7 +48,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Loader2
 } from 'lucide-react'
 import { AssistantConfigForm } from './components/AssistantConfigForm'
 import { AssignmentConfigForm } from './components/AssignmentConfigForm'
@@ -144,6 +145,7 @@ export default function AIManagementPage() {
   
   // Form states for assistant creation
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [selectedAssistant, setSelectedAssistant] = useState<BBAssistant | null>(null)
   const [formData, setFormData] = useState({
     name: '',
@@ -200,6 +202,8 @@ export default function AIManagementPage() {
 
   // Fetch all data
   const fetchData = async () => {
+    if (loading) return // Prevent multiple fetches
+    
     setLoading(true)
     try {
       // Test BB Agent connection and fetch assistants
@@ -207,21 +211,25 @@ export default function AIManagementPage() {
       
       // Fetch user assignments from database
       const assignmentsRes = await fetch('/api/admin/ai-management/assignments')
+      if (!assignmentsRes.ok) throw new Error('Failed to fetch assignments')
       const assignmentsData = await assignmentsRes.json()
       setUserAssignments(assignmentsData)
 
       // Fetch recent interactions
       const interactionsRes = await fetch('/api/admin/ai-management/interactions?limit=100')
+      if (!interactionsRes.ok) throw new Error('Failed to fetch interactions')
       const interactionsData = await interactionsRes.json()
       setInteractions(interactionsData)
 
       // Fetch analytics from database
       const analyticsRes = await fetch('/api/admin/ai-management/analytics')
+      if (!analyticsRes.ok) throw new Error('Failed to fetch analytics')
       const analyticsData = await analyticsRes.json()
       setAnalytics(analyticsData)
 
       // Fetch real-time AI stats from interactions
       const aiStatsRes = await fetch('/api/ai/stats')
+      if (!aiStatsRes.ok) throw new Error('Failed to fetch AI stats')
       const aiStatsData = await aiStatsRes.json()
       
       // Update real-time metrics if available
@@ -234,11 +242,31 @@ export default function AIManagementPage() {
         }))
       }
 
+      toast({
+        title: "Data refreshed",
+        description: "All data has been updated successfully.",
+      })
     } catch (error) {
       console.error('Failed to fetch AI management data:', error)
+      toast({
+        title: "Error refreshing data",
+        description: error instanceof Error ? error.message : "Failed to fetch updated data. Please try again.",
+        variant: "destructive"
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  // Initialize data on mount
+  useEffect(() => {
+    fetchData()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle refresh click
+  const handleRefresh = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    await fetchData()
   }
 
   // Fetch available contacts for assignment
@@ -313,6 +341,7 @@ export default function AIManagementPage() {
 
   const handleCreateAssistant = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch('/api/admin/ai-management/bb-assistants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -342,6 +371,8 @@ export default function AIManagementPage() {
         description: "Failed to create BB Agent assistant.",
         variant: "destructive"
       })
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -807,9 +838,22 @@ export default function AIManagementPage() {
                 className="pl-10 w-64"
               />
             </div>
-            <Button onClick={fetchData} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+            <Button 
+              onClick={handleRefresh}
+              variant="outline"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -1064,61 +1108,76 @@ export default function AIManagementPage() {
 
           {/* Dialog for old create form - kept for backward compatibility but hidden */}
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create BB Agent Assistant</DialogTitle>
-                    <DialogDescription>
-                      Create a new assistant using the BB Agent LangGraph API
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="name">Assistant Name</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Assistant Name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="description">Description</Label>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Description"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="recursion_limit">Recursion Limit</Label>
-                      <Input
-                        id="recursion_limit"
-                        type="number"
-                        value={formData.recursion_limit}
-                        onChange={(e) => setFormData({ ...formData, recursion_limit: parseInt(e.target.value) })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="configurable">Configurable (JSON)</Label>
-                      <Textarea
-                        id="configurable"
-                        value={formData.configurable}
-                        onChange={(e) => setFormData({ ...formData, configurable: e.target.value })}
-                        placeholder="{}"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={() => setIsCreateDialogOpen(false)} variant="outline">
-                        Cancel
-                      </Button>
-                      <Button onClick={handleCreateAssistant}>
-                        Create Assistant
-                      </Button>
-                    </div>
+            <DialogContent className="max-w-7xl">
+              <DialogHeader className="pb-4">
+                <DialogTitle>Create BB Agent Assistant</DialogTitle>
+                <DialogDescription>
+                  Create a new assistant using the BB Agent LangGraph API
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="name">Assistant Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      placeholder="Assistant name"
+                    />
                   </div>
-                </DialogContent>
-              </Dialog>
+                  <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Input
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Brief description"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="recursion_limit">Recursion Limit</Label>
+                    <Input
+                      id="recursion_limit"
+                      type="number"
+                      value={formData.recursion_limit}
+                      onChange={(e) => setFormData({ ...formData, recursion_limit: parseInt(e.target.value) })}
+                      placeholder="25"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="configurable">Configurable (JSON)</Label>
+                    <Textarea
+                      id="configurable"
+                      value={formData.configurable}
+                      onChange={(e) => setFormData({ ...formData, configurable: e.target.value })}
+                      placeholder="{}"
+                      className="h-[80px] font-mono text-sm"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col justify-end space-y-4">
+                  <div className="flex justify-end gap-2">
+                    <Button onClick={() => setIsCreateDialogOpen(false)} variant="outline">
+                      Cancel
+                    </Button>
+                    <Button onClick={handleCreateAssistant} disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        "Create Assistant"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* User Assignments Tab */}
           <TabsContent value="assignments" className="space-y-6">

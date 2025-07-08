@@ -14,50 +14,52 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Separator } from "@/components/ui/separator"
-import { Copy, ExternalLink, Package, TrendingUp, Store, Clock, Loader2 } from "lucide-react"
+import { Copy, Package, Info, Leaf, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Product {
   id: string
   title: string
-  store: string
-  storeCode: string
   gtin: string
   category: string
   subCategory: string
-  price: number
-  oldPrice: number
-  discount: number
-  discountRate: number
   brand: string
-  status: 'available' | 'unavailable'
-  availability: 'in_stock' | 'out_of_stock'
-  offer: string | null
-  link: string
-  imagePath: string
-  lastUpdated: string
+  description: string
+  image: string
+  additives: string | null
+  preparation: string | null
+  storage: string | null
+  recycling: string | null
+  status: 'variant' | 'base'
+  createdAt: string
+  updatedAt: string
 }
 
 interface ProductDetails {
   gtin: string
+  id: string
   title: string
-  titleOriginal?: string
-  description?: string
-  brand?: string
-  category?: string
-  subCategory?: string
-  image?: string
-}
-
-interface StorePricing {
-  store: string
-  storeCode: string
-  price: number
-  oldPrice?: number
-  isAvailable: boolean
-  offer?: string | null
-  lastUpdated: string
-  discountRate: number
+  description: string
+  brand: string
+  category: string
+  subCategory: string
+  image: string
+  nutrition: {
+    energy_kcal: number
+    energy_kj: number
+    fat: number
+    saturated_fat: number
+    carbohydrates: number
+    sugars: number
+    protein: number
+    salt: number
+  } | null
+  ingredients: string[]
+  features: string[]
+  additives: string | null
+  preparation: string | null
+  storage: string | null
+  recycling: string | null
 }
 
 interface ProductDetailsModalProps {
@@ -67,19 +69,12 @@ interface ProductDetailsModalProps {
 }
 
 const statusColors = {
-  available: "bg-green-100 text-green-800",
-  unavailable: "bg-red-100 text-red-800",
-}
-
-const storeColors: Record<string, string> = {
-  albert: "bg-blue-100 text-blue-800",
-  dirk: "bg-orange-100 text-orange-800", 
-  jumbo: "bg-yellow-100 text-yellow-800",
+  variant: "bg-purple-100 text-purple-800",
+  base: "bg-blue-100 text-blue-800",
 }
 
 export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDetailsModalProps) => {
   const [productDetails, setProductDetails] = useState<ProductDetails | null>(null)
-  const [storePricing, setStorePricing] = useState<StorePricing[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -87,13 +82,11 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
     try {
       setLoading(true)
       
-      // Fetch detailed product info and pricing from all stores
       const response = await fetch(`/admin/products/api/details?gtin=${gtin}`)
       const result = await response.json()
 
       if (result.success) {
         setProductDetails(result.data.details)
-        setStorePricing(result.data.pricing)
       } else {
         throw new Error(result.error || 'Failed to fetch product details')
       }
@@ -125,25 +118,7 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
     }
   }
 
-  const getBestPrice = () => {
-    if (storePricing.length === 0) return null
-    return storePricing
-      .filter(p => p.isAvailable)
-      .sort((a, b) => a.price - b.price)[0]
-  }
-
-  const getWorstPrice = () => {
-    if (storePricing.length === 0) return null
-    return storePricing
-      .filter(p => p.isAvailable)
-      .sort((a, b) => b.price - a.price)[0]
-  }
-
   if (!product) return null
-
-  const bestPrice = getBestPrice()
-  const worstPrice = getWorstPrice()
-  const priceDifference = bestPrice && worstPrice ? worstPrice.price - bestPrice.price : 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,8 +142,8 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
           <Tabs defaultValue="overview" className="space-y-4">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="pricing">Store Pricing</TabsTrigger>
-              <TabsTrigger value="details">Product Details</TabsTrigger>
+              <TabsTrigger value="nutrition">Nutrition & Ingredients</TabsTrigger>
+              <TabsTrigger value="details">Additional Info</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
@@ -196,11 +171,6 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
                     
                     <div className="space-y-2">
                       <h3 className="font-semibold">{productDetails?.title || product.title}</h3>
-                      {productDetails?.titleOriginal && productDetails.titleOriginal !== productDetails.title && (
-                        <p className="text-sm text-muted-foreground">
-                          Original: {productDetails.titleOriginal}
-                        </p>
-                      )}
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-mono bg-gray-100 px-2 py-1 rounded">
                           {product.gtin}
@@ -209,6 +179,9 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
                           <Copy className="h-3 w-3" />
                         </Button>
                       </div>
+                      <Badge className={statusColors[product.status]}>
+                        {product.status === 'variant' ? 'Variant Product' : 'Base Product'}
+                      </Badge>
                       {productDetails?.brand && (
                         <p className="text-sm"><strong>Brand:</strong> {productDetails.brand}</p>
                       )}
@@ -222,63 +195,39 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
                   </CardContent>
                 </Card>
 
-                {/* Price Summary */}
+                {/* Features & Storage */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4" />
-                      Price Summary
+                      <Info className="h-4 w-4" />
+                      Product Features
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Best Price</p>
-                        {bestPrice ? (
-                          <div>
-                            <p className="text-lg font-semibold text-green-600">
-                              €{bestPrice.price.toFixed(2)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{bestPrice.store}</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">N/A</p>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Highest Price</p>
-                        {worstPrice ? (
-                          <div>
-                            <p className="text-lg font-semibold text-red-600">
-                              €{worstPrice.price.toFixed(2)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">{worstPrice.store}</p>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">N/A</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {priceDifference > 0 && (
-                      <div className="pt-2 border-t">
-                        <p className="text-sm text-muted-foreground">Price Difference</p>
-                        <p className="text-lg font-semibold text-orange-600">
-                          €{priceDifference.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Save {((priceDifference / worstPrice!.price) * 100).toFixed(1)}% by choosing the best price
-                        </p>
+                    {productDetails?.features && productDetails.features.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Key Features</h4>
+                        <ul className="list-disc list-inside space-y-1">
+                          {productDetails.features.map((feature, index) => (
+                            <li key={index} className="text-sm">{feature}</li>
+                          ))}
+                        </ul>
                       </div>
                     )}
 
-                    <div className="pt-2 border-t">
-                      <p className="text-sm text-muted-foreground">Available Stores</p>
-                      <p className="text-lg font-semibold">
-                        {storePricing.filter(p => p.isAvailable).length} / {storePricing.length}
-                      </p>
-                    </div>
+                    {productDetails?.storage && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Storage Information</h4>
+                        <p className="text-sm">{productDetails.storage}</p>
+                      </div>
+                    )}
+
+                    {productDetails?.preparation && (
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Preparation</h4>
+                        <p className="text-sm">{productDetails.preparation}</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -296,99 +245,87 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
               )}
             </TabsContent>
 
-            <TabsContent value="pricing" className="space-y-4">
+            <TabsContent value="nutrition" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Store className="h-4 w-4" />
-                    Store Pricing Comparison
+                    <Leaf className="h-4 w-4" />
+                    Nutrition Information
                   </CardTitle>
                   <CardDescription>
-                    Compare prices across all stores where this product is available
+                    Nutritional values and ingredients
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {storePricing.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Store</TableHead>
-                          <TableHead>Current Price</TableHead>
-                          <TableHead>Original Price</TableHead>
-                          <TableHead>Discount</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Special Offer</TableHead>
-                          <TableHead>Last Updated</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {storePricing.map((pricing) => (
-                          <TableRow key={pricing.storeCode}>
+                  {productDetails?.nutrition && (
+                    <div className="space-y-6">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nutrient</TableHead>
+                            <TableHead>Per 100g/ml</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell>Energy</TableCell>
                             <TableCell>
-                              <Badge className={storeColors[pricing.storeCode] || "bg-gray-100 text-gray-800"}>
-                                {pricing.store}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`font-semibold ${
-                                pricing === bestPrice ? 'text-green-600' :
-                                pricing === worstPrice ? 'text-red-600' : ''
-                              }`}>
-                                €{pricing.price.toFixed(2)}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              {pricing.oldPrice && pricing.oldPrice !== pricing.price ? (
-                                <span className="text-muted-foreground line-through">
-                                  €{pricing.oldPrice.toFixed(2)}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {pricing.discountRate > 0 ? (
-                                <Badge variant="outline" className="text-green-600">
-                                  {pricing.discountRate}% off
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={pricing.isAvailable ? statusColors.available : statusColors.unavailable}>
-                                {pricing.isAvailable ? 'Available' : 'Unavailable'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {pricing.offer ? (
-                                <span className="text-sm">{pricing.offer}</span>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                {pricing.lastUpdated || 'Unknown'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {pricing.isAvailable && (
-                                <Button variant="ghost" size="sm">
-                                  <ExternalLink className="h-3 w-3" />
-                                </Button>
-                              )}
+                              {productDetails.nutrition.energy_kcal} kcal / {productDetails.nutrition.energy_kj} kJ
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-4">
-                      No pricing data available for this product.
+                          <TableRow>
+                            <TableCell>Fat</TableCell>
+                            <TableCell>{productDetails.nutrition.fat}g</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="pl-8">of which saturates</TableCell>
+                            <TableCell>{productDetails.nutrition.saturated_fat}g</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Carbohydrates</TableCell>
+                            <TableCell>{productDetails.nutrition.carbohydrates}g</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="pl-8">of which sugars</TableCell>
+                            <TableCell>{productDetails.nutrition.sugars}g</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Protein</TableCell>
+                            <TableCell>{productDetails.nutrition.protein}g</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell>Salt</TableCell>
+                            <TableCell>{productDetails.nutrition.salt}g</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {(!productDetails?.nutrition && !productDetails?.ingredients?.length) && (
+                    <p className="text-center text-muted-foreground py-4">
+                      No nutrition information available for this product.
                     </p>
+                  )}
+
+                  {productDetails?.ingredients && productDetails.ingredients.length > 0 && (
+                    <>
+                      <Separator className="my-6" />
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Ingredients</h4>
+                        <p className="text-sm">{productDetails.ingredients.join(', ')}</p>
+                      </div>
+                    </>
+                  )}
+
+                  {productDetails?.additives && (
+                    <>
+                      <Separator className="my-6" />
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Additives</h4>
+                        <p className="text-sm">{productDetails.additives}</p>
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
@@ -399,7 +336,7 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
                 <CardHeader>
                   <CardTitle>Technical Details</CardTitle>
                   <CardDescription>
-                    Raw product information and metadata
+                    Additional product information and metadata
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -409,6 +346,7 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
                       <div className="space-y-1 text-sm">
                         <p><strong>GTIN:</strong> {product.gtin}</p>
                         <p><strong>Product ID:</strong> {product.id}</p>
+                        <p><strong>Status:</strong> {product.status}</p>
                       </div>
                     </div>
                     
@@ -424,35 +362,23 @@ export const ProductDetailsModal = ({ product, open, onOpenChange }: ProductDeta
 
                   <Separator />
 
+                  {productDetails?.recycling && (
+                    <>
+                      <div className="space-y-2">
+                        <h4 className="font-semibold">Recycling Information</h4>
+                        <p className="text-sm">{productDetails.recycling}</p>
+                      </div>
+                      <Separator />
+                    </>
+                  )}
+
                   <div className="space-y-2">
-                    <h4 className="font-semibold">Titles</h4>
+                    <h4 className="font-semibold">Timestamps</h4>
                     <div className="space-y-1 text-sm">
-                      <p><strong>Display Title:</strong> {productDetails?.title || product.title}</p>
-                      {productDetails?.titleOriginal && (
-                        <p><strong>Original Title:</strong> {productDetails.titleOriginal}</p>
-                      )}
+                      <p><strong>Created:</strong> {new Date(product.createdAt).toLocaleString()}</p>
+                      <p><strong>Last Updated:</strong> {new Date(product.updatedAt).toLocaleString()}</p>
                     </div>
                   </div>
-
-                  {productDetails?.description && (
-                    <>
-                      <Separator />
-                      <div className="space-y-2">
-                        <h4 className="font-semibold">Description</h4>
-                        <p className="text-sm">{productDetails.description}</p>
-                      </div>
-                    </>
-                  )}
-
-                  {productDetails?.image && (
-                    <>
-                      <Separator />
-                      <div className="space-y-2">
-                        <h4 className="font-semibold">Image URL</h4>
-                        <p className="text-sm font-mono break-all">{productDetails.image}</p>
-                      </div>
-                    </>
-                  )}
                 </CardContent>
               </Card>
             </TabsContent>
