@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, UserPlus, Download, MessageSquare, ShoppingCart, Users, TrendingUp, Trash2 } from "lucide-react"
+import { Search, UserPlus, Download, MessageSquare, ShoppingCart, Users, TrendingUp, Trash2, ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { UserProfileModal } from "./components/UserProfileModal"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -84,6 +84,11 @@ function useDebounce(value: string, delay: number) {
   return debouncedValue
 }
 
+type SortConfig = {
+  key: keyof CRMUser | null
+  direction: 'asc' | 'desc'
+}
+
 export default function CRMUsersPage() {
   const [users, setUsers] = useState<CRMUser[]>([])
   const [stats, setStats] = useState<CRMStats>({ totalUsers: 0, activeUsers: 0, prospects: 0, customers: 0 })
@@ -92,6 +97,9 @@ export default function CRMUsersPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [personaFilter, setPersonaFilter] = useState("all")
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' })
+  const itemsPerPage = 5
 
   // Debounce search term to avoid excessive API calls
   const debouncedSearchTerm = useDebounce(searchTerm, 300)
@@ -255,6 +263,63 @@ export default function CRMUsersPage() {
     return users // API already handles filtering, but could add client-side sorting here
   }, [users])
 
+  // Sort function
+  const handleSort = useCallback((key: keyof CRMUser) => {
+    setSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+    }))
+  }, [])
+
+  // Memoized sorted and paginated users
+  const sortedAndPaginatedUsers = useMemo(() => {
+    let sorted = [...filteredUsers]
+    
+    if (sortConfig.key) {
+      sorted.sort((a, b) => {
+        const aValue = a[sortConfig.key!] ?? null
+        const bValue = b[sortConfig.key!] ?? null
+        
+        if (aValue === null) return 1
+        if (bValue === null) return -1
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          const comparison = aValue.localeCompare(bValue)
+          return sortConfig.direction === 'asc' ? comparison : -comparison
+        }
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          const comparison = aValue - bValue
+          return sortConfig.direction === 'asc' ? comparison : -comparison
+        }
+        
+        return 0
+      })
+    }
+
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    
+    return sorted.slice(startIndex, endIndex)
+  }, [filteredUsers, sortConfig, currentPage])
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
+
+  // Header component for sortable columns
+  const SortableHeader = ({ column, label }: { column: keyof CRMUser, label: string }) => (
+    <TableHead>
+      <Button 
+        variant="ghost" 
+        onClick={() => handleSort(column)}
+        className="h-8 flex items-center gap-1 font-semibold hover:bg-muted/50"
+      >
+        {label}
+        <ArrowUpDown className="h-4 w-4" />
+      </Button>
+    </TableHead>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -263,11 +328,11 @@ export default function CRMUsersPage() {
           <p className="text-muted-foreground">Manage WhatsApp customers, lifecycle stages, and shopping preferences</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" disabled>
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>
-          <Button>
+          <Button disabled>
             <MessageSquare className="mr-2 h-4 w-4" />
             Send Broadcast
           </Button>
@@ -384,20 +449,21 @@ export default function CRMUsersPage() {
               <div className="text-muted-foreground">Loading customers...</div>
             </div>
           ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Lifecycle</TableHead>
-                  <TableHead>Shopping Persona</TableHead>
-                  <TableHead>Engagement</TableHead>
-                  <TableHead>Messages</TableHead>
-                <TableHead>Last Active</TableHead>
-                <TableHead className="w-[70px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
+          <div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <SortableHeader column="full_name" label="Customer" />
+                  <SortableHeader column="lifecycle_stage" label="Lifecycle" />
+                  <SortableHeader column="shopping_persona" label="Shopping Persona" />
+                  <SortableHeader column="engagement_status" label="Engagement" />
+                  <SortableHeader column="total_messages" label="Messages" />
+                  <SortableHeader column="last_message_at" label="Last Active" />
+                  <TableHead className="w-[70px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedAndPaginatedUsers.map((user) => (
                   <TableRow 
                     key={user.contact_id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -412,21 +478,21 @@ export default function CRMUsersPage() {
                     role="button"
                     aria-label={`View details for customer ${user.full_name || user.preferred_name || user.phone_number}`}
                   >
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
                           <AvatarImage 
                             src={user.profile_picture_url && user.profile_picture_url !== 'removed' 
                               ? user.profile_picture_url 
                               : "/placeholder-user.jpg"} 
                           />
-                        <AvatarFallback>
+                          <AvatarFallback>
                             {(user.full_name || user.preferred_name || user.phone_number)
                               .slice(0, 2)
                               .toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
                           <div className="font-medium">
                             {user.full_name || user.preferred_name || 'Unknown'}
                           </div>
@@ -439,14 +505,14 @@ export default function CRMUsersPage() {
                             </div>
                           )}
                         </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       <Badge className={lifecycleColors[user.lifecycle_stage as keyof typeof lifecycleColors] || "bg-gray-100 text-gray-800"}>
                         {user.lifecycle_stage}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       {user.shopping_persona ? (
                         <Badge variant="outline" className={personaColors[user.shopping_persona as keyof typeof personaColors] || "bg-gray-100 text-gray-800"}>
                           {user.shopping_persona.replace(/([A-Z])/g, ' $1').trim()}
@@ -459,7 +525,7 @@ export default function CRMUsersPage() {
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={engagementColors[user.engagement_status as keyof typeof engagementColors] || "bg-gray-100 text-gray-800"}>
                           {user.engagement_status.replace('_', ' ')}
-                    </Badge>
+                        </Badge>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -475,8 +541,8 @@ export default function CRMUsersPage() {
                           Customer since {formatDate(user.customer_since)}
                         </div>
                       </div>
-                  </TableCell>
-                  <TableCell>
+                    </TableCell>
+                    <TableCell>
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -496,43 +562,84 @@ export default function CRMUsersPage() {
                         ) : (
                           "View"
                         )}
-                        </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          )}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
 
-          {!loading && filteredUsers.length === 0 && (
-            <div className="text-center py-12">
-              <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
-                <Users className="h-12 w-12 text-muted-foreground" />
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between py-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {Math.min(itemsPerPage, filteredUsers.length)} of {filteredUsers.length} customers
               </div>
-              <h3 className="text-lg font-semibold mb-2">
-                {searchTerm || statusFilter !== "all" || personaFilter !== "all" 
-                  ? "No customers found" 
-                  : "No customers yet"}
-              </h3>
-              <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
-                {searchTerm || statusFilter !== "all" || personaFilter !== "all"
-                  ? "Try adjusting your search criteria or filters to find customers."
-                  : "Customers will appear here when they interact with your WhatsApp business."}
-              </p>
-              {(searchTerm || statusFilter !== "all" || personaFilter !== "all") && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSearchTerm("")
-                    setStatusFilter("all")
-                    setPersonaFilter("all")
-                  }}
-                  className="mt-2"
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
                 >
-                  Clear filters
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
                 </Button>
-              )}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="w-8"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+
+            {!loading && filteredUsers.length === 0 && (
+              <div className="text-center py-12">
+                <div className="mx-auto w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-4">
+                  <Users className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                  {searchTerm || statusFilter !== "all" || personaFilter !== "all" 
+                    ? "No customers found" 
+                    : "No customers yet"}
+                </h3>
+                <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
+                  {searchTerm || statusFilter !== "all" || personaFilter !== "all"
+                    ? "Try adjusting your search criteria or filters to find customers."
+                    : "Customers will appear here when they interact with your WhatsApp business."}
+                </p>
+                {(searchTerm || statusFilter !== "all" || personaFilter !== "all") && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSearchTerm("")
+                      setStatusFilter("all")
+                      setPersonaFilter("all")
+                    }}
+                    className="mt-2"
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
           )}
         </CardContent>
       </Card>
