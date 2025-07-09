@@ -2,12 +2,25 @@
 
 import { getTranslation, type LanguageCode } from '@/lib/translations'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function Footer() {
     const [currentLanguage, setCurrentLanguage] = useState<LanguageCode>('nl')
 
-    const t = getTranslation(currentLanguage)
+  const t = getTranslation(currentLanguage)
+  
+  // Listen to language changes from LanguageToggle
+    useEffect(() => {
+      const handleLanguageChange = (event: CustomEvent) => {
+        setCurrentLanguage(event.detail.language)
+      }
+  
+      window.addEventListener('languageChange', handleLanguageChange as EventListener)
+      return () => {
+        window.removeEventListener('languageChange', handleLanguageChange as EventListener)
+      }
+    }, [])
+  
   return (
     <footer className="relative z-10 w-full py-8 mt-16">
         <div className="max-w-7xl mx-auto px-6 text-center">

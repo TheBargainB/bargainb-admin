@@ -547,7 +547,7 @@ export default function PublicHomePage() {
               <Linkedin className="w-3 h-3 md:w-4 md:h-4 text-[#00B207] dark:text-[#84D187]" />
             </a>
             <a
-              href="https://www.linkedin.com/company/bargainb/"
+              href="https://www.tiktok.com/bargainb/"
               target="_blank"
               rel="noopener noreferrer"
               className="w-7 h-7 md:w-8 md:h-8 bg-[#F4FBF4] dark:bg-[#323232] hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"

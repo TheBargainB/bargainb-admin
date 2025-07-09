@@ -42,7 +42,7 @@ export function ThemeToggle() {
         >
             <div
                 className={`absolute transition-all duration-300 ${
-                    theme === 'dark' ? 'translate-x-11' : 'translate-x-0'
+                    currentTheme === 'dark' ? 'translate-x-11' : 'translate-x-0'
                 } bg-[#123013] dark:bg-[#EBEBEB] w-7 h-7 rounded-full flex items-center justify-center shadow-md`}
             >
                 {currentTheme === 'dark' ? (
