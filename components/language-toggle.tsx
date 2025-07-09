@@ -1,7 +1,5 @@
 "use client"
 
-import * as React from "react"
-import { Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -9,6 +7,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Globe } from "lucide-react"
+import * as React from "react"
 
 const languages = [
   { code: "nl", name: "Nederlands", flag: "🇳🇱" },
@@ -50,10 +50,9 @@ export function LanguageToggle() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="outline" 
+        <Button
           size="sm"
-          className="flex items-center space-x-2"
+          className="flex items-center bg-[#F4FBF4] dark:bg-[#323232] text-[#00B207] dark:text-[#FFFFFF] py-5 px-6 rounded-xl space-x-2"
           title="Change language"
         >
           <Globe className="h-4 w-4" />
