@@ -309,7 +309,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
           <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
             <ShoppingCart className="w-5 h-5 text-green-500" />
             <div>
-              <p className="text-sm font-medium">{userData.data.stats.active_grocery_lists}</p>
+              <p className="text-sm font-medium">{userData.data?.stats?.active_grocery_lists || 0}</p>
               <p className="text-xs text-muted-foreground">Active Lists</p>
             </div>
           </div>
@@ -551,22 +551,22 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="space-y-3">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Total Interactions</label>
-                          <p className="text-sm font-semibold">{userData.aiConfig.stats.total_interactions}</p>
+                          <p className="text-sm font-semibold">{userData.aiConfig?.stats?.total_interactions || 0}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Success Rate</label>
-                          <p className="text-sm font-semibold">{userData.aiConfig.stats.success_rate.toFixed(1)}%</p>
+                          <p className="text-sm font-semibold">{userData.aiConfig?.stats?.success_rate?.toFixed(1) || 0}%</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Avg Response Time</label>
-                          <p className="text-sm font-semibold">{(userData.aiConfig.stats.avg_response_time / 1000).toFixed(2)}s</p>
+                          <p className="text-sm font-semibold">{userData.aiConfig?.stats?.avg_response_time ? (userData.aiConfig.stats.avg_response_time / 1000).toFixed(2) : 0}s</p>
                         </div>
                       </CardContent>
                     </Card>
                   </div>
 
                   {/* Recent AI Interactions */}
-                  {userData.aiConfig.interactions.length > 0 && (
+                  {userData.aiConfig?.interactions?.length > 0 && (
                     <Card className="mt-6">
                       <CardHeader>
                         <CardTitle className="text-lg">Recent AI Interactions</CardTitle>
@@ -611,7 +611,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <CalendarIcon className="w-5 h-5 text-primary" />
                         <div>
-                          <p className="text-sm font-medium">{userData.meals.stats.total_meal_plans}</p>
+                          <p className="text-sm font-medium">{userData.meals?.stats?.total_meal_plans || 0}</p>
                           <p className="text-xs text-muted-foreground">Total Plans</p>
                         </div>
                       </CardContent>
@@ -620,7 +620,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <CheckCircle className="w-5 h-5 text-green-500" />
                         <div>
-                          <p className="text-sm font-medium">{userData.meals.stats.completed_meals}</p>
+                          <p className="text-sm font-medium">{userData.meals?.stats?.completed_meals || 0}</p>
                           <p className="text-xs text-muted-foreground">Completed</p>
                         </div>
                       </CardContent>
@@ -629,7 +629,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <ChefHat className="w-5 h-5 text-orange-500" />
                         <div>
-                          <p className="text-sm font-medium">{userData.meals.stats.custom_recipes}</p>
+                          <p className="text-sm font-medium">{userData.meals?.stats?.custom_recipes || 0}</p>
                           <p className="text-xs text-muted-foreground">Custom Recipes</p>
                         </div>
                       </CardContent>
@@ -637,7 +637,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                   </div>
 
                   {/* Meal Plans */}
-                  {userData.meals.meal_plans.length > 0 && (
+                  {userData.meals?.meal_plans?.length > 0 && (
                     <Card className="mb-6">
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center space-x-2">
@@ -677,7 +677,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                   )}
 
                   {/* Custom Recipes */}
-                  {userData.meals.recipes.length > 0 && (
+                  {userData.meals?.recipes?.length > 0 && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center space-x-2">
@@ -729,7 +729,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <ShoppingCart className="w-5 h-5 text-green-500" />
                         <div>
-                          <p className="text-sm font-medium">{userData.data.stats.active_grocery_lists}</p>
+                          <p className="text-sm font-medium">{userData.data?.stats?.active_grocery_lists || 0}</p>
                           <p className="text-xs text-muted-foreground">Active Lists</p>
                         </div>
                       </CardContent>
@@ -738,7 +738,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <DollarSign className="w-5 h-5 text-blue-500" />
                         <div>
-                          <p className="text-sm font-medium">€{userData.data.stats.total_budget}</p>
+                          <p className="text-sm font-medium">€{userData.data?.stats?.total_budget || 0}</p>
                           <p className="text-xs text-muted-foreground">Total Budget</p>
                         </div>
                       </CardContent>
@@ -747,7 +747,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <Receipt className="w-5 h-5 text-red-500" />
                         <div>
-                          <p className="text-sm font-medium">€{userData.data.stats.total_spent}</p>
+                          <p className="text-sm font-medium">€{userData.data?.stats?.total_spent || 0}</p>
                           <p className="text-xs text-muted-foreground">Total Spent</p>
                         </div>
                       </CardContent>
@@ -756,7 +756,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                       <CardContent className="flex items-center space-x-2 p-4">
                         <Activity className="w-5 h-5 text-purple-500" />
                         <div>
-                          <p className="text-sm font-medium">{userData.data.stats.recent_events}</p>
+                          <p className="text-sm font-medium">{userData.data?.stats?.recent_events || 0}</p>
                           <p className="text-xs text-muted-foreground">Recent Events</p>
                         </div>
                       </CardContent>
@@ -764,7 +764,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                   </div>
 
                   {/* Active Grocery Lists */}
-                  {userData.data.grocery_lists.length > 0 && (
+                  {userData.data?.grocery_lists?.length > 0 && (
                     <Card className="mb-6">
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center space-x-2">
@@ -796,7 +796,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                   )}
 
                   {/* Budget Overview */}
-                  {userData.data.budget.periods.length > 0 && (
+                  {userData.data?.budget?.periods?.length > 0 && (
                     <Card className="mb-6">
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center space-x-2">
@@ -843,7 +843,7 @@ export function ChatUserProfile({ conversationId }: ChatUserProfileProps) {
                   )}
 
                   {/* Recent Activity */}
-                  {userData.data.activity.length > 0 && (
+                  {userData.data?.activity?.length > 0 && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center space-x-2">
