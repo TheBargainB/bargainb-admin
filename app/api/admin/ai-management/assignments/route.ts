@@ -81,32 +81,44 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Found contact:', contact.id, contact.display_name || contact.push_name)
 
-    // Find the conversation for this contact
+    // Find or create the conversation for this contact
     console.log('🔍 Looking for conversation with whatsapp_contact_id:', contact.id)
     
-    const { data: conversation, error: conversationError } = await supabaseAdmin
+    let { data: conversation, error: conversationError } = await supabaseAdmin
       .from('conversations')
       .select('id, assistant_id, whatsapp_contact_id')
       .eq('whatsapp_contact_id', contact.id)
       .single()
 
+    // If no conversation exists, create one
     if (conversationError || !conversation) {
-      console.error('❌ Conversation not found for contact ID:', contact.id, 'Error:', conversationError)
+      console.log('🆕 No conversation found, creating new conversation for contact:', contact.id)
       
-      // Let's also try to find ANY conversation for debugging
-      const { data: allConversations } = await supabaseAdmin
+      const { data: newConversation, error: createError } = await supabaseAdmin
         .from('conversations')
-        .select('id, whatsapp_contact_id')
-        .limit(5)
-      
-      console.log('🔍 Sample conversations in database:', allConversations)
-      
-      return NextResponse.json({ 
-        error: `Conversation not found for contact: ${contact.id}` 
-      }, { status: 404 })
-    }
+        .insert({
+          whatsapp_contact_id: contact.id,
+          whatsapp_conversation_id: `${contact.phone_number}@c.us`, // Required WhatsApp conversation ID
+          ai_enabled: false, // Will be set to true when assistant is assigned
+          status: 'active',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id, assistant_id, whatsapp_contact_id')
+        .single()
 
-    console.log('✅ Found conversation:', conversation.id, 'for contact:', contact.id)
+      if (createError || !newConversation) {
+        console.error('❌ Failed to create conversation for contact:', contact.id, 'Error:', createError)
+        return NextResponse.json({ 
+          error: `Failed to create conversation for contact: ${contact.id}` 
+        }, { status: 500 })
+      }
+
+      conversation = newConversation
+      console.log('✅ Created new conversation:', conversation.id, 'for contact:', contact.id)
+    } else {
+      console.log('✅ Found existing conversation:', conversation.id, 'for contact:', contact.id)
+    }
 
     // Check if assignment already exists (unless force_update is true)
     if (conversation.assistant_id && !force_update) {
