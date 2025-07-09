@@ -51,7 +51,8 @@ export const createUserAssignment = async (data: AssignUserData): Promise<UserAs
       notification_settings: data.notification_settings || {},
       schedule: data.schedule || null,
       custom_config: data.custom_config || {},
-      notes: data.notes || ''
+      notes: data.notes || '',
+      force_update: true // 🔧 FIX: Allow reassigning assistants to users who already have one
     }
 
     const response = await apiClient.post<{ success: boolean; assignment?: UserAssignment; error?: string }>(
