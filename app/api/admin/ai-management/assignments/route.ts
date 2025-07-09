@@ -13,6 +13,7 @@ export async function GET() {
         assistant_id, 
         assistant_name, 
         assistant_config, 
+        assistant_metadata,
         assistant_created_at,
         whatsapp_contact_id,
         whatsapp_contacts!inner(
@@ -28,7 +29,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch assignments' }, { status: 500 })
     }
 
-    return NextResponse.json(assignments || [])
+    // Map the data to match the frontend interface
+    const mappedAssignments = assignments?.map(assignment => ({
+      conversation_id: assignment.id,
+      assistant_id: assignment.assistant_id,
+      assistant_name: assignment.assistant_name,
+      phone_number: assignment.whatsapp_contacts.phone_number,
+      display_name: assignment.whatsapp_contacts.display_name || assignment.whatsapp_contacts.push_name,
+      assistant_created_at: assignment.assistant_created_at,
+      conversation_created_at: assignment.assistant_created_at, // Using same date for now
+      assistant_config: assignment.assistant_config,
+      assistant_metadata: assignment.assistant_metadata || {}
+    })) || []
+
+    return NextResponse.json(mappedAssignments)
   } catch (error) {
     console.error('Error in assignments API:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
