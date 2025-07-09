@@ -1,22 +1,23 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { toast } from 'sonner'
 import { BargainBLogo } from '@/components/bargainb-logo'
-import { ThemeToggle } from '@/components/theme-toggle'
+import Footer from '@/components/footer'
 import { LanguageToggle } from '@/components/language-toggle'
-import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { OrbitingCircles } from '@/components/ui/orbiting-circles'
-import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { BeautifulPhoneInput } from '@/components/ui/phone-input'
+import { ShimmerButton } from '@/components/ui/shimmer-button'
+import { getTranslation, type LanguageCode } from '@/lib/translations'
+import bgEffect from '@/public/background-effect.svg'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Check } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import Image from 'next/image'
-import { getTranslation, type LanguageCode } from '@/lib/translations'
-import { Check } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { toast } from 'sonner'
+import { z } from 'zod'
 
 // Beautiful Floating Bees Component using Magic UI Orbiting Circles
 const FloatingBees = () => {
@@ -175,7 +176,15 @@ export default function EarlyAccessPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
+      <Image
+          src={bgEffect}
+          alt='shadow'
+          width={1800}
+          height={550}
+          className='absolute top-0 left-1/2 -z-10 -translate-x-1/2 pointer-events-none'
+          priority
+      />
       {/* Beautiful Floating Bees using Magic UI */}
       <FloatingBees />
       
@@ -191,8 +200,8 @@ export default function EarlyAccessPage() {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-6 py-12">
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center">
+      <main className="container lg:h-screen flex items-center relative z-10 max-w-7xl mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-20 items-center">
           
           {/* Left side - iPhone Mockup */}
           <div className="flex justify-center lg:justify-start order-2 lg:order-1">
@@ -203,20 +212,29 @@ export default function EarlyAccessPage() {
                   alt="BargainB WhatsApp Interface"
                   width={520}
                   height={1050}
-                  className="w-full h-auto drop-shadow-2xl"
+                  className="w-full h-auto hidden md:flex"
                   priority
                 />
+                <Image
+                        src='/iPhone-sm.png'
+                        alt='iPhone'
+                        width={650}
+                        height={686}
+                        priority
+                        quality={100}
+                        className='flex md:hidden w-[326px] h-[344px] m-auto mt-5 object-contain'
+                    />
               </div>
             </div>
           </div>
 
           {/* Right side - Content & Form */}
           <div className="order-1 lg:order-2">
-            <div className="max-w-lg lg:max-w-none">
+            <div className="w-full lg:max-w-none">
               
               {/* Title */}
               <div className="space-y-6 mb-10">
-                <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold text-foreground leading-tight">
+                <h1 className="font-[family-name:var(--font-paytone-one)] text-[30px] lg:text-[35px] xl:text-[35px] 2xl:text-[45px] text-[#3D3D3D] dark:text-[#F5F5F5] text-center md:text-start tracking-[0.9px] leading-9 md:leading-[50px] 2xl:leading-[55px]">
                   {currentLanguage === 'nl' ? 'Krijg gratis early access tot' : 
                    currentLanguage === 'en' ? 'Get free early access to' :
                    currentLanguage === 'de' ? 'Erhalten Sie kostenlosen frühen Zugang zu' :
@@ -234,13 +252,13 @@ export default function EarlyAccessPage() {
                     <div className="flex-shrink-0 w-5 h-5 bg-primary rounded-sm flex items-center justify-center mt-0.5">
                       <Check className="w-3.5 h-3.5 text-primary-foreground" />
                     </div>
-                    <span className="text-muted-foreground leading-relaxed">{benefit}</span>
+                    <span className="font-[family-name:var(--font-inter)] text-sm xl:text-base text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed">{benefit}</span>
                   </div>
                 ))}
               </div>
 
               {/* Beautiful Form using Aceternity UI */}
-              <div className="bg-background/80 backdrop-blur-sm border border-border rounded-xl p-8 shadow-lg dark:bg-card/50 dark:border-border/50">
+              <div className="mt-14">
                 <div className="space-y-6">
                   
                   {/* Beautiful Phone Input */}
@@ -275,7 +293,7 @@ export default function EarlyAccessPage() {
                   <ShimmerButton
                     onClick={() => handleSubmit(handleEarlyAccessSubmit)()}
                     disabled={isSubmitting || !phoneNumber || phoneNumber.length !== 8}
-                    className="w-full py-4 text-lg rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50"
+                    className="max-w-max py-4 text-lg rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50"
                     shimmerColor="#ffffff40"
                     background="hsl(var(--primary))"
                   >
@@ -292,7 +310,7 @@ export default function EarlyAccessPage() {
       {/* FAQ Section */}
       <section className="relative z-10 max-w-4xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">
+          <h2 className="font-[family-name:var(--font-paytone-one)] text-center my-10 text-[30px] sm:text-[35px] md:text-[45px] text-[#3D3D3D] dark:text-[#F5F5F5] tracking-[0.9px] leading-[50px] px-4">
             {t.faq.title}
           </h2>
         </div>
@@ -300,37 +318,37 @@ export default function EarlyAccessPage() {
         <div className="max-w-3xl mx-auto">
           <Accordion type="single" collapsible className="space-y-6">
             <AccordionItem value="item-1" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
                 {t.faq.questions.free.question}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
                 {t.faq.questions.free.answer}
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-2" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
                 {t.faq.questions.whenAccess.question}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
                 {t.faq.questions.whenAccess.answer}
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-3" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
                 {t.faq.questions.whatIs.question}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
                 {t.faq.questions.whatIs.answer}
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-4" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="text-left font-semibold text-lg py-4">
+              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
                 {t.faq.questions.benefits.question}
               </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground leading-relaxed pb-4">
+              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
                 {t.faq.questions.benefits.answer}
               </AccordionContent>
             </AccordionItem>
@@ -339,38 +357,7 @@ export default function EarlyAccessPage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border bg-background/80 backdrop-blur-sm dark:bg-card/20 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-6 text-sm text-muted-foreground">
-            <span>
-              {currentLanguage === 'nl' ? '© 2024 BargainB - Alle rechten voorbehouden' : 
-               currentLanguage === 'en' ? '© 2024 BargainB - All rights reserved' :
-               currentLanguage === 'de' ? '© 2024 BargainB - Alle Rechte vorbehalten' :
-               currentLanguage === 'fr' ? '© 2024 BargainB - Tous droits réservés' :
-               currentLanguage === 'it' ? '© 2024 BargainB - Tutti i diritti riservati' :
-               '© 2024 BargainB - Todos los derechos reservados'}
-            </span>
-            <div className="flex items-center gap-6">
-              <a href="/privacy" className="hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline">
-                {currentLanguage === 'nl' ? 'Privacybeleid' : 
-                 currentLanguage === 'en' ? 'Privacy Policy' :
-                 currentLanguage === 'de' ? 'Datenschutzerklärung' :
-                 currentLanguage === 'fr' ? 'Politique de confidentialité' :
-                 currentLanguage === 'it' ? 'Informativa sulla privacy' :
-                 'Política de Privacidad'}
-              </a>
-              <a href="/terms" className="hover:text-foreground transition-colors duration-200 underline-offset-4 hover:underline">
-                {currentLanguage === 'nl' ? 'Algemene voorwaarden' : 
-                 currentLanguage === 'en' ? 'Terms of Service' :
-                 currentLanguage === 'de' ? 'Allgemeine Geschäftsbedingungen' :
-                 currentLanguage === 'fr' ? 'Conditions générales' :
-                 currentLanguage === 'it' ? 'Termini di servizio' :
-                 'Términos de Servicio'}
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 } 

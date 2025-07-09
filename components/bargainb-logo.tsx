@@ -1,8 +1,8 @@
 "use client"
 
-import Image from "next/image"
-import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useTheme } from "next-themes";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 
 // For now, we'll use the placeholder logo and style it to match your brand colors
 // The Figma assets are on localhost which won't work in production
@@ -64,18 +64,17 @@ export function BargainBLogoMassive({ className = "" }: { className?: string }) 
 
   if (!mounted) {
     return (
-      <div className="h-12 md:h-16 lg:h-20 w-auto bg-muted/20 rounded" />
+      <div className="h-12 md:h-16 lg:h-20 w-auto " />
     )
   }
 
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
+    <div className={`relative h-[50px] w-[150px] lg:h-[60px] lg:w-[180px] xl:h-[60px] xl:w-[200px] 2xl:h-[70px] 2xl:w-[240px] m-auto flex items-center justify-center ${className}`}>
       <Image
         src={logoSrc}
         alt="BargainB Logo"
-        width={174}
-        height={49}
-        className="h-12 md:h-16 lg:h-20 w-auto object-contain"
+        fill
+        className="object-contain"
         priority
       />
     </div>

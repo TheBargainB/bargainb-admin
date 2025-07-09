@@ -1,19 +1,20 @@
 "use client"
 
-import type React from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { useState, useEffect } from "react"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { LanguageToggle } from "@/components/language-toggle"
 import { BargainBLogoMassive } from "@/components/bargainb-logo"
+import Footer from "@/components/footer"
+import { LanguageToggle } from "@/components/language-toggle"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { toast } from "sonner"
-import { CheckCircle, Loader2, Twitter, Instagram, Facebook, Linkedin } from "lucide-react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { CheckCircle, Facebook, Instagram, Linkedin, Loader2 } from "lucide-react"
 import { useTheme } from "next-themes"
+import Image from "next/image"
+import { useEffect, useState } from "react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
+import { z } from "zod"
 
 const translations = {
   nl: {
@@ -353,9 +354,9 @@ export default function PublicHomePage() {
     const isJumping = jumpEffect[unit]
 
     return (
-      <div className="flex flex-col items-center space-y-1">
+      <div className="flex flex-col items-center space-y-4">
         <div
-          className={`text-lg md:text-2xl lg:text-4xl xl:text-5xl font-black text-foreground tabular-nums transition-all duration-300 ${
+          className={`text-lg md:text-2xl lg:text-4xl xl:text-5xl font-black text-foreground dark:text-[#84D187] tabular-nums transition-all duration-300 font-[family-name:var(--font-paytone-one)] shadow-[0px_9.338px_33.35px_0px_rgba(100,_100,_111,_0.15)] dark:shadow-[0px_9.338px_33.35px_0px_rgba(167,_167,_167,_0.15)] bg-white dark:bg-[#1F1F1F] p-5 rounded-3xl ${
             isJumping ? "animate-bounce" : ""
           }`}
           style={{
@@ -366,7 +367,7 @@ export default function PublicHomePage() {
           {value.toString().padStart(2, "0")}
         </div>
         <div className="min-h-[16px] md:min-h-[18px] lg:min-h-[20px] flex items-center justify-center">
-          <div className="text-xs md:text-xs lg:text-sm font-semibold text-muted-foreground uppercase tracking-wider text-center">
+          <div className="font-[family-name:var(--font-inter)] text-xs md:text-sm lg:text-base font-medium text-[#7A7A7A] tracking-wider text-center">
             {label}
           </div>
         </div>
@@ -383,6 +384,13 @@ export default function PublicHomePage() {
 
   return (
     <div className="min-h-screen bg-custom-gradient dark:bg-dark-green-gradient relative overflow-hidden">
+      <Image
+          src={`/background-effect.svg`}
+          alt='shadow'
+          width={1500}
+          height={350}
+          className='absolute top-0 left-1/2 z-1 -translate-x-1/2 pointer-events-none'
+      />
       {/* Theme and Language Toggles - Upper Right */}
       <div className="absolute top-4 right-4 md:top-6 md:right-6 z-50 flex items-center gap-3">
         <LanguageToggle />
@@ -399,15 +407,15 @@ export default function PublicHomePage() {
         <div className="w-full max-w-sm md:max-w-4xl text-center animate-fade-in">
           {/* Big Centered Logo - Right above countdown */}
           <div className="mb-4 md:mb-6 text-center">
-            <BargainBLogoMassive className="mb-3 md:mb-4" />
+            <BargainBLogoMassive className="mt-16 md:mt-4 mb-3 md:mb-4" />
             
             {/* Launching In - Right below logo */}
-            <div className="min-h-[20px] md:min-h-[24px] mb-3 md:mb-4 flex items-center justify-center">
-              <h3 className="text-xs md:text-sm lg:text-base font-semibold text-muted-foreground uppercase tracking-wide">
+            <div className="min-h-[20px] md:min-h-[24px] mb-3 md:mb-10 mt-12 flex items-center justify-center">
+              <h3 className="font-[family-name:var(--font-inter)] text-sm md:text-base lg:text-lg font-medium text-[#7A7A7A] dark:text-[#F5F5F5] uppercase tracking-wide">
                 {t.launchingIn}
               </h3>
             </div>
-            <div className="grid grid-cols-4 gap-3 md:gap-4 lg:gap-8 max-w-sm md:max-w-xl mx-auto mb-4 md:mb-6">
+            <div className="grid grid-cols-4 gap-3 md:gap-4 lg:gap-8 max-w-sm md:max-w-xl mx-auto my-5 md:my-10">
               <CountdownNumber value={timeLeft.days} label={t.days} unit="days" />
               <CountdownNumber value={timeLeft.hours} label={t.hours} unit="hours" />
               <CountdownNumber value={timeLeft.minutes} label={t.minutes} unit="minutes" />
@@ -416,25 +424,25 @@ export default function PublicHomePage() {
           </div>
 
           {/* Main Heading */}
-          <div className="min-h-[80px] md:min-h-[100px] lg:min-h-[120px] flex flex-col justify-center mb-3 md:mb-4">
-            <h2 className="text-xl md:text-2xl lg:text-4xl xl:text-5xl font-bold text-foreground leading-tight px-4">
-              {t.joinWaitlist}
-              <br />
-              <span className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+          <div className=" flex flex-col justify-center my-5 md:mt-16 md:mb-8">
+            <h2 className="font-[family-name:var(--font-paytone-one)] text-xl md:text-2xl lg:text-4xl xl:text-[40px] font-bold text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight px-4">
+              {t.joinWaitlist} {' '}
+              
+              <span className="text-[#00B207] dark:text-[#84D187]">
                 {t.launchWaitlist}
               </span>
             </h2>
           </div>
 
           {/* Subtitle */}
-          <div className="min-h-[50px] md:min-h-[60px] flex items-center justify-center mb-3 md:mb-4">
-            <p className="text-sm md:text-base lg:text-lg text-muted-foreground max-w-xl lg:max-w-2xl mx-auto leading-relaxed px-4">
+          <div className="flex items-center justify-center mb-3 md:mb-4">
+            <p className="font-[family-name:var(--font-inter)] text-xs sm:text-sm md:text-base lg:text-base text-[#3D3D3D] dark:text-[#F5F5F5] max-w-xl lg:max-w-3xl mx-auto leading-relaxed px-4">
               {t.subtitle}
             </p>
           </div>
 
           {/* Success State */}
-          <div className="min-h-[100px] md:min-h-[120px] flex items-center justify-center mb-3 md:mb-4">
+          <div className="flex items-center justify-center mb-3 md:mb-4">
             {isSuccess && (
               <div className="bg-card border border-border rounded-2xl p-4 md:p-6 shadow-lg max-w-sm md:max-w-lg mx-auto transform animate-pulse">
                 <div className="flex items-center justify-center mb-3 md:mb-4">
@@ -442,15 +450,15 @@ export default function PublicHomePage() {
                     <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
                   </div>
                 </div>
-                <h3 className="text-lg md:text-xl font-bold text-foreground text-center mb-2">{t.youreIn}</h3>
-                <p className="text-xs md:text-sm text-muted-foreground text-center">{t.notifyMessage}</p>
+                <h3 className="font-[family-name:var(--font-paytone-one)] text-lg md:text-xl font-bold text-foreground text-center mb-2">{t.youreIn}</h3>
+                <p className="font-[family-name:var(--font-inter)] text-xs md:text-sm text-muted-foreground text-center">{t.notifyMessage}</p>
               </div>
             )}
           </div>
 
           {/* Email Form */}
           <div className="min-h-[70px] md:min-h-[80px] flex flex-col justify-center mb-4 md:mb-6">
-            <div className="max-w-xs md:max-w-md mx-auto px-2 md:px-4">
+            <div className="w-full md:max-w-xl m-auto px-2 md:px-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-2 md:gap-3">
                   <FormField
@@ -464,7 +472,7 @@ export default function PublicHomePage() {
                               type="email"
                               placeholder={t.emailPlaceholder}
                               {...field}
-                              className="h-9 md:h-10 lg:h-12 px-3 md:px-4 text-xs md:text-sm lg:text-base bg-background/80 backdrop-blur-sm border-2 border-border/50 rounded-xl transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary placeholder:text-muted-foreground w-full"
+                              className="h-9 md:h-10 lg:h-12 px-3 md:px-4 text-xs md:text-sm lg:text-base bg-[#F4FBF4] dark:bg-[#323232] text-[#00B207] rounded-xl border-0 focus-visible:ring-0 focus:ring-0 placeholder:text-muted-foreground w-full font-[family-name:var(--font-inter)]"
                               disabled={isLoading}
                             />
                           </div>
@@ -477,7 +485,7 @@ export default function PublicHomePage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="h-9 md:h-10 lg:h-12 px-4 md:px-6 text-xs md:text-sm lg:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none whitespace-nowrap w-full sm:w-auto md:min-w-[140px]"
+                    className="h-9 md:h-10 lg:h-12 px-4 md:px-6 text-xs md:text-sm lg:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none whitespace-nowrap w-full sm:w-auto md:min-w-[140px] font-[family-name:var(--font-inter)]"
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">
@@ -494,7 +502,7 @@ export default function PublicHomePage() {
           </div>
 
           {/* User Avatars and Count */}
-          <div className="min-h-[35px] md:min-h-[40px] flex items-center justify-center gap-2 md:gap-3 mb-4 md:mb-6 px-4">
+          {/* <div className="min-h-[35px] md:min-h-[40px] flex items-center justify-center gap-2 md:gap-3 mb-4 md:mb-6 px-4">
             <div className="flex -space-x-1 md:-space-x-2">
               {userAvatars.map((user, index) => (
                 <div
@@ -508,41 +516,55 @@ export default function PublicHomePage() {
             <p className="text-xs md:text-sm text-muted-foreground font-medium">
                               <span className="font-bold text-foreground">{waitlistCount.toLocaleString()}+</span> {t.peopleWaitlist}
             </p>
-          </div>
+          </div> */}
 
           {/* Social Links */}
-          <div className="flex items-center justify-center gap-3 md:gap-4 mb-4 md:mb-6">
+          <div className="flex items-center justify-center gap-3 md:gap-4 mb-4 md:mb-6 mt-28">
+            
             <a
-              href="https://x.com/thebargainb"
+              href="https://www.facebook.com/thebargainbapp"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-7 h-7 md:w-8 md:h-8 bg-muted/50 hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
+              className="w-7 h-7 md:w-8 md:h-8 bg-[#F4FBF4] dark:bg-[#323232] hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
             >
-              <Twitter className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground" />
+              <Facebook className="w-3 h-3 md:w-4 md:h-4 text-[#00B207] dark:text-[#84D187]" />
             </a>
             <a
               href="https://www.instagram.com/thebargainbhq/"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-7 h-7 md:w-8 md:h-8 bg-muted/50 hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
+              className="w-7 h-7 md:w-8 md:h-8 bg-[#F4FBF4] dark:bg-[#323232] hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
             >
-              <Instagram className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground" />
+              <Instagram className="w-3 h-3 md:w-4 md:h-4 text-[#00B207] dark:text-[#84D187]" />
             </a>
-            <a
-              href="https://www.facebook.com/thebargainbapp"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-7 h-7 md:w-8 md:h-8 bg-muted/50 hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
-            >
-              <Facebook className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground" />
-            </a>
+            
             <a
               href="https://www.linkedin.com/company/bargainb/"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-7 h-7 md:w-8 md:h-8 bg-muted/50 hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
+              className="w-7 h-7 md:w-8 md:h-8 bg-[#F4FBF4] dark:bg-[#323232] hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
             >
-              <Linkedin className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground" />
+              <Linkedin className="w-3 h-3 md:w-4 md:h-4 text-[#00B207] dark:text-[#84D187]" />
+            </a>
+            <a
+              href="https://www.tiktok.com/@thebargainb_ai"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-7 h-7 md:w-8 md:h-8 bg-[#F4FBF4] dark:bg-[#323232] hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 21 21" fill="none">
+                <path d="M14.1608 5.96855C13.6749 5.41384 13.3828 4.69055 13.3828 3.89984H12.774M14.1608 5.96855C14.6036 6.47426 15.2031 6.84204 15.8858 6.98605C16.098 7.03203 16.3194 7.05658 16.55 7.05658V9.32445C15.3692 9.32445 14.2744 8.94753 13.3827 8.31003V12.9225C13.3827 15.2272 11.5007 17.0998 9.19135 17.0998C7.98282 17.0998 6.89117 16.5849 6.12548 15.7666C5.42744 15.0189 5 14.0197 5 12.9225C5 10.6515 6.8266 8.8004 9.08986 8.75136M14.1608 5.96855C14.149 5.96086 14.1372 5.95311 14.1254 5.94527M7.64154 14.032C7.41399 13.7194 7.27868 13.3363 7.27868 12.9195C7.27868 11.8683 8.13663 11.0132 9.19141 11.0132C9.3882 11.0132 9.35915 10.8572 9.5375 10.9123V8.76328C9.35299 8.73873 9.38512 8.74522 9.19141 8.74522C9.15756 8.74522 8.88509 8.76328 8.85126 8.76328M12.7707 3.89984H11.104L11.101 12.993C11.0641 14.0105 10.2215 14.8288 9.19135 14.8288C8.55172 14.8288 7.98897 14.5132 7.63842 14.0351" stroke="#84D187" strokeWidth="1.0725" strokeLinejoin="round"/>
+              </svg>
+            </a>
+            <a
+              href="https://x.com/thebargainb"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-7 h-7 md:w-8 md:h-8 bg-[#F4FBF4] dark:bg-[#323232] hover:bg-muted rounded-full flex items-center justify-center transition-colors duration-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="14" viewBox="0 0 15 14" fill="none">
+                <path d="M0.831707 0.846462C0.760028 0.749098 0.829547 0.611591 0.950451 0.611591H4.66153C4.70816 0.611591 4.75205 0.633648 4.77987 0.671071L8.39682 5.53631C8.45229 5.61093 8.56213 5.61621 8.6245 5.54726L13.1497 0.545113C13.1783 0.513551 13.2191 0.495865 13.2616 0.496604L13.9879 0.50922C14.114 0.51141 14.1794 0.660553 14.0955 0.754713L9.1395 6.31998C9.09299 6.3722 9.08956 6.44991 9.13129 6.50603L14.2682 13.4146C14.3405 13.5118 14.2711 13.65 14.1498 13.65H10.4415C10.3952 13.65 10.3516 13.6282 10.3237 13.5912L6.91902 9.06952C6.86318 8.99536 6.75352 8.99063 6.69151 9.05971L2.51019 13.7172C2.48222 13.7484 2.44233 13.7661 2.40047 13.7661H1.69725C1.57012 13.7661 1.50258 13.616 1.58691 13.5209L6.19265 8.32509C6.23878 8.27306 6.24228 8.19587 6.20106 8.13987L0.831707 0.846462ZM4.39545 1.41957C4.36762 1.38218 4.32376 1.36015 4.27716 1.36015H2.49246C2.37106 1.36015 2.30167 1.49866 2.37436 1.59589L10.7679 12.8229C10.7958 12.8601 10.8395 12.8821 10.886 12.8821H12.633C12.7542 12.8821 12.8236 12.7439 12.7512 12.6466L4.39545 1.41957Z" fill="#84D187" stroke="#84D187" strokeWidth="0.294905"/>
+              </svg>
             </a>
           </div>
 
@@ -551,6 +573,7 @@ export default function PublicHomePage() {
             <ProductHuntBadge />
           </div>
         </div>
+        <Footer />
       </div>
     </div>
   )
