@@ -1,5 +1,684 @@
 import { supabaseAdmin } from './supabase';
 import { getOrCreateAssistantForConversation } from './assistant-service';
+import { createClient } from '@/utils/supabase/server'
+import { createClient as createClientSide } from '@/utils/supabase/client'
+
+// =============================================================================
+// WASENDER API CONFIGURATION
+// =============================================================================
+
+const WASENDER_API_BASE_URL = process.env.WASENDER_API_URL || 'https://www.wasenderapi.com'
+const WASENDER_API_KEY = process.env.WASENDER_API_KEY || ''
+const WASENDER_SESSION_ID = process.env.WASENDER_SESSION_ID || ''
+
+interface WASenderResponse {
+  success: boolean
+  data?: any
+  error?: string
+}
+
+interface SendMessageOptions {
+  to: string
+  text?: string
+  imageUrl?: string
+  videoUrl?: string
+  audioUrl?: string
+  documentUrl?: string
+  replyToMessageId?: string
+}
+
+interface WebhookPayload {
+  event: string
+  data: {
+    messages?: Array<{
+      key: {
+        remoteJid: string
+        fromMe: boolean
+        id: string
+      }
+      message: {
+        conversation?: string
+        extendedTextMessage?: {
+          text: string
+        }
+        imageMessage?: {
+          url: string
+          mediaKey: string
+          mimetype: string
+          caption?: string
+        }
+        videoMessage?: {
+          url: string
+          mediaKey: string
+          mimetype: string
+          caption?: string
+        }
+        audioMessage?: {
+          url: string
+          mediaKey: string
+          mimetype: string
+        }
+        documentMessage?: {
+          url: string
+          mediaKey: string
+          mimetype: string
+          fileName?: string
+        }
+      }
+      pushName?: string
+      messageTimestamp: number
+    }>
+  }
+}
+
+// =============================================================================
+// WASENDER API CLIENT
+// =============================================================================
+
+class WASenderClient {
+  private apiKey: string
+  private sessionId: string
+  private baseUrl: string
+
+  constructor() {
+    this.apiKey = WASENDER_API_KEY
+    this.sessionId = WASENDER_SESSION_ID
+    this.baseUrl = WASENDER_API_BASE_URL
+  }
+
+  private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<WASenderResponse> {
+    try {
+      const url = `${this.baseUrl}${endpoint}`
+      console.log('🔄 WASender API Request:', { url, method: options.method || 'GET' })
+
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ WASender API Error Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        })
+        
+        throw new Error(`WASender API Error: ${response.status} ${response.statusText} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log('✅ WASender API Success:', data)
+      
+      return {
+        success: true,
+        data
+      }
+    } catch (error) {
+      console.error('❌ WASender API Request Failed:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  // =============================================================================
+  // SEND MESSAGE METHODS
+  // =============================================================================
+
+  async sendTextMessage(to: string, text: string, replyToMessageId?: string): Promise<WASenderResponse> {
+    const payload: any = {
+      to,
+      text
+    }
+
+    if (replyToMessageId) {
+      payload.replyToMessageId = replyToMessageId
+    }
+
+    return this.makeRequest('/api/send-message', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+  }
+
+  async sendImageMessage(to: string, imageUrl: string, caption?: string): Promise<WASenderResponse> {
+    const payload: any = {
+      to,
+      imageUrl
+    }
+
+    if (caption) {
+      payload.caption = caption
+    }
+
+    return this.makeRequest('/api/send-message', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+  }
+
+  async sendVideoMessage(to: string, videoUrl: string, caption?: string): Promise<WASenderResponse> {
+    const payload: any = {
+      to,
+      videoUrl
+    }
+
+    if (caption) {
+      payload.caption = caption
+    }
+
+    return this.makeRequest('/api/send-message', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+  }
+
+  async sendAudioMessage(to: string, audioUrl: string): Promise<WASenderResponse> {
+    return this.makeRequest('/api/send-message', {
+      method: 'POST',
+      body: JSON.stringify({
+        to,
+        audioUrl
+      })
+    })
+  }
+
+  async sendDocumentMessage(to: string, documentUrl: string, fileName?: string): Promise<WASenderResponse> {
+    const payload: any = {
+      to,
+      documentUrl
+    }
+
+    if (fileName) {
+      payload.fileName = fileName
+    }
+
+    return this.makeRequest('/api/send-message', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+  }
+
+  // =============================================================================
+  // CONTACT SYNC METHODS
+  // =============================================================================
+
+  async syncContacts(): Promise<WASenderResponse> {
+    return this.makeRequest('/api/contacts', {
+      method: 'GET'
+    })
+  }
+
+  async getConversations(): Promise<WASenderResponse> {
+    return this.makeRequest('/api/conversations', {
+      method: 'GET'
+    })
+  }
+
+  async getConversationMessages(conversationId: string, limit: number = 50): Promise<WASenderResponse> {
+    return this.makeRequest(`/api/conversations/${conversationId}/messages?limit=${limit}`, {
+      method: 'GET'
+    })
+  }
+
+  // =============================================================================
+  // SESSION MANAGEMENT
+  // =============================================================================
+
+  async getSessionStatus(): Promise<WASenderResponse> {
+    return this.makeRequest('/api/session/status', {
+      method: 'GET'
+    })
+  }
+
+  async restartSession(): Promise<WASenderResponse> {
+    return this.makeRequest('/api/session/restart', {
+      method: 'POST'
+    })
+  }
+}
+
+// =============================================================================
+// WEBHOOK PROCESSING
+// =============================================================================
+
+export async function processWASenderWebhook(payload: WebhookPayload): Promise<{ success: boolean; message?: string }> {
+  try {
+    console.log('📨 Processing WASender webhook:', payload.event)
+
+    if (payload.event === 'messages.upsert' && payload.data.messages) {
+      const messages = payload.data.messages
+      
+      for (const message of messages) {
+        await processIncomingMessage(message)
+      }
+    }
+
+    return { success: true, message: 'Webhook processed successfully' }
+  } catch (error) {
+    console.error('❌ Webhook processing error:', error)
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
+}
+
+async function processIncomingMessage(message: any) {
+  try {
+    const { key, message: messageContent, pushName, messageTimestamp } = message
+    
+    // Skip outgoing messages (sent by us)
+    if (key.fromMe) {
+      console.log('⏩ Skipping outgoing message:', key.id)
+      return
+    }
+
+    console.log('📥 Processing incoming message:', key.id)
+
+    // Extract phone number from remoteJid
+    const phoneNumber = key.remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
+    
+    // Get message content
+    let content = ''
+    let messageType = 'text'
+    let mediaUrl = ''
+    let mediaType = ''
+    
+    if (messageContent.conversation) {
+      content = messageContent.conversation
+    } else if (messageContent.extendedTextMessage?.text) {
+      content = messageContent.extendedTextMessage.text
+    } else if (messageContent.imageMessage) {
+      content = messageContent.imageMessage.caption || '[Image]'
+      messageType = 'image'
+      mediaUrl = messageContent.imageMessage.url || ''
+      mediaType = messageContent.imageMessage.mimetype || 'image/jpeg'
+    } else if (messageContent.videoMessage) {
+      content = messageContent.videoMessage.caption || '[Video]'
+      messageType = 'video'
+      mediaUrl = messageContent.videoMessage.url || ''
+      mediaType = messageContent.videoMessage.mimetype || 'video/mp4'
+    } else if (messageContent.audioMessage) {
+      content = '[Audio]'
+      messageType = 'audio'
+      mediaUrl = messageContent.audioMessage.url || ''
+      mediaType = messageContent.audioMessage.mimetype || 'audio/mp4'
+    } else if (messageContent.documentMessage) {
+      content = messageContent.documentMessage.fileName || '[Document]'
+      messageType = 'document'
+      mediaUrl = messageContent.documentMessage.url || ''
+      mediaType = messageContent.documentMessage.mimetype || 'application/octet-stream'
+    }
+
+    // Skip if no content
+    if (!content) {
+      console.log('⏩ Skipping message with no content:', key.id)
+      return
+    }
+
+    const supabase = createClient()
+
+    // Find or create contact
+    const { data: contact, error: contactError } = await supabase
+      .from('whatsapp_contacts')
+      .select('*')
+      .eq('phone_number', phoneNumber)
+      .single()
+
+    let contactId = contact?.id
+
+    if (!contact) {
+      console.log('👤 Creating new contact:', phoneNumber)
+      const { data: newContact, error: createError } = await supabase
+        .from('whatsapp_contacts')
+        .insert({
+          phone_number: phoneNumber,
+          display_name: pushName || phoneNumber,
+          push_name: pushName,
+          is_active: true,
+          last_seen_at: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        })
+        .select('*')
+        .single()
+
+      if (createError) {
+        console.error('❌ Error creating contact:', createError)
+        return
+      }
+
+      contactId = newContact.id
+    } else {
+      // Update contact last seen
+      await supabase
+        .from('whatsapp_contacts')
+        .update({
+          last_seen_at: new Date().toISOString(),
+          push_name: pushName || contact.push_name
+        })
+        .eq('id', contactId)
+    }
+
+    // Find or create conversation
+    let { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('whatsapp_contact_id', contactId)
+      .single()
+
+    if (!conversation) {
+      console.log('💬 Creating new conversation for contact:', contactId)
+      const { data: newConversation, error: createConvError } = await supabase
+        .from('conversations')
+        .insert({
+          whatsapp_contact_id: contactId,
+          title: pushName || `Chat with ${phoneNumber}`,
+          description: 'WhatsApp conversation',
+          unread_count: 1,
+          last_message_at: new Date().toISOString(),
+          created_at: new Date().toISOString()
+        })
+        .select('*')
+        .single()
+
+      if (createConvError) {
+        console.error('❌ Error creating conversation:', createConvError)
+        return
+      }
+
+      conversation = newConversation
+    } else {
+      // Update conversation with new message
+      await supabase
+        .from('conversations')
+        .update({
+          unread_count: (conversation.unread_count || 0) + 1,
+          last_message_at: new Date().toISOString()
+        })
+        .eq('id', conversation.id)
+    }
+
+    // Insert message
+    const messageData: any = {
+      conversation_id: conversation.id,
+      whatsapp_message_id: key.id,
+      content,
+      message_type: messageType,
+      direction: 'inbound',
+      status: 'delivered',
+      sender_name: pushName || phoneNumber,
+      created_at: new Date(messageTimestamp * 1000).toISOString()
+    }
+
+    if (mediaUrl) {
+      messageData.media_url = mediaUrl
+      messageData.media_type = mediaType
+    }
+
+    const { error: messageError } = await supabase
+      .from('messages')
+      .insert(messageData)
+
+    if (messageError) {
+      console.error('❌ Error inserting message:', messageError)
+      return
+    }
+
+    console.log('✅ Message processed successfully:', key.id)
+
+  } catch (error) {
+    console.error('❌ Error processing incoming message:', error)
+    throw error
+  }
+}
+
+// =============================================================================
+// EXPORT SINGLETON CLIENT
+// =============================================================================
+
+export const wasenderClient = new WASenderClient()
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+export function formatPhoneNumber(phoneNumber: string): string {
+  // Remove all non-digit characters
+  const cleaned = phoneNumber.replace(/\D/g, '')
+  
+  // Add country code if not present
+  if (cleaned.length === 10) {
+    return `+1${cleaned}` // Default to US
+  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+    return `+${cleaned}`
+  } else if (cleaned.length > 11) {
+    return `+${cleaned}`
+  }
+  
+  return phoneNumber
+}
+
+export function extractPhoneNumber(remoteJid: string): string {
+  return remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
+}
+
+export function isValidPhoneNumber(phoneNumber: string): boolean {
+  const cleaned = phoneNumber.replace(/\D/g, '')
+  return cleaned.length >= 10 && cleaned.length <= 15
+}
+
+// =============================================================================
+// MESSAGE SENDING HELPERS FOR CHAT 2.0
+// =============================================================================
+
+export async function sendMessage(
+  phoneNumber: string,
+  message: string,
+  options: {
+    conversationId?: string
+    replyToMessageId?: string
+    messageType?: 'text' | 'image' | 'video' | 'audio' | 'document'
+    mediaUrl?: string
+    caption?: string
+  } = {}
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  try {
+    const formattedPhone = formatPhoneNumber(phoneNumber)
+    
+    if (!isValidPhoneNumber(formattedPhone)) {
+      throw new Error('Invalid phone number format')
+    }
+
+    let response: WASenderResponse
+
+    // Send appropriate message type
+    switch (options.messageType || 'text') {
+      case 'text':
+        response = await wasenderClient.sendTextMessage(
+          formattedPhone,
+          message,
+          options.replyToMessageId
+        )
+        break
+      
+      case 'image':
+        if (!options.mediaUrl) {
+          throw new Error('Media URL is required for image messages')
+        }
+        response = await wasenderClient.sendImageMessage(
+          formattedPhone,
+          options.mediaUrl,
+          options.caption
+        )
+        break
+      
+      case 'video':
+        if (!options.mediaUrl) {
+          throw new Error('Media URL is required for video messages')
+        }
+        response = await wasenderClient.sendVideoMessage(
+          formattedPhone,
+          options.mediaUrl,
+          options.caption
+        )
+        break
+      
+      case 'audio':
+        if (!options.mediaUrl) {
+          throw new Error('Media URL is required for audio messages')
+        }
+        response = await wasenderClient.sendAudioMessage(
+          formattedPhone,
+          options.mediaUrl
+        )
+        break
+      
+      case 'document':
+        if (!options.mediaUrl) {
+          throw new Error('Media URL is required for document messages')
+        }
+        response = await wasenderClient.sendDocumentMessage(
+          formattedPhone,
+          options.mediaUrl,
+          options.caption
+        )
+        break
+      
+      default:
+        throw new Error(`Unsupported message type: ${options.messageType}`)
+    }
+
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to send message')
+    }
+
+    // Save message to database if conversation ID is provided
+    if (options.conversationId) {
+      const supabase = createClient()
+      
+      const messageData = {
+        conversation_id: options.conversationId,
+        whatsapp_message_id: response.data?.msgId?.toString() || '',
+        content: message,
+        message_type: options.messageType || 'text',
+        direction: 'outbound',
+        status: 'sent',
+        sender_name: 'Admin',
+        media_url: options.mediaUrl || null,
+        media_type: options.messageType === 'text' ? null : options.messageType,
+        created_at: new Date().toISOString()
+      }
+
+      const { error: dbError } = await supabase
+        .from('messages')
+        .insert(messageData)
+
+      if (dbError) {
+        console.error('❌ Error saving message to database:', dbError)
+        // Don't fail the entire operation for DB errors
+      }
+    }
+
+    return {
+      success: true,
+      messageId: response.data?.msgId?.toString()
+    }
+
+  } catch (error) {
+    console.error('❌ Error sending message:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+// =============================================================================
+// CONTACT SYNC HELPERS
+// =============================================================================
+
+export async function syncContactsFromWASender(): Promise<{ success: boolean; contactsUpdated: number; error?: string }> {
+  try {
+    console.log('🔄 Syncing contacts from WASender...')
+    
+    const response = await wasenderClient.syncContacts()
+    
+    if (!response.success) {
+      throw new Error(response.error || 'Failed to sync contacts')
+    }
+
+    const supabase = createClient()
+    let contactsUpdated = 0
+
+    // Process contacts from WASender
+    const contacts = response.data?.contacts || []
+    
+    for (const contact of contacts) {
+      try {
+        const { data: existingContact } = await supabase
+          .from('whatsapp_contacts')
+          .select('*')
+          .eq('phone_number', contact.phone_number)
+          .single()
+
+        if (existingContact) {
+          // Update existing contact
+          await supabase
+            .from('whatsapp_contacts')
+            .update({
+              display_name: contact.display_name || existingContact.display_name,
+              push_name: contact.push_name || existingContact.push_name,
+              verified_name: contact.verified_name || existingContact.verified_name,
+              is_active: contact.is_active ?? existingContact.is_active,
+              last_seen_at: contact.last_seen_at || existingContact.last_seen_at,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingContact.id)
+        } else {
+          // Create new contact
+          await supabase
+            .from('whatsapp_contacts')
+            .insert({
+              phone_number: contact.phone_number,
+              display_name: contact.display_name || contact.phone_number,
+              push_name: contact.push_name,
+              verified_name: contact.verified_name,
+              is_active: contact.is_active ?? true,
+              last_seen_at: contact.last_seen_at,
+              created_at: new Date().toISOString()
+            })
+        }
+
+        contactsUpdated++
+      } catch (error) {
+        console.error('❌ Error processing contact:', contact.phone_number, error)
+        continue
+      }
+    }
+
+    console.log(`✅ Synced ${contactsUpdated} contacts from WASender`)
+    
+    return {
+      success: true,
+      contactsUpdated
+    }
+
+  } catch (error) {
+    console.error('❌ Error syncing contacts:', error)
+    return {
+      success: false,
+      contactsUpdated: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
 
 export interface AIAgentConfig {
   baseUrl: string;

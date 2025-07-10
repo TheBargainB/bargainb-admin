@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, MessageSquare, Package, Users, Settings, Home, Activity, Bug, Bot } from "lucide-react"
+import { BarChart3, MessageSquare, Package, Users, Settings, Home, Activity, Bug, Bot, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
@@ -42,6 +42,12 @@ const menuItems = [
     url: "/admin/chat",
     icon: MessageSquare,
     description: "Customer conversations",
+  },
+  {
+    title: "Chat 2.0",
+    url: "/admin/chat-v2",
+    icon: MessageCircle,
+    description: "Next-gen WhatsApp business chat",
   },
   {
     title: "Analytics",
