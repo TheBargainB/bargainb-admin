@@ -189,12 +189,12 @@ export default function AIManagementPage() {
   // Loading state
   if (globalLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Loader2 className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-spin" />
-              <p className="text-gray-500">Loading AI Management...</p>
+              <p className="text-muted-foreground">Loading AI Management...</p>
             </div>
           </div>
         </div>
@@ -205,11 +205,11 @@ export default function AIManagementPage() {
   // Error state
   if (hasError) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="text-red-500 mb-4">
+              <div className="text-destructive mb-4">
                 <p className="text-lg font-semibold">Error Loading AI Management</p>
                 <p className="text-sm">Please check the console for details</p>
               </div>
@@ -222,14 +222,14 @@ export default function AIManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">AI Management</h1>
-            <p className="text-gray-600 mt-2">Manage BB Agent assistants and user assignments</p>
+            <h1 className="text-3xl font-bold text-foreground">AI Management</h1>
+            <p className="text-muted-foreground mt-2">Manage BB Agent assistants and user assignments</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -304,7 +304,7 @@ export default function AIManagementPage() {
         {/* Main Content - Assistants Table */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">BB Agent Assistants</h2>
+            <h2 className="text-xl font-semibold text-foreground">BB Agent Assistants</h2>
             <Button 
               onClick={handleCreateAssistant}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
