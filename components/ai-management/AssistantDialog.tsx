@@ -149,7 +149,7 @@ export const AssistantDialog = ({
                   </CardHeader>
                   <CardContent>
                     <ScrollArea className="h-48">
-                      <pre className="text-xs bg-muted text-muted-foreground p-3 rounded font-mono overflow-auto">
+                      <pre className="text-xs bg-card text-foreground p-3 rounded border font-mono overflow-auto">
                         {JSON.stringify(assistant.config.configurable, null, 2)}
                       </pre>
                     </ScrollArea>
@@ -167,7 +167,7 @@ export const AssistantDialog = ({
                     </CardHeader>
                     <CardContent>
                       <ScrollArea className="h-32">
-                        <pre className="text-xs bg-muted text-muted-foreground p-3 rounded font-mono overflow-auto">
+                        <pre className="text-xs bg-card text-foreground p-3 rounded border font-mono overflow-auto">
                           {JSON.stringify(assistant.metadata, null, 2)}
                         </pre>
                       </ScrollArea>
