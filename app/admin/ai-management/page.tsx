@@ -29,6 +29,7 @@ import { useAIManagement } from '@/hooks/ai-management'
 
 // Import types
 import type { BBAssistant } from '@/types/ai-management.types'
+import { Badge } from '@/components/ui/badge'
 
 export default function AIManagementPage() {
   // Use our unified hook instead of 20+ useState hooks
@@ -236,13 +237,13 @@ export default function AIManagementPage() {
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
-      <div className="w-full space-y-6">
+      <div className="w-full space-y-4">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">AI Management</h1>
-            <p className="text-muted-foreground mt-2">Manage BB Agent assistants and user assignments</p>
+            <h1 className="text-2xl font-bold text-foreground">AI Management</h1>
+            <p className="text-muted-foreground mt-1">Manage BB Agent assistants and user assignments</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -259,6 +260,7 @@ export default function AIManagementPage() {
               onClick={handleRefresh}
               variant="outline"
               disabled={globalLoading}
+              size="sm"
             >
               {globalLoading ? (
                 <>
@@ -275,8 +277,8 @@ export default function AIManagementPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        {/* Stats Cards - More Compact */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatsCard
             label="BB Assistants"
             value={assistants.length}
@@ -314,13 +316,21 @@ export default function AIManagementPage() {
           />
         </div>
 
-        {/* Main Content - Assistants Table */}
-        <div className="space-y-6">
+        {/* Main Content - Assistants Table with Create Button */}
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-foreground">BB Agent Assistants</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground">BB Agent Assistants</h2>
+              {filteredAssistants.length !== assistants.length && (
+                <Badge variant="outline" className="text-xs">
+                  {filteredAssistants.length} of {assistants.length} shown
+                </Badge>
+              )}
+            </div>
             <Button 
               onClick={handleCreateAssistant}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+              size="sm"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create New Assistant

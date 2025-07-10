@@ -28,13 +28,13 @@ export const StatsCard = ({
 }: StatsCardProps) => {
   return (
     <Card className={cn("hover:shadow-md transition-shadow", className)}>
-      <CardContent className="p-6">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <p className="text-2xl font-bold">{value}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted-foreground truncate">{label}</p>
+            <p className="text-lg font-bold mt-1">{value}</p>
             {description && (
-              <p className="text-xs text-muted-foreground mt-1">{description}</p>
+              <p className="text-xs text-muted-foreground mt-1 truncate">{description}</p>
             )}
             {trend && (
               <p className={cn(
@@ -45,7 +45,7 @@ export const StatsCard = ({
               </p>
             )}
           </div>
-          <Icon className={cn("h-8 w-8", iconColor)} />
+          <Icon className={cn("h-6 w-6 ml-2 flex-shrink-0", iconColor)} />
         </div>
       </CardContent>
     </Card>
