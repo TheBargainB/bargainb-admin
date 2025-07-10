@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -25,14 +25,19 @@ import {
   ShoppingCart,
   DollarSign,
   Clock,
-  Shield
+  Shield,
+  Edit
 } from 'lucide-react'
-import { CreateAssistantData } from '@/types/ai-management.types'
+import { CreateAssistantData, BBAssistant } from '@/types/ai-management.types'
 
 interface CreateAssistantDialogProps {
   isOpen: boolean
   onClose: () => void
   onCreate: (data: CreateAssistantData) => Promise<void>
+  // New props for edit mode
+  editMode?: boolean
+  assistant?: BBAssistant | null
+  onUpdate?: (assistantId: string, data: CreateAssistantData) => Promise<void>
 }
 
 interface AssistantConfiguration {
@@ -82,52 +87,112 @@ interface AssistantConfiguration {
   }
 }
 
+// Default configuration
+const getDefaultConfig = (): AssistantConfiguration => ({
+  name: '',
+  description: '',
+  recursion_limit: 25,
+  user_preferences: {
+    budget_limit: 100,
+    dietary_restrictions: [],
+    preferred_stores: ['Albert Heijn', 'Jumbo', 'Dirk'],
+    language: 'dutch',
+    region: 'netherlands'
+  },
+  ai_behavior: {
+    response_style: 'friendly',
+    price_sensitivity: 'balanced',
+    health_focus: true,
+    tone: 'friendly',
+    expertise_level: 'expert'
+  },
+  capabilities: {
+    recipes: true,
+    nutrition: true,
+    meal_planning: true,
+    budget_tracking: true,
+    cultural_cuisine: true,
+    store_recommendations: true,
+    price_comparison: true,
+    delivery_options: true
+  },
+  advanced: {
+    guard_rails_enabled: true,
+    max_message_length: 500,
+    max_tokens_per_request: 4000,
+    request_timeout: 30,
+    temperature: 0.7,
+    custom_instructions: ''
+  }
+})
+
 export const CreateAssistantDialog = ({
   isOpen,
   onClose,
-  onCreate
+  onCreate,
+  editMode = false,
+  assistant = null,
+  onUpdate
 }: CreateAssistantDialogProps) => {
-  const [config, setConfig] = useState<AssistantConfiguration>({
-    name: '',
-    description: '',
-    recursion_limit: 25,
-    user_preferences: {
-      budget_limit: 100,
-      dietary_restrictions: [],
-      preferred_stores: ['Albert Heijn', 'Jumbo', 'Dirk'],
-      language: 'dutch',
-      region: 'netherlands'
-    },
-    ai_behavior: {
-      response_style: 'friendly',
-      price_sensitivity: 'balanced',
-      health_focus: true,
-      tone: 'friendly',
-      expertise_level: 'expert'
-    },
-    capabilities: {
-      recipes: true,
-      nutrition: true,
-      meal_planning: true,
-      budget_tracking: true,
-      cultural_cuisine: true,
-      store_recommendations: true,
-      price_comparison: true,
-      delivery_options: true
-    },
-    advanced: {
-      guard_rails_enabled: true,
-      max_message_length: 500,
-      max_tokens_per_request: 4000,
-      request_timeout: 30,
-      temperature: 0.7,
-      custom_instructions: ''
-    }
-  })
-  
+  const [config, setConfig] = useState<AssistantConfiguration>(getDefaultConfig())
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [newDietaryRestriction, setNewDietaryRestriction] = useState('')
+
+  // Load assistant data when in edit mode
+  useEffect(() => {
+    if (editMode && assistant && isOpen) {
+      try {
+        // Parse the existing configurable JSON
+        const existingConfig = assistant.config?.configurable ? JSON.parse(assistant.config.configurable) : {}
+        
+        setConfig({
+          name: assistant.name || '',
+          description: assistant.description || '',
+          recursion_limit: assistant.config?.recursion_limit || 25,
+          user_preferences: {
+            budget_limit: existingConfig.user_preferences?.budget_limit || 100,
+            dietary_restrictions: existingConfig.user_preferences?.dietary_restrictions || [],
+            preferred_stores: existingConfig.user_preferences?.preferred_stores || ['Albert Heijn', 'Jumbo', 'Dirk'],
+            language: existingConfig.user_preferences?.language || 'dutch',
+            region: existingConfig.user_preferences?.region || 'netherlands'
+          },
+          ai_behavior: {
+            response_style: existingConfig.ai_behavior?.response_style || 'friendly',
+            price_sensitivity: existingConfig.ai_behavior?.price_sensitivity || 'balanced',
+            health_focus: existingConfig.ai_behavior?.health_focus !== undefined ? existingConfig.ai_behavior.health_focus : true,
+            tone: existingConfig.ai_behavior?.tone || 'friendly',
+            expertise_level: existingConfig.ai_behavior?.expertise_level || 'expert'
+          },
+          capabilities: {
+            recipes: existingConfig.capabilities?.recipes !== undefined ? existingConfig.capabilities.recipes : true,
+            nutrition: existingConfig.capabilities?.nutrition !== undefined ? existingConfig.capabilities.nutrition : true,
+            meal_planning: existingConfig.capabilities?.meal_planning !== undefined ? existingConfig.capabilities.meal_planning : true,
+            budget_tracking: existingConfig.capabilities?.budget_tracking !== undefined ? existingConfig.capabilities.budget_tracking : true,
+            cultural_cuisine: existingConfig.capabilities?.cultural_cuisine !== undefined ? existingConfig.capabilities.cultural_cuisine : true,
+            store_recommendations: existingConfig.capabilities?.store_recommendations !== undefined ? existingConfig.capabilities.store_recommendations : true,
+            price_comparison: existingConfig.capabilities?.price_comparison !== undefined ? existingConfig.capabilities.price_comparison : true,
+            delivery_options: existingConfig.capabilities?.delivery_options !== undefined ? existingConfig.capabilities.delivery_options : true
+          },
+          advanced: {
+            guard_rails_enabled: existingConfig.advanced?.guard_rails_enabled !== undefined ? existingConfig.advanced.guard_rails_enabled : true,
+            max_message_length: existingConfig.advanced?.max_message_length || 500,
+            max_tokens_per_request: existingConfig.advanced?.max_tokens_per_request || 4000,
+            request_timeout: existingConfig.advanced?.request_timeout || 30,
+            temperature: existingConfig.advanced?.temperature !== undefined ? existingConfig.advanced.temperature : 0.7,
+            custom_instructions: existingConfig.advanced?.custom_instructions || ''
+          }
+        })
+      } catch (error) {
+        console.error('Error parsing assistant configuration:', error)
+        // Fall back to default config if parsing fails
+        setConfig(getDefaultConfig())
+      }
+    } else if (!editMode && isOpen) {
+      // Reset to default when creating new assistant
+      setConfig(getDefaultConfig())
+    }
+  }, [editMode, assistant, isOpen])
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {}
@@ -172,54 +237,26 @@ export const CreateAssistantDialog = ({
         })
       }
       
-      await onCreate(formData)
+      if (editMode && assistant && onUpdate) {
+        await onUpdate(assistant.assistant_id, formData)
+      } else {
+        await onCreate(formData)
+      }
+      
       handleClose()
     } catch (error) {
-      console.error('Failed to create assistant:', error)
+      console.error(`Failed to ${editMode ? 'update' : 'create'} assistant:`, error)
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleClose = () => {
-    setConfig({
-      name: '',
-      description: '',
-      recursion_limit: 25,
-      user_preferences: {
-        budget_limit: 100,
-        dietary_restrictions: [],
-        preferred_stores: ['Albert Heijn', 'Jumbo', 'Dirk'],
-        language: 'dutch',
-        region: 'netherlands'
-      },
-      ai_behavior: {
-        response_style: 'friendly',
-        price_sensitivity: 'balanced',
-        health_focus: true,
-        tone: 'friendly',
-        expertise_level: 'expert'
-      },
-      capabilities: {
-        recipes: true,
-        nutrition: true,
-        meal_planning: true,
-        budget_tracking: true,
-        cultural_cuisine: true,
-        store_recommendations: true,
-        price_comparison: true,
-        delivery_options: true
-      },
-      advanced: {
-        guard_rails_enabled: true,
-        max_message_length: 500,
-        max_tokens_per_request: 4000,
-        request_timeout: 30,
-        temperature: 0.7,
-        custom_instructions: ''
-      }
-    })
+    if (!editMode) {
+      setConfig(getDefaultConfig())
+    }
     setErrors({})
+    setNewDietaryRestriction('')
     onClose()
   }
 
@@ -269,11 +306,20 @@ export const CreateAssistantDialog = ({
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
         <DialogHeader className="p-6 pb-0">
           <div className="flex items-center gap-3">
-            <Bot className="h-6 w-6 text-blue-600" />
+            {editMode ? (
+              <Edit className="h-6 w-6 text-blue-600" />
+            ) : (
+              <Bot className="h-6 w-6 text-blue-600" />
+            )}
             <div>
-              <DialogTitle className="text-xl">Create New Assistant</DialogTitle>
+              <DialogTitle className="text-xl">
+                {editMode ? `Edit Assistant: ${assistant?.name || 'Unknown'}` : 'Create New Assistant'}
+              </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Configure a new BB Agent assistant with advanced settings
+                {editMode 
+                  ? 'Modify the configuration of this BB Agent assistant'
+                  : 'Configure a new BB Agent assistant with advanced settings'
+                }
               </p>
             </div>
           </div>
@@ -708,12 +754,21 @@ export const CreateAssistantDialog = ({
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating...
+                  {editMode ? 'Updating...' : 'Creating...'}
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4" />
-                  Create Assistant
+                  {editMode ? (
+                    <>
+                      <Edit className="h-4 w-4" />
+                      Update Assistant
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Create Assistant
+                    </>
+                  )}
                 </>
               )}
             </Button>

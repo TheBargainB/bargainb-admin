@@ -51,6 +51,7 @@ export default function AIManagementPage() {
   const [selectedAssistant, setSelectedAssistant] = useState<BBAssistant | null>(null)
   const [isAssistantDialogOpen, setIsAssistantDialogOpen] = useState(false)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isAssignUserDialogOpen, setIsAssignUserDialogOpen] = useState(false)
 
   // Filter assistants by search term
@@ -90,8 +91,8 @@ export default function AIManagementPage() {
 
   // Handle editing assistant
   const handleEditAssistant = (assistant: BBAssistant) => {
-    // TODO: Implement edit functionality or open edit dialog
-    console.log('Edit assistant:', assistant)
+    setSelectedAssistant(assistant)
+    setIsEditDialogOpen(true)
   }
 
   // Handle deleting assistant
@@ -131,6 +132,17 @@ export default function AIManagementPage() {
       await refreshAll()
     } catch (error) {
       console.error('Failed to create assistant:', error)
+      throw error
+    }
+  }
+
+  // Handle updating assistant
+  const handleUpdateAssistantSubmit = async (assistantId: string, data: any) => {
+    try {
+      await assistantActions.update(assistantId, data)
+      await refreshAll()
+    } catch (error) {
+      console.error('Failed to update assistant:', error)
       throw error
     }
   }
@@ -319,6 +331,18 @@ export default function AIManagementPage() {
           isOpen={isCreateDialogOpen}
           onClose={() => setIsCreateDialogOpen(false)}
           onCreate={handleCreateAssistantSubmit}
+        />
+
+        <CreateAssistantDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => {
+            setIsEditDialogOpen(false)
+            setSelectedAssistant(null)
+          }}
+          onCreate={handleCreateAssistantSubmit}
+          editMode={true}
+          assistant={selectedAssistant}
+          onUpdate={handleUpdateAssistantSubmit}
         />
 
         <AssignUserDialog
