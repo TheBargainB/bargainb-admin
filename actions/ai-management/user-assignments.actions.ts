@@ -55,20 +55,20 @@ export const createUserAssignment = async (data: AssignUserData): Promise<UserAs
       force_update: true // 🔧 FIX: Allow reassigning assistants to users who already have one
     }
 
-    const response = await apiClient.post<{ success: boolean; assignment?: UserAssignment; error?: string }>(
+    const response = await apiClient.post<any>(
       API_ENDPOINTS.USER_ASSIGNMENTS, 
       payload
     )
 
-    if (response.success && response.data && response.data.success) {
+    if (response.success) {
       return {
         success: true,
-        assignment: response.data.assignment
+        assignment: response.data // The assignment data is now in response.data
       }
     } else {
       return {
         success: false,
-        error: response.data?.error || response.error || 'Failed to create assignment'
+        error: response.error || 'Failed to create assignment'
       }
     }
   } catch (error) {
@@ -99,20 +99,20 @@ export const updateUserAssignment = async (
       ...(additionalData?.notes && { notes: additionalData.notes })
     }
 
-    const response = await apiClient.put<{ success: boolean; assignment?: UserAssignment; error?: string }>(
+    const response = await apiClient.put<any>(
       API_ENDPOINTS.USER_ASSIGNMENTS, 
       payload
     )
 
-    if (response.success && response.data && response.data.success) {
+    if (response.success) {
       return {
         success: true,
-        assignment: response.data.assignment
+        assignment: response.data // The assignment data is now in response.data
       }
     } else {
       return {
         success: false,
-        error: response.data?.error || response.error || 'Failed to update assignment'
+        error: response.error || 'Failed to update assignment'
       }
     }
   } catch (error) {
@@ -128,7 +128,7 @@ export const updateUserAssignment = async (
  */
 export const deleteUserAssignment = async (conversationId: string): Promise<UserAssignmentsResponse> => {
   try {
-    const response = await apiClient.request<{ success: boolean; error?: string }>(
+    const response = await apiClient.request<any>(
       API_ENDPOINTS.USER_ASSIGNMENTS,
       { 
         method: 'DELETE',
@@ -136,14 +136,14 @@ export const deleteUserAssignment = async (conversationId: string): Promise<User
       }
     )
 
-    if (response.success && response.data && response.data.success) {
+    if (response.success) {
       return {
         success: true
       }
     } else {
       return {
         success: false,
-        error: response.data?.error || response.error || 'Failed to remove assignment'
+        error: response.error || 'Failed to remove assignment'
       }
     }
   } catch (error) {

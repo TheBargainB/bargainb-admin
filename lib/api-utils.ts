@@ -58,11 +58,24 @@ export const transformApiResponse = <T>(response: any): ApiResponse<T> => {
   // Handle responses that already follow our format
   if (typeof response === 'object' && response !== null) {
     if (SUCCESS_INDICATORS.SUCCESS_FIELD in response) {
-      return {
-        success: response[SUCCESS_INDICATORS.SUCCESS_FIELD],
-        data: response[SUCCESS_INDICATORS.DATA_FIELD],
-        error: response[SUCCESS_INDICATORS.ERROR_FIELD],
-        message: response[SUCCESS_INDICATORS.MESSAGE_FIELD],
+      // Check if the response has a dedicated data field
+      if (SUCCESS_INDICATORS.DATA_FIELD in response) {
+        return {
+          success: response[SUCCESS_INDICATORS.SUCCESS_FIELD],
+          data: response[SUCCESS_INDICATORS.DATA_FIELD],
+          error: response[SUCCESS_INDICATORS.ERROR_FIELD],
+          message: response[SUCCESS_INDICATORS.MESSAGE_FIELD],
+        }
+      } else {
+        // Response has success field but data is in the root object
+        // This is common for assignment APIs that return data directly
+        const { success, error, message, ...dataFields } = response
+        return {
+          success: response[SUCCESS_INDICATORS.SUCCESS_FIELD],
+          data: Object.keys(dataFields).length > 0 ? dataFields : response,
+          error: response[SUCCESS_INDICATORS.ERROR_FIELD],
+          message: response[SUCCESS_INDICATORS.MESSAGE_FIELD],
+        }
       }
     }
     
