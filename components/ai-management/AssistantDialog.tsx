@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { UserAssignmentTable } from './UserAssignmentTable'
+import { AssistantConfigDisplay } from './AssistantConfigDisplay'
 import { Bot, Settings, Code, Calendar, Hash, Edit } from 'lucide-react'
 import { BBAssistant, UserAssignment } from '@/types/ai-management.types'
 
@@ -140,21 +141,9 @@ export const AssistantDialog = ({
                 </Card>
 
                 {/* Configuration */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Code className="h-5 w-5" />
-                      Configuration
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="h-48">
-                      <pre className="text-xs bg-card text-foreground p-3 rounded border font-mono overflow-auto">
-                        {JSON.stringify(assistant.config.configurable, null, 2)}
-                      </pre>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
+                <AssistantConfigDisplay 
+                  config={assistant.config.configurable} 
+                />
 
                 {/* Metadata */}
                 {assistant.metadata && Object.keys(assistant.metadata).length > 0 && (

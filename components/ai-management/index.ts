@@ -5,6 +5,7 @@ export { UserAssignmentTable } from './UserAssignmentTable'
 export { AssistantDialog } from './AssistantDialog'
 export { CreateAssistantDialog } from './CreateAssistantDialog'
 export { AssignUserDialog } from './AssignUserDialog'
+export { AssistantConfigDisplay } from './AssistantConfigDisplay'
 
 // Type exports for convenience
 export type {
