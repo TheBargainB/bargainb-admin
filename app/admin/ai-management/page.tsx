@@ -186,6 +186,19 @@ export default function AIManagementPage() {
     }
   }
 
+  // Handle updating assistant configuration
+  const handleUpdateConfig = async (assistantId: string, config: any) => {
+    try {
+      const success = await assistantActions.update(assistantId, { configurable: JSON.stringify(config) })
+      if (success) {
+        await refreshAll(false) // Silent refresh - update action already shows toast
+      }
+    } catch (error) {
+      console.error('Failed to update configuration:', error)
+      throw error
+    }
+  }
+
   // Loading state
   if (globalLoading) {
     return (
@@ -338,6 +351,7 @@ export default function AIManagementPage() {
             setIsAssistantDialogOpen(false)
             setIsAssignUserDialogOpen(true)
           }}
+          onUpdateConfig={handleUpdateConfig}
         />
 
         <CreateAssistantDialog

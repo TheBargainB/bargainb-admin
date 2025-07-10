@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { useState } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { UserAssignmentTable } from './UserAssignmentTable'
-import { AssistantConfigDisplay } from './AssistantConfigDisplay'
+import { AssistantConfigEditor } from './AssistantConfigEditor'
 import { Bot, Settings, Code, Calendar, Hash, Edit } from 'lucide-react'
 import { BBAssistant, UserAssignment } from '@/types/ai-management.types'
 
@@ -19,6 +20,7 @@ interface AssistantDialogProps {
   onEdit: (assistant: BBAssistant) => void
   onUnassign: (conversationId: string, displayName: string) => void
   onAssignUser: (assistant: BBAssistant) => void
+  onUpdateConfig?: (assistantId: string, config: any) => void
 }
 
 export const AssistantDialog = ({
@@ -28,9 +30,19 @@ export const AssistantDialog = ({
   onClose,
   onEdit,
   onUnassign,
-  onAssignUser
+  onAssignUser,
+  onUpdateConfig
 }: AssistantDialogProps) => {
+  const [isEditingConfig, setIsEditingConfig] = useState(false)
+
   if (!assistant) return null
+
+  const handleConfigSave = async (updatedConfig: any) => {
+    if (onUpdateConfig && assistant) {
+      await onUpdateConfig(assistant.assistant_id, updatedConfig)
+      setIsEditingConfig(false)
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -141,9 +153,34 @@ export const AssistantDialog = ({
                 </Card>
 
                 {/* Configuration */}
-                <AssistantConfigDisplay 
-                  config={assistant.config.configurable} 
-                />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-5 w-5" />
+                        Configuration
+                      </div>
+                      {onUpdateConfig && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditingConfig(!isEditingConfig)}
+                          className="gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          {isEditingConfig ? 'Cancel' : 'Edit Config'}
+                        </Button>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <AssistantConfigEditor 
+                      config={assistant.config.configurable} 
+                      onSave={handleConfigSave}
+                      readOnly={!isEditingConfig}
+                    />
+                  </CardContent>
+                </Card>
 
                 {/* Metadata */}
                 {assistant.metadata && Object.keys(assistant.metadata).length > 0 && (
