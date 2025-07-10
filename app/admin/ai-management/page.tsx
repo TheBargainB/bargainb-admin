@@ -189,8 +189,8 @@ export default function AIManagementPage() {
   // Loading state
   if (globalLoading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        <div className="w-full">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Loader2 className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-spin" />
@@ -205,8 +205,8 @@ export default function AIManagementPage() {
   // Error state
   if (hasError) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+        <div className="w-full">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="text-destructive mb-4">
@@ -222,8 +222,8 @@ export default function AIManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+      <div className="w-full space-y-6">
         
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -234,7 +234,7 @@ export default function AIManagementPage() {
           
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Search assistants..."
                 value={searchTerm}
