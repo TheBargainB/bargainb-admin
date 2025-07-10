@@ -113,7 +113,7 @@ export default function AIManagementPage() {
       if (success) {
         console.log('✅ Assistant deleted successfully')
         // The hook handles success notifications via toast
-        await refreshAll()
+        await refreshAll(false) // Silent refresh - delete action already shows toast
       } else {
         console.error('❌ Delete failed')
         // The hook handles error notifications via toast
@@ -128,8 +128,10 @@ export default function AIManagementPage() {
   // Handle creating assistant
   const handleCreateAssistantSubmit = async (data: any) => {
     try {
-      await assistantActions.create(data)
-      await refreshAll()
+      const success = await assistantActions.create(data)
+      if (success) {
+        await refreshAll(false) // Silent refresh - create action already shows toast
+      }
     } catch (error) {
       console.error('Failed to create assistant:', error)
       throw error
@@ -139,8 +141,10 @@ export default function AIManagementPage() {
   // Handle updating assistant
   const handleUpdateAssistantSubmit = async (assistantId: string, data: any) => {
     try {
-      await assistantActions.update(assistantId, data)
-      await refreshAll()
+      const success = await assistantActions.update(assistantId, data)
+      if (success) {
+        await refreshAll(false) // Silent refresh - update action already shows toast
+      }
     } catch (error) {
       console.error('Failed to update assistant:', error)
       throw error
@@ -150,13 +154,20 @@ export default function AIManagementPage() {
   // Handle assigning user to assistant
   const handleAssignUserSubmit = async (contactId: string, assistantId: string) => {
     try {
-      await assignmentActions.create({
+      const success = await assignmentActions.create({
         phone_number: contactId,
         assistant_id: assistantId,
         priority: 'normal',
         auto_enable: true
       })
-      await refreshAll()
+      
+      // Only refresh if assignment was successful (silent refresh to avoid duplicate toasts)
+      if (success) {
+        await refreshAll(false)
+      } else {
+        // The hook already showed the error toast, just throw to prevent further processing
+        throw new Error('Assignment failed')
+      }
     } catch (error) {
       console.error('Failed to assign user:', error)
       throw error
@@ -166,8 +177,10 @@ export default function AIManagementPage() {
   // Handle unassigning user from assistant
   const handleUnassignUser = async (conversationId: string, displayName: string) => {
     try {
-      await assignmentActions.delete(conversationId)
-      await refreshAll()
+      const success = await assignmentActions.delete(conversationId)
+      if (success) {
+        await refreshAll(false) // Silent refresh - delete action already shows toast
+      }
     } catch (error) {
       console.error('Failed to unassign user:', error)
     }

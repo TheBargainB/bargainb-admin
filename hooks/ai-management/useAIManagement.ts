@@ -60,7 +60,7 @@ interface UseAIManagementReturn {
   }
   
   // Global actions
-  refreshAll: () => Promise<void>
+  refreshAll: (showToast?: boolean) => Promise<void>
   initialize: () => Promise<void>
 }
 
@@ -78,7 +78,7 @@ export const useAIManagement = (): UseAIManagementReturn => {
   const hasError = !!(assistants.error || assignments.error || analytics.error || contacts.error)
 
   // Global refresh function
-  const refreshAll = useCallback(async () => {
+  const refreshAll = useCallback(async (showToast: boolean = true) => {
     try {
       await Promise.all([
         assistants.testConnection(), // This also fetches assistants
@@ -87,12 +87,16 @@ export const useAIManagement = (): UseAIManagementReturn => {
         contacts.fetchContacts()
       ])
       
-      toast({
-        title: "Data refreshed",
-        description: "All AI management data has been updated successfully.",
-      })
+      // Only show success toast if explicitly requested (e.g., manual refresh)
+      if (showToast) {
+        toast({
+          title: "Data refreshed",
+          description: "All AI management data has been updated successfully.",
+        })
+      }
     } catch (error) {
       console.error('Failed to refresh all data:', error)
+      // Always show error toast for refresh failures
       toast({
         title: "Error refreshing data",
         description: "Some data may not have been updated. Please try again.",
