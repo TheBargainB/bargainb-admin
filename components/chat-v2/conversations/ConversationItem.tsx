@@ -2,7 +2,6 @@
 
 import { memo } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { Conversation } from '@/types/chat-v2.types'
 
@@ -88,7 +87,7 @@ export const ConversationItem = memo<ConversationItemProps>(({
     <div
       role="button"
       tabIndex={0}
-      aria-label={`Conversation with ${displayName}${hasUnread ? `, ${conversation.unread_count} unread messages` : ''}`}
+      aria-label={`Conversation with ${displayName}`}
       aria-selected={is_selected}
       className={cn(
         // Base styles
@@ -168,15 +167,7 @@ export const ConversationItem = memo<ConversationItemProps>(({
             {lastMessagePreview}
           </p>
           
-          {/* Unread badge */}
-          {hasUnread && (
-            <Badge 
-              variant="default" 
-              className="ml-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium px-2 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center"
-            >
-              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-            </Badge>
-          )}
+          {/* Unread badge removed - handled by admin notification bell */}
         </div>
       </div>
     </div>

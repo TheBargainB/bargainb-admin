@@ -273,9 +273,9 @@ export default function ChatV2Page() {
       {/* Error display */}
       {renderError()}
       
-      {/* Left Panel - Conversations (Wider for Better Message Preview) */}
+      {/* Left Panel - Conversations (Extra Wide for Full Message Preview) */}
       <div className={cn(
-        'w-[32rem] flex-shrink-0 bg-white dark:bg-gray-900',
+        'w-[42rem] flex-shrink-0 bg-white dark:bg-gray-900',
         'border-r border-gray-200 dark:border-gray-700',
         'overflow-hidden flex flex-col h-full'
       )}>

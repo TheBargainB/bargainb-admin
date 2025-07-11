@@ -5,7 +5,6 @@ import { Search, RefreshCw, Plus, Filter, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { 
@@ -197,11 +196,7 @@ export const ConversationList = memo<ConversationListProps>(({
             <h2 className="text-lg font-semibold text-foreground">
               Chats
             </h2>
-            {total_unread > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                {total_unread}
-              </Badge>
-            )}
+            {/* Unread badge removed - handled by admin notification bell */}
           </div>
           
           <div className="flex items-center gap-1">
@@ -288,14 +283,8 @@ export const ConversationList = memo<ConversationListProps>(({
         )}
       </div>
 
-      {/* Footer */}
-      {total_unread > 0 && (
-        <div className="flex-shrink-0 p-3 border-t border-border bg-muted/30">
-          <p className="text-xs text-center text-muted-foreground">
-            {total_unread} unread conversation{total_unread !== 1 ? 's' : ''}
-          </p>
-        </div>
-      )}
+      {/* Footer - Removed unread count display */}
+      {/* Unread counts should be handled by the admin notification bell */}
     </div>
   )
 })
