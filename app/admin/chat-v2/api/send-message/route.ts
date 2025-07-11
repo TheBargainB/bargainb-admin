@@ -6,13 +6,13 @@ function normalizePhoneNumber(phoneNumber: string): string {
   // Remove WhatsApp suffix and clean the number
   let cleaned = phoneNumber.replace('@s.whatsapp.net', '').replace(/[^\d+]/g, '')
   
-  // If it starts with +, use as is
+  // If it starts with +, remove it
   if (cleaned.startsWith('+')) {
-    return cleaned
+    cleaned = cleaned.substring(1)
   }
   
-  // Add + for all numbers
-  return `+${cleaned}`
+  // Return just the numbers for WASender API
+  return cleaned
 }
 
 export async function POST(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Clean and format the phone number for WhatsApp API (E.164 format)
+    // Clean and format the phone number for WASender API (numbers only, no + prefix)
     const cleanPhoneNumber = normalizePhoneNumber(phoneNumber)
     console.log('📱 Chat 2.0 - Sending message to:', cleanPhoneNumber, 'Original:', phoneNumber)
 
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({ 
         to: cleanPhoneNumber,
-        text: message 
+        text: message,
+        type: 'text'  // Explicitly specify text type
       }),
     })
 
@@ -111,30 +112,20 @@ export async function POST(request: NextRequest) {
     console.log('✅ Message stored in database:', newMessage.id)
 
     // Update conversation stats
-    const { data: currentConversation } = await supabaseAdmin
+    const { data: currentStats } = await supabaseAdmin
       .from('conversations')
       .select('total_messages')
       .eq('id', conversationId)
       .single()
 
-    if (currentConversation) {
-      const newTotalMessages = (currentConversation.total_messages || 0) + 1
-
-      const { error: statsError } = await supabaseAdmin
-        .from('conversations')
-        .update({
-          total_messages: newTotalMessages,
-          last_message_at: now,
-          updated_at: now
-        })
-        .eq('id', conversationId)
-
-      if (statsError) {
-        console.warn('⚠️ Error updating conversation stats:', statsError)
-      } else {
-        console.log('✅ Conversation stats updated: total_messages =', newTotalMessages)
-      }
-    }
+    await supabaseAdmin
+      .from('conversations')
+      .update({
+        total_messages: (currentStats?.total_messages || 0) + 1,
+        last_message_at: now,
+        updated_at: now
+      })
+      .eq('id', conversationId)
 
     // Check for @bb mention and trigger AI processing
     if (message && /@bb/i.test(message)) {
@@ -152,7 +143,7 @@ export async function POST(request: NextRequest) {
           console.error('❌ Could not find WhatsApp contact ID for conversation:', conversationId)
         } else {
           // Call the AI processing API
-          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
+          const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/whatsapp/ai`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
