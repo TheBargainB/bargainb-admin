@@ -1,39 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Verify webhook signature
+function verifySignature(request: NextRequest): boolean {
+  const signature = request.headers.get('x-webhook-signature')
+  const webhookSecret = process.env.WASENDER_WEBHOOK_SECRET
+
+  if (!signature || !webhookSecret || signature !== webhookSecret) {
+    console.error('❌ Invalid webhook signature')
+    return false
+  }
+  return true
+}
+
 // Helper function to normalize phone numbers
 function normalizePhoneNumber(phoneNumber: string): string {
-  // Remove all non-digit characters except +
-  const cleaned = phoneNumber.replace(/[^\d+]/g, '')
+  // Remove @s.whatsapp.net and clean the number
+  const cleaned = phoneNumber.replace('@s.whatsapp.net', '').replace(/[^\d+]/g, '')
   
-  // If it already starts with +, use as is
+  // If it starts with +, use as is
   if (cleaned.startsWith('+')) {
     return cleaned
   }
   
-  // Remove any leading zeros or other non-standard formatting
-  const digitsOnly = cleaned.replace(/\D/g, '')
-  
-  // If it looks like an international number (10+ digits), add +
-  if (digitsOnly.length >= 10) {
-    // Handle common cases
-    if (digitsOnly.length === 10) {
-      // Assume US if 10 digits
-      return `+1${digitsOnly}`
-    } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
-      // US number with country code
-      return `+${digitsOnly}`
-    } else {
-      // International number (like Dutch +31...)
-      return `+${digitsOnly}`
-    }
-  }
-  
-  // Return original if we can't format it properly
-  return phoneNumber
+  // Add + for all numbers
+  return `+${cleaned}`
 }
 
-// Message status codes
+// Message status codes from WASender
 enum MessageStatus {
   ERROR = 0,
   PENDING = 1,
@@ -43,17 +37,9 @@ enum MessageStatus {
   PLAYED = 5,
 }
 
-// Helper function to get status name from status code
+// Helper function to get status name
 function getStatusName(status: number): string {
-  switch (status) {
-    case MessageStatus.ERROR: return 'error';
-    case MessageStatus.PENDING: return 'pending';
-    case MessageStatus.SENT: return 'sent';
-    case MessageStatus.DELIVERED: return 'delivered';
-    case MessageStatus.READ: return 'read';
-    case MessageStatus.PLAYED: return 'played';
-    default: return 'unknown';
-  }
+  return MessageStatus[status] || 'unknown'
 }
 
 // Helper function to get or create WhatsApp contact in CRM system
@@ -405,277 +391,178 @@ async function storeMessage(conversationId: string, content: string, direction: 
   }
 }
 
-// =============================================================================
-// WEBHOOK HANDLERS
-// =============================================================================
-
-export async function GET(request: NextRequest) {
+// Main webhook handler
+export async function POST(request: NextRequest) {
   try {
-    console.log('📡 Chat 2.0 - Webhook health check requested')
-    
-    return NextResponse.json({ 
-      status: 'healthy',
-      endpoint: '/admin/chat-v2/api/webhook',
-      supportedEvents: ['messages.upsert', 'messages.update'],
-      timestamp: new Date().toISOString(),
-      version: 'Chat-2.0-with-ai-processing',
-      deployedAt: '2025-01-26T23:00:00Z'
-    })
-    
+    // 1. Verify webhook signature
+    if (!verifySignature(request)) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    }
+
+    const payload = await request.json()
+    console.log('📥 Chat 2.0 - Webhook received:', JSON.stringify(payload, null, 2))
+
+    // 2. Handle different event types
+    switch (payload.event) {
+      case 'messages.upsert':
+        return handleMessageUpsert(payload)
+      case 'messages.update':
+        return handleMessageUpdate(payload)
+      case 'webhook.test':
+        return NextResponse.json({ success: true, message: 'Webhook test received successfully' })
+      default:
+        console.warn('⚠️ Unknown webhook event type:', payload.event)
+        return NextResponse.json({ success: true, message: 'Event acknowledged' })
+    }
   } catch (error) {
-    console.error('❌ Chat 2.0 webhook health check error:', error)
+    console.error('❌ Webhook processing error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    // Verify webhook signature for WASender
-    const signature = request.headers.get('x-webhook-signature')
-    const webhookSecret = process.env.WASENDER_WEBHOOK_SECRET
-    
-    console.log('🔐 Chat 2.0 - Webhook signature:', signature ? 'present' : 'missing')
-    console.log('🔐 Chat 2.0 - Webhook secret configured:', webhookSecret ? 'yes' : 'no')
-    
-    // If webhook secret is configured, verify signature
-    if (webhookSecret && signature) {
-      if (signature !== webhookSecret) {
-        console.error('❌ Invalid webhook signature')
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-      }
-      console.log('✅ Webhook signature verified')
-    } else if (webhookSecret && !signature) {
-      console.error('❌ Missing webhook signature')
-      return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
-    } else {
-      console.log('⚠️ Webhook verification skipped (no secret configured)')
-    }
-
-    const body = await request.json()
-    console.log('📥 Chat 2.0 - Webhook received:', JSON.stringify(body, null, 2))
-
-    const { event, data } = body
-    console.log('🔍 Event:', event)
-
-    if (event === 'messages.upsert') {
-      // Handle new or updated messages
-      const message = Array.isArray(data.messages) ? data.messages[0] : data.messages
+// Handle new/updated messages
+async function handleMessageUpsert(payload: any) {
+  const messages = payload.data?.messages || []
+  
+  for (const messageData of messages) {
+    try {
+      const { key, message, pushName, messageTimestamp } = messageData
       
-      if (!message) {
-        console.log('⚠️ No message found in payload')
-        return NextResponse.json({ success: true, skipped: 'no_message' })
+      if (!key?.remoteJid) {
+        console.warn('⚠️ Missing remoteJid in message:', messageData)
+        continue
       }
+
+      // Get message content based on type
+      let content = ''
+      let messageType = 'text'
+      let mediaUrl = null
       
-      const { 
-        key,
-        message: messageContent, 
-        messageTimestamp, 
-        pushName
-      } = message
-
-      // Extract from key object
-      const { remoteJid, id: messageId, fromMe } = key
-
-      console.log('🔍 Chat 2.0 - Extracted values:')
-      console.log('  - remoteJid:', remoteJid)
-      console.log('  - messageId:', messageId)
-      console.log('  - fromMe:', fromMe)
-      console.log('  - pushName:', pushName)
-
-      // Get or create WhatsApp contact in CRM system
-      const contact = await getOrCreateWhatsAppContact(remoteJid, pushName)
-      const contactName = contact.display_name || contact.push_name || contact.phone_number
-
-      // Get or create conversation for this contact
-      const conversation = await getOrCreateConversation(contact.id, contactName, remoteJid)
-
-      // Extract message text from different formats
-      let messageText = ''
-      if (messageContent?.conversation) {
-        messageText = messageContent.conversation
-      } else if (messageContent?.extendedTextMessage?.text) {
-        messageText = messageContent.extendedTextMessage.text
-      } else {
-        console.log('⚠️ Unknown message format:', messageContent)
-        messageText = 'Unknown message format'
+      if (message?.conversation) {
+        content = message.conversation
+      } else if (message?.extendedTextMessage?.text) {
+        content = message.extendedTextMessage.text
+      } else if (message?.imageMessage) {
+        content = message.imageMessage.caption || ''
+        messageType = 'image'
+        mediaUrl = message.imageMessage.url
+      } else if (message?.videoMessage) {
+        content = message.videoMessage.caption || ''
+        messageType = 'video'
+        mediaUrl = message.videoMessage.url
+      } else if (message?.audioMessage) {
+        messageType = 'audio'
+        mediaUrl = message.audioMessage.url
+      } else if (message?.documentMessage) {
+        content = message.documentMessage.fileName || ''
+        messageType = 'document'
+        mediaUrl = message.documentMessage.url
       }
 
-      console.log('📝 Chat 2.0 - Message text extracted:', messageText)
+      // Skip if no content and no media
+      if (!content && !mediaUrl) {
+        console.log('ℹ️ Skipping empty message')
+        continue
+      }
 
-      // Prepare message metadata
-      const messageMetadata = {
-        whatsapp_message_id: messageId,
-        whatsapp_timestamp: messageTimestamp,
+      // Process the message
+      const phoneNumber = normalizePhoneNumber(key.remoteJid)
+      console.log('📱 Processing message from:', phoneNumber, 'Type:', messageType)
+
+      // Get or create contact
+      const contact = await getOrCreateWhatsAppContact(key.remoteJid, pushName)
+      if (!contact) {
+        throw new Error('Failed to get/create contact')
+      }
+
+      // Get or create conversation
+      const conversation = await getOrCreateConversation(contact.id, pushName || 'Unknown', key.remoteJid)
+      if (!conversation) {
+        throw new Error('Failed to get/create conversation')
+      }
+
+      // Store the message
+      const messageRecord = await storeMessage(conversation.id, content, 'inbound', {
+        whatsapp_message_id: key.id,
+        message_type: messageType,
+        media_url: mediaUrl,
         push_name: pushName,
-        remote_jid: remoteJid,
-        from_me: fromMe,
-        key: key,
-        original_message: messageContent
+        timestamp: messageTimestamp,
+        raw_data: messageData
+      })
+
+      // Check for @bb mention and process AI if needed
+      if (content && /@bb/i.test(content)) {
+        await processAIMention(conversation.id, content, contact.id)
       }
 
-      // Store message in CRM system
-      const direction = fromMe ? 'outbound' : 'inbound'
+      console.log('✅ Message processed successfully:', messageRecord.id)
+    } catch (error) {
+      console.error('❌ Error processing message:', error)
+    }
+  }
+
+  return NextResponse.json({ success: true })
+}
+
+// Handle message status updates
+async function handleMessageUpdate(payload: any) {
+  const updates = payload.data?.messages || []
+  
+  for (const update of updates) {
+    try {
+      const { key, update: statusUpdate } = update
       
-      if (fromMe) {
-        // Check if this outgoing message already exists (sent via send-message API)
-        const messageTimestampMs = typeof messageTimestamp === 'object' && messageTimestamp !== null && 'low' in messageTimestamp
-          ? messageTimestamp.low * 1000
-          : (typeof messageTimestamp === 'number' ? messageTimestamp * 1000 : Date.now())
-        
-        const timestampStart = new Date(messageTimestampMs - 30000).toISOString() // 30 seconds before
-        const timestampEnd = new Date(messageTimestampMs + 30000).toISOString()   // 30 seconds after
-
-        const { data: existingMessage } = await supabaseAdmin
-          .from('messages')
-          .select('id, raw_message_data')
-          .eq('conversation_id', conversation.id)
-          .eq('content', messageText)
-          .eq('direction', 'outbound')
-          .gte('created_at', timestampStart)
-          .lte('created_at', timestampEnd)
-          .single()
-
-        if (existingMessage) {
-          console.log('✅ Outgoing message already exists in CRM (sent via API), updating with WhatsApp message ID')
-          
-          // Update the existing message with the WhatsApp message ID
-          const currentMetadata = (existingMessage.raw_message_data as Record<string, any>) || {}
-          const updatedMetadata = {
-            ...currentMetadata,
-            whatsapp_message_id: messageId,
-            whatsapp_timestamp: messageTimestamp,
-            remote_jid: remoteJid,
-            from_me: fromMe
-          }
-
-          const { error: updateError } = await supabaseAdmin
-            .from('messages')
-            .update({ 
-              whatsapp_message_id: messageId,
-              raw_message_data: updatedMetadata
-            })
-            .eq('id', existingMessage.id)
-
-          if (updateError) {
-            console.error('❌ Error updating message with WhatsApp ID:', updateError)
-          } else {
-            console.log('✅ Message updated with WhatsApp ID:', messageId, 'for status tracking')
-          }
-          
-          return NextResponse.json({ success: true, updated: 'whatsapp_id_added' })
-        }
+      if (!key?.id) {
+        console.warn('⚠️ Missing message ID in update:', update)
+        continue
       }
 
-      // Store the message in CRM system
-      await storeMessage(conversation.id, messageText, direction, messageMetadata)
-      
-      console.log('✅ Chat 2.0 - Message stored in CRM system:', direction, messageText)
+      // Update message status in database
+      const { error } = await supabaseAdmin
+        .from('messages')
+        .update({
+          whatsapp_status: getStatusName(statusUpdate.status),
+          updated_at: new Date().toISOString()
+        })
+        .eq('whatsapp_message_id', key.id)
 
-      // Check for @bb mention in incoming messages and trigger AI processing
-      if (!fromMe && messageText && /@bb/i.test(messageText)) {
-        console.log('🤖 Chat 2.0 - @bb mention detected, triggering AI processing...')
-        
-        try {
-          // Call the AI processing API
-          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chatId: conversation.id,
-              message: messageText,
-              userId: contact.id
-            })
-          })
-
-          if (aiResponse.ok) {
-            const aiResult = await aiResponse.json()
-            console.log('✅ Chat 2.0 - AI processing successful:', aiResult.success)
-          } else {
-            console.error('❌ Chat 2.0 - AI processing failed:', aiResponse.status, aiResponse.statusText)
-          }
-        } catch (error) {
-          console.error('❌ Chat 2.0 - Error calling AI API:', error)
-        }
+      if (error) {
+        console.error('❌ Error updating message status:', error)
+      } else {
+        console.log('✅ Message status updated:', key.id, 'Status:', getStatusName(statusUpdate.status))
       }
+    } catch (error) {
+      console.error('❌ Error processing status update:', error)
+    }
+  }
 
-      return NextResponse.json({ success: true })
+  return NextResponse.json({ success: true })
+}
 
-    } else if (event === 'messages.update') {
-      // Handle message status updates (delivered, read, etc.)
-      const { update, key } = data
-      const { status } = update
-      const { id: messageId, remoteJid, fromMe } = key
+// Process AI mention
+async function processAIMention(conversationId: string, message: string, userId: string) {
+  try {
+    const response = await fetch('/api/whatsapp/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId: conversationId, message, userId })
+    })
 
-      console.log('📊 Chat 2.0 - Message status update:')
-      console.log('  - Message ID:', messageId)
-      console.log('  - Remote JID:', remoteJid)
-      console.log('  - Status:', status, getStatusName(status))
-      console.log('  - From Me:', fromMe)
-
-      try {
-        // Find the message in CRM system by WhatsApp message ID
-        const { data: existingMessage } = await supabaseAdmin
-          .from('messages')
-          .select('id, raw_message_data, conversation_id')
-          .eq('whatsapp_message_id', messageId)
-          .single()
-
-        if (existingMessage) {
-          console.log('📝 Chat 2.0 - Updating status for existing message:', messageId, 'in conversation:', existingMessage.conversation_id)
-          
-          const currentMetadata = (existingMessage.raw_message_data as Record<string, any>) || {}
-          const updatedMetadata = {
-            ...currentMetadata,
-            whatsapp_status: status,
-            whatsapp_status_name: getStatusName(status),
-            status_updated_at: new Date().toISOString()
-          }
-
-          const { error: updateError } = await supabaseAdmin
-            .from('messages')
-            .update({ 
-              whatsapp_status: getStatusName(status),
-              raw_message_data: updatedMetadata
-            })
-            .eq('id', existingMessage.id)
-
-          if (updateError) {
-            console.error('❌ Error updating message status:', updateError)
-          } else {
-            console.log('✅ Chat 2.0 - Message status updated to:', getStatusName(status), 'for message:', messageId)
-          }
-        } else {
-          console.log('🔍 Chat 2.0 - Message not found in CRM system:', messageId)
-        }
-      } catch (error) {
-        console.error('❌ Chat 2.0 - Error processing status update:', error)
-      }
-
-      return NextResponse.json({ success: true, updated: true })
-
-    } else {
-      console.log('⚠️ Chat 2.0 - Unknown webhook event type:', event)
-      return NextResponse.json({ error: 'Unknown event type' }, { status: 400 })
+    if (!response.ok) {
+      throw new Error(`AI processing failed: ${response.status}`)
     }
 
+    console.log('✅ AI processing completed for message with @bb mention')
   } catch (error) {
-    console.error('❌ Chat 2.0 - Error in webhook POST:', error)
-    
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      timestamp: new Date().toISOString(),
-      requestId: Math.random().toString(36).substr(2, 9)
-    }, { status: 500 })
+    console.error('❌ Error processing AI mention:', error)
   }
 }
 
-// =============================================================================
-// WEBHOOK VERIFICATION ENDPOINT (FOR WASENDER SETUP)
-// =============================================================================
-
+// Allow HEAD requests for webhook testing
 export async function HEAD(request: NextRequest) {
-  // Simple health check for webhook endpoint
+  if (!verifySignature(request)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  }
   return new Response(null, { status: 200 })
 } 

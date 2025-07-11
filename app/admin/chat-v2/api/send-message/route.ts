@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Helper function to normalize phone numbers to E.164 format
+function normalizePhoneNumber(phoneNumber: string): string {
+  // Remove WhatsApp suffix and clean the number
+  let cleaned = phoneNumber.replace('@s.whatsapp.net', '').replace(/[^\d+]/g, '')
+  
+  // If it starts with +, use as is
+  if (cleaned.startsWith('+')) {
+    return cleaned
+  }
+  
+  // Add + for all numbers
+  return `+${cleaned}`
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -21,22 +35,11 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Clean the phone number for WhatsApp API (E.164 format with +)
-    let cleanPhoneNumber = phoneNumber
-    if (phoneNumber.includes('@s.whatsapp.net')) {
-      cleanPhoneNumber = phoneNumber.replace('@s.whatsapp.net', '')
-    }
-    
-    // Remove any spaces, dashes, or other formatting characters
-    cleanPhoneNumber = cleanPhoneNumber.replace(/[\s\-\(\)]/g, '')
-    
-    if (!cleanPhoneNumber.startsWith('+')) {
-      cleanPhoneNumber = `+${cleanPhoneNumber}`
-    }
-    
-    console.log('🚀 Chat 2.0 - Sending message to:', cleanPhoneNumber, 'Original:', phoneNumber)
+    // Clean and format the phone number for WhatsApp API (E.164 format)
+    const cleanPhoneNumber = normalizePhoneNumber(phoneNumber)
+    console.log('📱 Chat 2.0 - Sending message to:', cleanPhoneNumber, 'Original:', phoneNumber)
 
-    // Send message directly via WASender API
+    // Send message via WASender API
     const apiRes = await fetch('https://www.wasenderapi.com/api/send-message', {
       method: 'POST',
       headers: {
@@ -59,13 +62,21 @@ export async function POST(request: NextRequest) {
     }
 
     const apiData = await apiRes.json()
-    console.log('✅ Chat 2.0 - Message sent successfully:', apiData)
+    console.log('✅ Chat 2.0 - WASender API response:', apiData)
 
-    // Store the sent message in Chat 2.0 database structure
+    if (!apiData.success || !apiData.data?.msgId) {
+      console.error('❌ Invalid WASender API response:', apiData)
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid response from WASender API'
+      }, { status: 500 })
+    }
+
+    // Store the sent message in Chat 2.0 database
     const now = new Date().toISOString()
-    const whatsappMessageId = apiData.data?.msgId?.toString() || `out_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const whatsappMessageId = apiData.data.msgId.toString()
 
-    // Store the outbound message in the messages table
+    // Store the outbound message
     const { data: newMessage, error: messageError } = await supabaseAdmin
       .from('messages')
       .insert({
@@ -90,12 +101,16 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (messageError) {
-      console.error('❌ Error storing message in Chat 2.0 structure:', messageError)
-    } else {
-      console.log('✅ Message stored in Chat 2.0 CRM structure:', newMessage.id)
+      console.error('❌ Error storing message:', messageError)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to store message in database'
+      }, { status: 500 })
     }
 
-    // Update conversation stats manually
+    console.log('✅ Message stored in database:', newMessage.id)
+
+    // Update conversation stats
     const { data: currentConversation } = await supabaseAdmin
       .from('conversations')
       .select('total_messages')
@@ -121,9 +136,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check for @bb mention in sent messages and trigger AI processing
+    // Check for @bb mention and trigger AI processing
     if (message && /@bb/i.test(message)) {
-      console.log('🤖 @bb mention detected in sent message, triggering AI processing...')
+      console.log('🤖 @bb mention detected, triggering AI processing...')
       
       try {
         // Get the WhatsApp contact ID for the conversation
@@ -136,7 +151,7 @@ export async function POST(request: NextRequest) {
         if (!conversationData?.whatsapp_contact_id) {
           console.error('❌ Could not find WhatsApp contact ID for conversation:', conversationId)
         } else {
-          // Call the AI processing API with correct user ID
+          // Call the AI processing API
           const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
             method: 'POST',
             headers: {
@@ -151,13 +166,13 @@ export async function POST(request: NextRequest) {
 
           if (aiResponse.ok) {
             const aiResult = await aiResponse.json()
-            console.log('✅ AI processing successful from Chat 2.0 send-message:', aiResult.success)
+            console.log('✅ AI processing successful:', aiResult.success)
           } else {
-            console.error('❌ AI processing failed from Chat 2.0 send-message:', aiResponse.status, aiResponse.statusText)
+            console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText)
           }
         }
       } catch (error) {
-        console.error('❌ Error calling AI API from Chat 2.0 send-message:', error)
+        console.error('❌ Error calling AI API:', error)
       }
     }
 
@@ -171,17 +186,13 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Chat 2.0 send message API error:', error)
+    console.error('❌ Send message error:', error)
     return NextResponse.json({ 
       success: false, 
       error: error instanceof Error ? error.message : 'Internal server error' 
     }, { status: 500 })
   }
 }
-
-// =============================================================================
-// GET METHOD - Get message sending status
-// =============================================================================
 
 export async function GET(request: NextRequest) {
   try {
