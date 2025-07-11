@@ -49,7 +49,8 @@ export async function updateSession(request: NextRequest) {
     '/api/early-access',
     '/api/waitlist',
     '/api/whatsapp',
-    '/admin/chat/api'
+    '/admin/chat/api',
+    '/admin/chat-v2/api'
   ]
 
   // Check if the current path is a public route
