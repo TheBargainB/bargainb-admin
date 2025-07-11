@@ -193,92 +193,23 @@ export default function ChatV2Page() {
   // REAL-TIME UPDATES SETUP
   // =============================================================================
 
-  useEffect(() => {
-    if (!isClient) return
-
-    const supabase = createClient()
-    console.log('🔔 Setting up Chat 2.0 real-time subscriptions')
-
-    // Single consolidated channel for better connection management
-    const chatChannel = supabase
-      .channel('chat-v2-updates')
-      .on(
-        'postgres_changes' as any,
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages'
-        },
-        (payload: any) => {
-          console.log('🔔 New message received via real-time:', payload.new)
-          
-          // If it's for the current conversation, refresh messages
-          if (conversations.selected_conversation && 
-              payload.new?.conversation_id === conversations.selected_conversation.id) {
-            messages.refreshMessages()
-          }
-          
-          // Always refresh conversations and notifications for new messages
-          conversations.refreshConversations()
-          conversations.refreshNotifications()
-        }
-      )
-      .on(
-        'postgres_changes' as any,
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages'
-        },
-        (payload: any) => {
-          console.log('🔔 Message updated via real-time:', payload.new)
-          
-          // If it's for the current conversation, refresh messages
-          if (conversations.selected_conversation && 
-              payload.new?.conversation_id === conversations.selected_conversation.id) {
-            messages.refreshMessages()
-          }
-        }
-      )
-      .on(
-        'postgres_changes' as any,
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'conversations'
-        },
-        (payload: any) => {
-          console.log('🔔 Conversation updated via real-time:', payload.new)
-          
-          // Refresh conversations list and notifications
-          conversations.refreshConversations()
-          conversations.refreshNotifications()
-        }
-      )
-      .subscribe((status: any) => {
-        console.log('📡 Chat 2.0 subscription status:', status)
-      })
-
-    // Cleanup subscription
-    return () => {
-      console.log('🔔 Cleaning up Chat 2.0 real-time subscription')
-      supabase.removeChannel(chatChannel)
-    }
-  }, [isClient, conversations.selected_conversation, messages, conversations])
+  // Real-time subscriptions are handled by individual hooks (useMessages, useConversations, etc.)
+  // No additional page-level subscriptions needed to avoid conflicts
 
   // =============================================================================
-  // PERIODIC REFRESH FOR RELIABILITY
+  // PERIODIC REFRESH FOR RELIABILITY (REDUCED FREQUENCY)
   // =============================================================================
 
   useEffect(() => {
     if (!isClient) return
 
-    // Set up periodic refresh every 30 seconds as backup to real-time
+    // Set up periodic refresh every 60 seconds as backup to real-time (reduced from 30s)
     const refreshInterval = setInterval(() => {
-      console.log('🔄 Periodic refresh triggered')
+      console.log('🔄 Periodic refresh triggered (backup only)')
       
-      // Only refresh if not actively loading
-      if (!conversations.is_loading && !messages.is_loading) {
+      // Only refresh if not actively loading and real-time seems disconnected
+      if (!conversations.is_loading && !messages.is_loading && !is_connected) {
+        console.log('📡 Real-time disconnected, triggering backup refresh')
         conversations.refreshConversations()
         conversations.refreshNotifications()
         
@@ -286,12 +217,12 @@ export default function ChatV2Page() {
           messages.refreshMessages()
         }
       }
-    }, 30000) // 30 seconds
+    }, 60000) // 60 seconds (reduced frequency)
 
     return () => {
       clearInterval(refreshInterval)
     }
-  }, [isClient, conversations, messages])
+  }, [isClient, conversations, messages, is_connected])
 
   const handleContactProfileSendMessage = () => {
     console.log('Send message clicked from contact profile')
