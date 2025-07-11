@@ -1,7 +1,6 @@
 import { supabaseAdmin } from './supabase';
 import { getOrCreateAssistantForConversation } from './assistant-service';
-import { createClient } from '@/utils/supabase/server'
-import { createClient as createClientSide } from '@/utils/supabase/client'
+import { createClient } from '@/utils/supabase/client'
 
 // =============================================================================
 // WASENDER API CONFIGURATION
@@ -450,18 +449,33 @@ export const wasenderClient = new WASenderClient()
 // =============================================================================
 
 export function formatPhoneNumber(phoneNumber: string): string {
-  // Remove all non-digit characters
-  const cleaned = phoneNumber.replace(/\D/g, '')
+  // Remove all non-digit characters except +
+  const cleaned = phoneNumber.replace(/[^\d+]/g, '')
   
-  // Add country code if not present
-  if (cleaned.length === 10) {
-    return `+1${cleaned}` // Default to US
-  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
-    return `+${cleaned}`
-  } else if (cleaned.length > 11) {
-    return `+${cleaned}`
+  // If it already starts with +, use as is
+  if (cleaned.startsWith('+')) {
+    return cleaned
   }
   
+  // Remove any leading zeros or other non-standard formatting
+  const digitsOnly = cleaned.replace(/\D/g, '')
+  
+  // If it looks like an international number (10+ digits), add +
+  if (digitsOnly.length >= 10) {
+    // Handle common cases
+    if (digitsOnly.length === 10) {
+      // Assume US if 10 digits
+      return `+1${digitsOnly}`
+    } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
+      // US number with country code
+      return `+${digitsOnly}`
+    } else {
+      // International number (like Dutch +31...)
+      return `+${digitsOnly}`
+    }
+  }
+  
+  // Return original if we can't format it properly
   return phoneNumber
 }
 
@@ -490,10 +504,21 @@ export async function sendMessage(
   } = {}
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    console.log('📤 sendMessage called with:', {
+      originalPhone: phoneNumber,
+      messageLength: message.length,
+      conversationId: options.conversationId
+    })
+
     const formattedPhone = formatPhoneNumber(phoneNumber)
+    console.log('📞 Phone number formatting:', {
+      original: phoneNumber,
+      formatted: formattedPhone,
+      isValid: isValidPhoneNumber(formattedPhone)
+    })
     
     if (!isValidPhoneNumber(formattedPhone)) {
-      throw new Error('Invalid phone number format')
+      throw new Error(`Invalid phone number format. Original: ${phoneNumber}, Formatted: ${formattedPhone}`)
     }
 
     let response: WASenderResponse

@@ -38,16 +38,20 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
 
+  console.log('🔔 DROPDOWN: Rendering Chat 2.0 notification dropdown')
+
   // Fetch recent messages when dropdown opens
   const fetchRecentMessages = async () => {
     if (isLoading) return
     
     setIsLoading(true)
     try {
-      const response = await fetch('/admin/chat/api/recent-messages')
+      console.log('🔔 DROPDOWN: Fetching recent messages from Chat 2.0 API')
+      const response = await fetch('/admin/chat-v2/api/recent-messages')
       if (response.ok) {
         const data = await response.json()
         setRecentMessages(data.messages || [])
+        console.log('🔔 DROPDOWN: Loaded', data.messages?.length || 0, 'recent messages')
       } else {
         console.error('Failed to fetch recent messages:', response.status)
       }
@@ -156,7 +160,7 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
               {recentMessages.map((message) => (
                 <Link 
                   key={message.id} 
-                  href={`/admin/chat?conversation=${message.conversation_id}`}
+                  href={`/admin/chat-v2?conversation=${message.conversation_id}`}
                   onClick={() => setIsOpen(false)}
                 >
                   <DropdownMenuItem className="p-3 cursor-pointer hover:bg-muted/50 focus:bg-muted/50">

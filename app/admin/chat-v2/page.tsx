@@ -194,107 +194,75 @@ export default function ChatV2Page() {
   // =============================================================================
 
   useEffect(() => {
-    if (!isClient || !conversations.selected_conversation) return
+    if (!isClient) return
 
-    console.log('🔔 Setting up real-time subscription for conversation:', conversations.selected_conversation.id)
-    
     const supabase = createClient()
-    
-    // Subscribe to new messages in the current conversation
-    const messageChannel = supabase
-      .channel(`messages:${conversations.selected_conversation.id}`)
+    console.log('🔔 Setting up Chat 2.0 real-time subscriptions')
+
+    // Single consolidated channel for better connection management
+    const chatChannel = supabase
+      .channel('chat-v2-updates')
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversations.selected_conversation.id}`
+          table: 'messages'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('🔔 New message received via real-time:', payload.new)
           
-          // Refresh messages to show the new message
-          messages.refreshMessages()
+          // If it's for the current conversation, refresh messages
+          if (conversations.selected_conversation && 
+              payload.new?.conversation_id === conversations.selected_conversation.id) {
+            messages.refreshMessages()
+          }
           
-          // Update conversation last message time
+          // Always refresh conversations and notifications for new messages
           conversations.refreshConversations()
-          
-          // Update notification counts
           conversations.refreshNotifications()
         }
       )
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversations.selected_conversation.id}`
+          table: 'messages'
         },
-        (payload) => {
+        (payload: any) => {
           console.log('🔔 Message updated via real-time:', payload.new)
           
-          // Refresh messages to show status updates
-          messages.refreshMessages()
-        }
-      )
-      .subscribe()
-
-    // Subscribe to conversation updates (unread count, etc.)
-    const conversationChannel = supabase
-      .channel(`conversation:${conversations.selected_conversation.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'conversations',
-          filter: `id=eq.${conversations.selected_conversation.id}`
-        },
-        (payload) => {
-          console.log('🔔 Conversation updated via real-time:', payload.new)
-          
-          // Refresh conversations list
-          conversations.refreshConversations()
-          
-          // Update notifications
-          conversations.refreshNotifications()
-        }
-      )
-      .subscribe()
-
-    // Global message subscription for all conversations (for notification updates)
-    const globalMessageChannel = supabase
-      .channel('global-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: 'direction=eq.inbound'
-        },
-        (payload) => {
-          console.log('🔔 New inbound message globally:', payload.new)
-          
-          // Update global notification counts
-          conversations.refreshNotifications()
-          
-          // If it's not for the current conversation, just update notifications
-          if (conversations.selected_conversation && payload.new.conversation_id !== conversations.selected_conversation.id) {
-            conversations.refreshConversations()
+          // If it's for the current conversation, refresh messages
+          if (conversations.selected_conversation && 
+              payload.new?.conversation_id === conversations.selected_conversation.id) {
+            messages.refreshMessages()
           }
         }
       )
-      .subscribe()
+      .on(
+        'postgres_changes' as any,
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations'
+        },
+        (payload: any) => {
+          console.log('🔔 Conversation updated via real-time:', payload.new)
+          
+          // Refresh conversations list and notifications
+          conversations.refreshConversations()
+          conversations.refreshNotifications()
+        }
+      )
+      .subscribe((status: any) => {
+        console.log('📡 Chat 2.0 subscription status:', status)
+      })
 
-    // Cleanup subscriptions
+    // Cleanup subscription
     return () => {
-      console.log('🔔 Cleaning up real-time subscriptions')
-      supabase.removeChannel(messageChannel)
-      supabase.removeChannel(conversationChannel)
-      supabase.removeChannel(globalMessageChannel)
+      console.log('🔔 Cleaning up Chat 2.0 real-time subscription')
+      supabase.removeChannel(chatChannel)
     }
   }, [isClient, conversations.selected_conversation, messages, conversations])
 

@@ -1,10 +1,10 @@
 'use client'
 
-import React from "react"
+import React, { useState, useEffect } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
-import { NotificationDropdown } from "@/app/admin/chat/components/NotificationDropdown"
+import { NotificationDropdown } from "@/components/ui/notification-dropdown"
 import { ThemeToggle } from "@/components/theme-toggle"
 import LogoutButton from '@/components/logout-button'
 
@@ -13,6 +13,39 @@ interface AdminDashboardLayoutProps {
 }
 
 export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fetch initial notification count
+  useEffect(() => {
+    const fetchNotificationCount = async () => {
+      try {
+        const response = await fetch('/admin/chat-v2/api/notifications')
+        if (response.ok) {
+          const data = await response.json()
+          setUnreadCount(data.total_unread || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching notification count:', error)
+      }
+    }
+
+    fetchNotificationCount()
+
+    // Set up periodic refresh for notification count
+    const interval = setInterval(fetchNotificationCount, 30000) // 30 seconds
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      // TODO: Implement mark all as read functionality
+      setUnreadCount(0)
+    } catch (error) {
+      console.error('Error marking all as read:', error)
+    }
+  }
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -28,7 +61,10 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-4">
-              <NotificationDropdown />
+              <NotificationDropdown 
+                unreadCount={unreadCount} 
+                onMarkAllAsRead={handleMarkAllAsRead}
+              />
               <ThemeToggle />
               <LogoutButton />
             </div>

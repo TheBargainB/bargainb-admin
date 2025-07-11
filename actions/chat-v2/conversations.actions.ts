@@ -85,25 +85,38 @@ export async function getConversations(
 
     // Get last messages for each conversation
     const conversationsWithMessages = await Promise.all(
-      (data || []).map(async (conv) => {
-        // Fetch the latest message for this conversation
-        const { data: lastMessage } = await supabase
-          .from('messages')
-          .select('content')
-          .eq('conversation_id', conv.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
+      (data || []).map(async (conv: any) => {
+        try {
+          // Fetch the latest message for this conversation
+          const { data: messages, error } = await supabase
+            .from('messages')
+            .select('content')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
 
-        return {
-          ...conv,
-          last_message_content: lastMessage?.content || null
+          if (error) {
+            console.warn(`⚠️ Could not fetch last message for conversation ${conv.id}:`, error.message)
+          }
+
+          const lastMessage = messages?.[0]
+
+          return {
+            ...conv,
+            last_message_content: lastMessage?.content || null
+          }
+        } catch (err) {
+          console.warn(`⚠️ Error fetching last message for conversation ${conv.id}:`, err)
+          return {
+            ...conv,
+            last_message_content: null
+          }
         }
       })
     )
 
     // Transform data to match our clean types
-    const conversations: Conversation[] = conversationsWithMessages.map(conv => ({
+    const conversations: Conversation[] = conversationsWithMessages.map((conv: any) => ({
       id: conv.id,
       whatsapp_contact_id: conv.whatsapp_contact_id,
       whatsapp_conversation_id: conv.whatsapp_conversation_id,
@@ -561,7 +574,7 @@ export async function getTotalUnreadCount(): Promise<number> {
       throw new Error(`Failed to fetch unread count: ${error.message}`)
     }
 
-    const totalUnread = (data || []).reduce((total, conv) => total + (conv.unread_count || 0), 0)
+    const totalUnread = (data || []).reduce((total: number, conv: any) => total + (conv.unread_count || 0), 0)
     return totalUnread
 
   } catch (error) {
