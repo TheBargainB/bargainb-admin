@@ -49,7 +49,7 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
       await markConversationAsRead(notification.conversation_id)
       
       // Navigate to Chat 2.0 with selected conversation
-      setIsOpen(false)
+        setIsOpen(false)
       router.push(`/admin/chat-v2?conversation=${notification.conversation_id}`)
       
       // Refresh notifications to update counts
@@ -177,11 +177,11 @@ export const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                   <div className="flex items-start space-x-3 p-4 w-full">
                     {/* Avatar */}
                     <div className="flex-shrink-0">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-500 text-white text-xs">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-500 text-white text-xs">
                           {getInitials(notification.contact_name)}
-                        </AvatarFallback>
-                      </Avatar>
+                          </AvatarFallback>
+                        </Avatar>
                     </div>
 
                     {/* Content */}
