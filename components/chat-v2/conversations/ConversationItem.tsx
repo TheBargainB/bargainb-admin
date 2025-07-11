@@ -42,8 +42,8 @@ export const ConversationItem = memo<ConversationItemProps>(({
                      conversation.contact?.whatsapp_jid?.split('@')[0] ||
                      'Unknown Contact'
   
-  const lastMessagePreview = conversation.last_message && conversation.last_message.length > 50 
-    ? `${conversation.last_message.substring(0, 50)}...` 
+  const lastMessagePreview = conversation.last_message && conversation.last_message.length > 120 
+    ? `${conversation.last_message.substring(0, 120)}...` 
     : conversation.last_message || 'No messages yet'
 
   const avatarFallback = displayName

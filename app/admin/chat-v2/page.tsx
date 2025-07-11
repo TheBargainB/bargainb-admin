@@ -84,6 +84,10 @@ export default function ChatV2Page() {
 
   const handleConversationSelect = (conversationId: string) => {
     selectConversation(conversationId)
+    
+    // Auto-mark conversation as read when selected
+    conversations.markAsRead(conversationId)
+    
     setContactPanelVisible(true) // Auto-open contact profile
   }
 
@@ -271,7 +275,7 @@ export default function ChatV2Page() {
       
       {/* Left Panel - Conversations (Wider for Better Message Preview) */}
       <div className={cn(
-        'w-96 flex-shrink-0 bg-white dark:bg-gray-900',
+        'w-[32rem] flex-shrink-0 bg-white dark:bg-gray-900',
         'border-r border-gray-200 dark:border-gray-700',
         'overflow-hidden flex flex-col h-full'
       )}>

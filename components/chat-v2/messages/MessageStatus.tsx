@@ -124,10 +124,34 @@ MessageStatus.displayName = 'MessageStatus'
 const formatTime = (timestamp: string): string => {
   try {
     const date = new Date(timestamp)
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
+    const now = new Date()
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    // Today - show time
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    }
+    
+    // Yesterday
+    if (date.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday'
+    }
+    
+    // This week - show day
+    const daysAgo = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+    if (daysAgo < 7) {
+      return date.toLocaleDateString('en-US', { weekday: 'short' })
+    }
+    
+    // Older - show date
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
     })
   } catch (error) {
     console.warn('Invalid timestamp:', timestamp)

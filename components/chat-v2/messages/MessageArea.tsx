@@ -181,6 +181,18 @@ export const MessageArea = memo<MessageAreaProps>(({
     }
   }, [messages, is_sending_message, isAtBottom])
 
+  // Auto-mark conversation as read when messages are visible
+  useEffect(() => {
+    if (conversation && messages.length > 0 && isAtBottom) {
+      // Mark messages as read when user is viewing them
+      const timer = setTimeout(() => {
+        onMarkAsRead?.()
+      }, 1000) // 1 second delay to ensure user is actually reading
+
+      return () => clearTimeout(timer)
+    }
+  }, [conversation, messages.length, isAtBottom, onMarkAsRead])
+
   // Mark as read when conversation changes
   useEffect(() => {
     if (conversation && onMarkAsRead) {
