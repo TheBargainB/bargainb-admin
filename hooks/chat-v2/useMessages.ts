@@ -437,8 +437,13 @@ export const useMessages = (options: UseMessagesOptions = {}): UseMessagesReturn
   // =============================================================================
 
   useEffect(() => {
-    if (!enable_realtime || !conversation_id) return
+    if (!enable_realtime || !conversation_id) {
+      setIsRealtimeConnected(false)
+      return
+    }
 
+    console.log('🔄 Setting up real-time subscription for conversation:', conversation_id)
+    
     const channel = supabase
       .channel(`messages_${conversation_id}`)
       .on(
@@ -450,50 +455,102 @@ export const useMessages = (options: UseMessagesOptions = {}): UseMessagesReturn
           filter: `conversation_id=eq.${conversation_id}`
         },
         (payload: any) => {
-          console.log('📡 Message real-time update:', payload.eventType)
+          console.log('📡 Message real-time update:', {
+            eventType: payload.eventType,
+            messageId: payload.new?.id || payload.old?.id,
+            conversationId: payload.new?.conversation_id || payload.old?.conversation_id,
+            content: payload.new?.content?.substring(0, 50) + '...'
+          })
           
-          if (payload.eventType === 'INSERT' && payload.new) {
-            const newMessage = payload.new as any
+          try {
+            if (payload.eventType === 'INSERT' && payload.new) {
+              const newMessage = payload.new as Message
+              
+              setMessages(prev => {
+                // Avoid duplicates by checking ID
+                if (prev.some(msg => msg.id === newMessage.id)) {
+                  console.log('⚠️ Duplicate message prevented:', newMessage.id)
+                  return prev
+                }
+                
+                console.log('✅ Adding new message to UI:', newMessage.id)
+                return [...prev, newMessage]
+              })
+              
+              setTotalCount(prev => prev + 1)
+            }
             
-            setMessages(prev => {
-              // Avoid duplicates
-              if (prev.some(msg => msg.id === newMessage.id)) {
-                return prev
-              }
-              return [...prev, newMessage]
-            })
+            else if (payload.eventType === 'UPDATE' && payload.new) {
+              const updatedMessage = payload.new as Message
+              
+              setMessages(prev => prev.map(msg => 
+                msg.id === updatedMessage.id 
+                  ? { ...msg, ...updatedMessage }
+                  : msg
+              ))
+              
+              console.log('📝 Updated message in UI:', updatedMessage.id)
+            }
             
-            setTotalCount(prev => prev + 1)
-          }
-          
-          else if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedMessage = payload.new as any
-            
-            setMessages(prev => prev.map(msg => 
-              msg.id === updatedMessage.id 
-                ? { ...msg, ...updatedMessage }
-                : msg
-            ))
-          }
-          
-          else if (payload.eventType === 'DELETE' && payload.old) {
-            const deletedId = (payload.old as any).id
-            
-            setMessages(prev => prev.filter(msg => msg.id !== deletedId))
-            setTotalCount(prev => Math.max(0, prev - 1))
+            else if (payload.eventType === 'DELETE' && payload.old) {
+              const deletedId = (payload.old as any).id
+              
+              setMessages(prev => prev.filter(msg => msg.id !== deletedId))
+              setTotalCount(prev => Math.max(0, prev - 1))
+              
+              console.log('🗑️ Removed message from UI:', deletedId)
+            }
+          } catch (error) {
+            console.error('❌ Error processing real-time message update:', error)
           }
         }
       )
-      .subscribe((status) => {
-        setIsRealtimeConnected(status === 'SUBSCRIBED')
-        console.log('📡 Messages subscription status:', status)
+      .subscribe((status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => {
+        const isConnected = status === 'SUBSCRIBED'
+        setIsRealtimeConnected(isConnected)
+        
+        console.log('📡 Messages subscription status:', {
+          status,
+          isConnected,
+          conversationId: conversation_id,
+          timestamp: new Date().toISOString()
+        })
+        
+        if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Real-time subscription error for conversation:', conversation_id)
+          
+          // Show error toast for channel errors
+          toast({
+            title: 'Connection Issue',
+            description: 'Real-time messaging may be delayed. Refreshing...',
+            variant: 'destructive'
+          })
+          
+          // Auto-refresh messages to get latest state
+          setTimeout(() => {
+            refreshMessages()
+          }, 2000)
+        }
+        
+        if (status === 'TIMED_OUT') {
+          console.warn('⏰ Real-time subscription timed out for conversation:', conversation_id)
+        }
+        
+        if (status === 'CLOSED') {
+          console.warn('🔌 Real-time subscription closed for conversation:', conversation_id)
+        }
       })
 
+    // Cleanup function
     return () => {
+      console.log('🧹 Cleaning up real-time subscription for conversation:', conversation_id)
       supabase.removeChannel(channel)
       setIsRealtimeConnected(false)
     }
-  }, [enable_realtime, conversation_id, supabase])
+    
+    // CRITICAL: Removed 'supabase' from dependency array to prevent constant reconnections
+    // The supabase client should be stable and not change between renders
+  }, [enable_realtime, conversation_id, toast, refreshMessages])
 
   // =============================================================================
   // EFFECTS

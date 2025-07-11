@@ -51,18 +51,47 @@ export async function getMessagesByConversation(
       throw new Error(`Failed to fetch conversation: ${convError.message}`)
     }
 
-    // Then get the messages
-    const { data: messagesData, error: messagesError } = await supabase
+    // Get total message count first
+    const { count: totalCount, error: countError } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', conversationId)
+
+    if (countError) {
+      console.error('❌ Error getting message count:', countError)
+      throw new Error(`Failed to get message count: ${countError.message}`)
+    }
+
+    // For initial fetch (offset = 0), get the latest messages
+    // For pagination (offset > 0), get older messages for "Load older messages" functionality
+    let messagesQuery = supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true })
-      .range(offset, offset + limit - 1)
+
+    if (offset === 0) {
+      // Initial fetch: Get the latest messages (newest first, then reverse for chronological display)
+      messagesQuery = messagesQuery
+        .order('created_at', { ascending: false })
+        .limit(limit)
+    } else {
+      // Pagination: Get older messages (oldest first for prepending to existing list)  
+      // Calculate the offset from the beginning to get older messages
+      messagesQuery = messagesQuery
+        .order('created_at', { ascending: true })
+        .range(offset, offset + limit - 1)
+    }
+
+    const { data: messagesData, error: messagesError } = await messagesQuery
 
     if (messagesError) {
       console.error('❌ Error fetching messages:', messagesError)
       throw new Error(`Failed to fetch messages: ${messagesError.message}`)
     }
+
+    // For initial fetch, reverse the messages to show in chronological order (oldest to newest)
+    // For pagination, keep the order as-is since we're prepending older messages
+    const orderedMessages: any[] = offset === 0 && messagesData ? [...messagesData].reverse() : (messagesData || [])
 
     // Transform conversation data
     const conversation = {
@@ -92,7 +121,7 @@ export async function getMessagesByConversation(
     }
 
     // Transform messages data
-    const messages: Message[] = (messagesData || []).map(msg => {
+    const messages: Message[] = orderedMessages.map((msg: any) => {
       const senderType: SenderType = msg.direction === 'inbound' ? 'user' : 
                                    msg.is_ai_triggered ? 'ai' : 'admin'
       
@@ -124,7 +153,7 @@ export async function getMessagesByConversation(
 
     return {
       messages,
-      total_count: messages.length,
+      total_count: totalCount || 0,
       conversation
     }
 
