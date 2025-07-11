@@ -287,33 +287,6 @@ async function storeMessage(conversationId: string, messageData: any) {
   }
 }
 
-// Helper function to process AI mentions
-async function processAIMention(conversationId: string, message: string, userId: string) {
-  try {
-    if (!message || !/@bb/i.test(message)) {
-      return
-    }
-
-    const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/whatsapp/ai`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chatId: conversationId,
-        message: message,
-        userId: userId
-      })
-    })
-
-    if (!aiResponse.ok) {
-      throw new Error(`AI API returned ${aiResponse.status}`)
-    }
-
-    return await aiResponse.json()
-  } catch (error) {
-    console.error('❌ Error processing AI mention:', error)
-  }
-}
-
 // Main webhook handler
 export async function POST(request: NextRequest) {
   try {
@@ -464,8 +437,11 @@ export async function POST(request: NextRequest) {
         console.log('🤖 @bb mention detected, triggering AI processing...');
         
         try {
+          // Get the base URL for the API call
+          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.thebargainb.com';
+          
           // Call the AI processing API
-          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
+          const aiResponse = await fetch(`${baseUrl}/api/whatsapp/ai`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -511,19 +487,32 @@ export async function POST(request: NextRequest) {
 
     // Handle messages.update event (status updates)
     if (event === 'messages.update') {
-      const updates = body.data || []
+      const updates = Array.isArray(body.data) ? body.data : (body.data ? [body.data] : []);
+      console.log('📊 Processing message status updates:', updates.length, 'updates');
       
       for (const update of updates) {
-        const { key: { id: whatsappMessageId }, update: status } = update
-        
-        // Update message status
-        await supabaseAdmin
-          .from('messages')
-          .update({ whatsapp_status: getStatusName(status) })
-          .eq('whatsapp_message_id', whatsappMessageId)
+        try {
+          const { key: { id: whatsappMessageId }, update: status } = update;
+          
+          if (whatsappMessageId && status !== undefined) {
+            // Update message status
+            const { error: updateError } = await supabaseAdmin
+              .from('messages')
+              .update({ whatsapp_status: getStatusName(status) })
+              .eq('whatsapp_message_id', whatsappMessageId);
+
+            if (updateError) {
+              console.error('❌ Error updating message status:', updateError);
+            } else {
+              console.log('✅ Updated message status:', whatsappMessageId, '→', getStatusName(status));
+            }
+          }
+        } catch (updateError) {
+          console.error('❌ Error processing status update:', updateError, 'for update:', update);
+        }
       }
 
-      return NextResponse.json({ success: true, message: 'Message statuses updated' })
+      return NextResponse.json({ success: true, message: 'Message statuses updated' });
     }
 
     // Unknown event type
