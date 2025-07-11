@@ -233,7 +233,7 @@ async function storeMessage(conversationId: string, messageData: any) {
         message_type: messageType,
         direction: fromMe ? 'outbound' : 'inbound',
         from_me: fromMe,
-        whatsapp_status: fromMe ? 'sent' : 'received',
+        whatsapp_status: fromMe ? 'sent' : 'delivered',
         sender_type: fromMe ? 'admin' : 'user',
         raw_message_data: {
           ...messageData,
