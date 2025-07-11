@@ -91,90 +91,16 @@ export default function ChatV2Page() {
   // MESSAGE SENDING WITH WASENDER INTEGRATION
   // =============================================================================
 
+  // Use the messages.sendMessage function directly - it has proper real-time integration
   const handleSendMessage = useCallback(async (content: string, messageType?: MessageType, mediaFile?: File) => {
-    if (!conversations.selected_conversation || !content.trim()) return
-
-    // Get contact phone number
-    const contact = conversations.selected_conversation?.contact
-    const phoneNumber = contact?.phone_number
-    
-    if (!phoneNumber) {
-      toast({
-        title: "Cannot send message",
-        description: "Contact phone number not found",
-        variant: "destructive"
-      })
-      return
-    }
-
-    setIsLoading(true)
+    if (!content.trim()) return
 
     try {
-      console.log('📤 Sending message via API:', {
-        conversationId: conversations.selected_conversation.id,
-        phoneNumber,
-        content,
-        messageType
-      })
-
-      // Prepare request data
-      const requestData: any = {
-        conversationId: conversations.selected_conversation.id,
-        phoneNumber: phoneNumber,
-        message: content,
-        messageType: messageType || 'text'
-      }
-
-      // Handle media file if provided
-      if (mediaFile && messageType !== 'text') {
-        // TODO: Upload media file to cloud storage and get URL
-        // For now, we'll skip media files
-        console.warn('⚠️ Media file upload not implemented yet')
-        toast({
-          title: "Media not supported yet",
-          description: "Text messages only for now",
-          variant: "destructive"
-        })
-        return
-      }
-
-      // Add reply context if replying
-      if (messages.input_state.reply_to_message) {
-        requestData.replyToMessageId = messages.input_state.reply_to_message.id
-      }
-
-      // Send message via API
-      const response = await fetch('/admin/chat-v2/api/send-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to send message')
-      }
-
-      console.log('✅ Message sent successfully:', result.data)
-
-      // Clear input state
-      messages.handleInputChange('')
-      messages.handleCancelReply()
-
-      // Refresh messages to show the sent message
-      await messages.refreshMessages()
-
-      // Refresh conversations to update last message
+      // Use the messages hook's sendMessage function which has proper real-time integration
+      await messages.sendMessage(content)
+      
+      // Refresh conversations to update last message (this is handled by real-time but good for backup)
       await conversations.refreshConversations()
-
-      toast({
-        title: "Message sent",
-        description: "Your message has been delivered",
-        variant: "default"
-      })
 
     } catch (error) {
       console.error('❌ Send message error:', error)
@@ -184,10 +110,8 @@ export default function ChatV2Page() {
         description: error instanceof Error ? error.message : "Please try again",
         variant: "destructive"
       })
-    } finally {
-      setIsLoading(false)
     }
-  }, [conversations.selected_conversation, conversations, messages, toast])
+  }, [messages, conversations, toast])
 
   // =============================================================================
   // REAL-TIME UPDATES SETUP
@@ -203,26 +127,16 @@ export default function ChatV2Page() {
   useEffect(() => {
     if (!isClient) return
 
-    // Set up periodic refresh every 60 seconds as backup to real-time (reduced from 30s)
-    const refreshInterval = setInterval(() => {
-      console.log('🔄 Periodic refresh triggered (backup only)')
-      
-      // Only refresh if not actively loading and real-time seems disconnected
-      if (!conversations.is_loading && !messages.is_loading && !is_connected) {
-        console.log('📡 Real-time disconnected, triggering backup refresh')
-        conversations.refreshConversations()
-        conversations.refreshNotifications()
-        
-        if (conversations.selected_conversation) {
-          messages.refreshMessages()
-        }
+    // Set up periodic refresh as backup when disconnected (reduced frequency)
+    const interval = setInterval(() => {
+      if (!is_connected) {
+        console.log('🔄 Backup refresh while disconnected...')
+        refreshAll()
       }
-    }, 60000) // 60 seconds (reduced frequency)
+    }, 60000) // 60 seconds
 
-    return () => {
-      clearInterval(refreshInterval)
-    }
-  }, [isClient, conversations, messages, is_connected])
+    return () => clearInterval(interval)
+  }, [isClient, is_connected, refreshAll])
 
   const handleContactProfileSendMessage = () => {
     console.log('Send message clicked from contact profile')
