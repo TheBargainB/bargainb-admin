@@ -268,6 +268,7 @@ async function storeMessage(conversationId: string, messageData: any) {
         .update({
           total_messages: newTotalMessages,
           unread_count: newUnreadCount,
+          last_message: messageContent, // Add the actual message content
           last_message_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -276,7 +277,7 @@ async function storeMessage(conversationId: string, messageData: any) {
       if (updateError) {
         console.warn('⚠️ Could not update conversation stats:', updateError)
       } else {
-        console.log('✅ Updated conversation stats: messages =', newTotalMessages, ', unread =', newUnreadCount)
+        console.log('✅ Updated conversation stats: messages =', newTotalMessages, ', unread =', newUnreadCount, ', last_message =', messageContent)
       }
     }
 
