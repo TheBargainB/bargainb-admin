@@ -215,6 +215,14 @@ async function storeMessage(conversationId: string, messageData: any) {
     const messageType = mediaInfo ? mediaInfo.mediaType : 'text'
     const messageContent = content || (mediaInfo ? `[${mediaInfo.mediaType} message]` : '[unknown message]')
 
+    console.log('💾 Storing message:', {
+      conversation_id: conversationId,
+      whatsapp_message_id: whatsappMessageId,
+      content: messageContent,
+      direction: fromMe ? 'outbound' : 'inbound',
+      from_me: fromMe
+    })
+
     // Store the message
     const { data: newMessage, error: storeError } = await supabaseAdmin
       .from('messages')
@@ -225,36 +233,52 @@ async function storeMessage(conversationId: string, messageData: any) {
         message_type: messageType,
         direction: fromMe ? 'outbound' : 'inbound',
         from_me: fromMe,
-        whatsapp_status: 'received',
+        whatsapp_status: fromMe ? 'sent' : 'received',
         sender_type: fromMe ? 'admin' : 'user',
         raw_message_data: {
           ...messageData,
           media_info: mediaInfo
-        },
-        created_at: new Date(messageTimestamp * 1000).toISOString()
+        }
       })
       .select()
       .single()
 
     if (storeError) {
+      console.error('❌ Error inserting message:', storeError)
       throw storeError
     }
+
+    console.log('✅ Message stored successfully:', newMessage.id)
 
     // Update conversation stats
     const { data: currentStats } = await supabaseAdmin
       .from('conversations')
-      .select('total_messages')
+      .select('total_messages, unread_count')
       .eq('id', conversationId)
       .single()
 
-    await supabaseAdmin
-      .from('conversations')
-      .update({
-        total_messages: (currentStats?.total_messages || 0) + 1,
-        last_message_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', conversationId)
+    if (currentStats) {
+      const newTotalMessages = (currentStats.total_messages || 0) + 1
+      const newUnreadCount = !fromMe 
+        ? (currentStats.unread_count || 0) + 1 
+        : (currentStats.unread_count || 0)
+
+      const { error: updateError } = await supabaseAdmin
+        .from('conversations')
+        .update({
+          total_messages: newTotalMessages,
+          unread_count: newUnreadCount,
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', conversationId)
+
+      if (updateError) {
+        console.warn('⚠️ Could not update conversation stats:', updateError)
+      } else {
+        console.log('✅ Updated conversation stats: messages =', newTotalMessages, ', unread =', newUnreadCount)
+      }
+    }
 
     return newMessage
   } catch (error) {
@@ -321,26 +345,136 @@ export async function POST(request: NextRequest) {
 
     // Handle messages.upsert event
     if (event === 'messages.upsert') {
-      const messages = body.data?.messages || []
+      console.log('📨 Processing messages.upsert event')
+      console.log('🔍 Event data structure:', JSON.stringify(body.data, null, 2))
       
-      for (const messageData of messages) {
-        const {
-          key: { remoteJid, id: whatsappMessageId },
-          pushName
-        } = messageData
+      // Support both array format (data.messages[0]) and object format (data.messages)
+      const message = Array.isArray(body.data?.messages) ? body.data.messages[0] : body.data?.messages
+      console.log('🔍 Message object:', JSON.stringify(message, null, 2))
+      
+      if (!message) {
+        console.log('⚠️ No message found in payload')
+        return NextResponse.json({ success: true, skipped: 'no_message' })
+      }
+      
+      const { 
+        key,
+        message: messageContent, 
+        messageTimestamp, 
+        pushName
+      } = message
 
-        // Get or create contact
-        const contact = await getOrCreateWhatsAppContact(remoteJid, pushName)
+      // Extract from key object
+      const { remoteJid, id: messageId, fromMe } = key
+
+      console.log('🔍 Extracted values:')
+      console.log('  - remoteJid:', remoteJid)
+      console.log('  - messageId:', messageId)
+      console.log('  - messageTimestamp:', messageTimestamp)
+      console.log('  - pushName:', pushName)
+      console.log('  - fromMe:', fromMe)
+      console.log('  - messageContent object:', JSON.stringify(messageContent, null, 2))
+
+      console.log('📨 Processing message from:', remoteJid, fromMe ? '(sent by us)' : '(incoming)')
+
+      // Get or create contact
+      const contact = await getOrCreateWhatsAppContact(remoteJid, pushName)
+      const contactName = contact.display_name || contact.push_name || contact.phone_number
+      
+      // Get or create conversation
+      const conversation = await getOrCreateConversation(contact.id)
+      
+      // Extract message text from different formats
+      let messageText = ''
+      if (messageContent?.conversation) {
+        messageText = messageContent.conversation
+      } else if (messageContent?.extendedTextMessage?.text) {
+        messageText = messageContent.extendedTextMessage.text
+      } else {
+        console.log('⚠️ Unknown message format:', messageContent)
+        messageText = 'Unknown message format'
+      }
+
+      console.log('📝 Message text extracted:', messageText)
+      
+      // Check for duplicate messages (especially for outbound messages)
+      const direction = fromMe ? 'outbound' : 'inbound'
+      
+      if (fromMe) {
+        // Check if this outgoing message already exists (sent via send-message API)
+        const messageTimestampMs = typeof messageTimestamp === 'object' && messageTimestamp !== null && 'low' in messageTimestamp
+          ? messageTimestamp.low * 1000
+          : (typeof messageTimestamp === 'number' ? messageTimestamp * 1000 : Date.now())
         
-        // Get or create conversation
-        const conversation = await getOrCreateConversation(contact.id)
+        const timestampStart = new Date(messageTimestampMs - 30000).toISOString() // 30 seconds before
+        const timestampEnd = new Date(messageTimestampMs + 30000).toISOString()   // 30 seconds after
+
+        const { data: existingMessage } = await supabaseAdmin
+          .from('messages')
+          .select('id, raw_message_data')
+          .eq('conversation_id', conversation.id)
+          .eq('content', messageText)
+          .eq('direction', 'outbound')
+          .gte('created_at', timestampStart)
+          .lte('created_at', timestampEnd)
+          .single()
+
+        if (existingMessage) {
+          console.log('✅ Outgoing message already exists in CRM (sent via API), updating with WhatsApp message ID')
+          
+          // Update the existing message with the WhatsApp message ID
+          const currentMetadata = (existingMessage.raw_message_data as Record<string, any>) || {}
+          const updatedMetadata = {
+            ...currentMetadata,
+            whatsapp_message_id: messageId,
+            whatsapp_timestamp: messageTimestamp,
+            remote_jid: remoteJid,
+            from_me: fromMe
+          }
+
+          const { error: updateError } = await supabaseAdmin
+            .from('messages')
+            .update({ 
+              whatsapp_message_id: messageId,
+              raw_message_data: updatedMetadata
+            })
+            .eq('id', existingMessage.id)
+
+          if (updateError) {
+            console.error('❌ Error updating message with WhatsApp ID:', updateError)
+          } else {
+            console.log('✅ Message updated with WhatsApp ID:', messageId, 'for status tracking')
+          }
+          
+          return NextResponse.json({ success: true, updated: 'whatsapp_id_added' })
+        }
+      }
+      
+      // Store the message using the updated message data
+      const updatedMessageData = {
+        ...message,
+        message: messageContent
+      }
+      const storedMessage = await storeMessage(conversation.id, updatedMessageData)
+      
+      console.log('✅ Message stored in CRM system:', direction, messageText)
+      
+      // Process @bb mentions for incoming messages
+      if (!fromMe && messageText && /@bb/i.test(messageText)) {
+        console.log('🤖 @bb mention detected, triggering AI processing...')
+        await processAIMention(conversation.id, messageText, contact.id)
+      } else {
+        console.log('🔍 @bb detection debug:')
+        console.log('  - fromMe:', fromMe)
+        console.log('  - messageText:', JSON.stringify(messageText))
+        console.log('  - @bb regex test result:', /@bb/i.test(messageText || ''))
         
-        // Store the message
-        const message = await storeMessage(conversation.id, messageData)
-        
-        // Process @bb mentions
-        if (message.content) {
-          await processAIMention(conversation.id, message.content, contact.id)
+        if (fromMe) {
+          console.log('⚠️ Skipping AI processing: message is from us')
+        } else if (!messageText) {
+          console.log('⚠️ Skipping AI processing: no message text')
+        } else if (!/@bb/i.test(messageText)) {
+          console.log('⚠️ Skipping AI processing: no @bb mention found')
         }
       }
 
