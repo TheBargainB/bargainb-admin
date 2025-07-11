@@ -6,12 +6,12 @@ function normalizePhoneNumber(phoneNumber: string): string {
   // Remove WhatsApp suffix and clean the number
   let cleaned = phoneNumber.replace('@s.whatsapp.net', '').replace(/[^\d+]/g, '')
   
-  // If it starts with +, remove it
-  if (cleaned.startsWith('+')) {
-    cleaned = cleaned.substring(1)
+  // Ensure it starts with + for E.164 format
+  if (!cleaned.startsWith('+')) {
+    cleaned = '+' + cleaned
   }
   
-  // Return just the numbers for WASender API
+  // Return E.164 format for WASender API
   return cleaned
 }
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
 
-    // Clean and format the phone number for WASender API (numbers only, no + prefix)
+    // Clean and format the phone number for WASender API (E.164 format with + prefix)
     const cleanPhoneNumber = normalizePhoneNumber(phoneNumber)
     console.log('📱 Chat 2.0 - Sending message to:', cleanPhoneNumber, 'Original:', phoneNumber)
 
@@ -48,8 +48,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({ 
         to: cleanPhoneNumber,
-        text: message,
-        type: 'text'  // Explicitly specify text type
+        text: message
       }),
     })
 
