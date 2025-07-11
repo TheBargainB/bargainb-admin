@@ -245,34 +245,46 @@ export const useMessages = (options: UseMessagesOptions = {}): UseMessagesReturn
   }, [conversation_id, has_more, is_loading_more, current_page, messages_per_page, toast])
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!conversation_id || !content.trim()) return
+    if (!conversation_id || !content.trim() || !conversation) return
 
     try {
       setIsSending(true)
       setInputState(prev => ({ ...prev, is_sending: true }))
       setError(null)
       
-      const messageData: MessageInsert = {
-        conversation_id,
-        content: content.trim(),
-        direction: 'outbound',
-        from_me: true,
-        message_type: 'text',
-        sender_type: 'admin',
-        whatsapp_status: 'pending'
+      // Get the phone number from the conversation
+      const phoneNumber = conversation.contact?.phone_number
+      if (!phoneNumber) {
+        throw new Error('No phone number found for this conversation')
       }
+
+      // Call the send-message API endpoint
+      const response = await fetch('/admin/chat-v2/api/send-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversationId: conversation_id,
+          phoneNumber: phoneNumber,
+          message: content.trim()
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
       
-      const newMessage = await createMessage(messageData)
-      
-      // Add message to local state immediately (optimistic update)
-      setMessages(prev => [...prev, newMessage])
-      
-      // Update conversation last message
-      await updateConversationLastMessage(
-        conversation_id,
-        content.trim(),
-        newMessage.created_at
-      )
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send message')
+      }
+
+      // The API already handles storing the message and updating conversation stats
+      // Refresh messages to get the latest state
+      await refreshMessages()
       
       // Clear input
       setInputState({
@@ -301,7 +313,7 @@ export const useMessages = (options: UseMessagesOptions = {}): UseMessagesReturn
     } finally {
       setIsSending(false)
     }
-  }, [conversation_id, toast])
+  }, [conversation_id, conversation, toast, refreshMessages])
 
   const updateMessageContent = useCallback(async (messageId: string, content: string) => {
     try {
