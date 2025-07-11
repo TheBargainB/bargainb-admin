@@ -459,26 +459,54 @@ export async function POST(request: NextRequest) {
       
       console.log('✅ Message stored in CRM system:', direction, messageText)
       
-      // Process @bb mentions for incoming messages
+      // Check for @bb mention in incoming messages and trigger AI processing
       if (!fromMe && messageText && /@bb/i.test(messageText)) {
-        console.log('🤖 @bb mention detected, triggering AI processing...')
-        await processAIMention(conversation.id, messageText, contact.id)
+        console.log('🤖 @bb mention detected, triggering AI processing...');
+        
+        try {
+          // Call the AI processing API
+          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chatId: conversation.id,
+              message: messageText,
+              userId: contact.id
+            })
+          });
+
+          if (aiResponse.ok) {
+            const aiResult = await aiResponse.json();
+            console.log('✅ AI processing successful:', aiResult.success);
+          } else {
+            console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText);
+          }
+        } catch (error) {
+          console.error('❌ Error calling AI API:', error);
+        }
       } else {
-        console.log('🔍 @bb detection debug:')
-        console.log('  - fromMe:', fromMe)
-        console.log('  - messageText:', JSON.stringify(messageText))
-        console.log('  - @bb regex test result:', /@bb/i.test(messageText || ''))
+        // Debug logging for @bb detection
+        console.log('🔍 @bb detection debug:');
+        console.log('  - fromMe:', fromMe);
+        console.log('  - messageText:', JSON.stringify(messageText));
+        console.log('  - messageText length:', messageText?.length);
+        console.log('  - @bb regex test result:', /@bb/i.test(messageText || ''));
+        console.log('  - Final condition result:', !fromMe && messageText && /@bb/i.test(messageText));
         
         if (fromMe) {
-          console.log('⚠️ Skipping AI processing: message is from us')
+          console.log('⚠️ Skipping AI processing: message is from us');
         } else if (!messageText) {
-          console.log('⚠️ Skipping AI processing: no message text')
+          console.log('⚠️ Skipping AI processing: no message text');
         } else if (!/@bb/i.test(messageText)) {
-          console.log('⚠️ Skipping AI processing: no @bb mention found')
+          console.log('⚠️ Skipping AI processing: no @bb mention found');
+        } else {
+          console.log('⚠️ Skipping AI processing: unknown reason');
         }
       }
 
-      return NextResponse.json({ success: true, message: 'Messages processed successfully' })
+      return NextResponse.json({ success: true });
     }
 
     // Handle messages.update event (status updates)
