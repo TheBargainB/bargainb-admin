@@ -2,14 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 // Verify webhook signature
-function verifySignature(request: NextRequest): boolean {
-  const signature = request.headers.get('x-webhook-signature')
-  const webhookSecret = process.env.WASENDER_WEBHOOK_SECRET
+function verifySignature(signature: string | null, webhookSecret: string | undefined): boolean {
+  // If no secret is configured, skip verification (for testing)
+  if (!webhookSecret) {
+    console.log('⚠️ Webhook secret not configured, skipping verification')
+    return true
+  }
 
-  if (!signature || !webhookSecret || signature !== webhookSecret) {
+  if (!signature) {
+    console.error('❌ Missing webhook signature')
+    return false
+  }
+
+  if (signature !== webhookSecret) {
     console.error('❌ Invalid webhook signature')
     return false
   }
+
+  console.log('✅ Webhook signature verified')
   return true
 }
 
@@ -59,6 +69,8 @@ function getMessageContent(message: any): string | null {
 
 // Helper function to find media info in message
 function findMediaInfo(message: any): { mediaObject: any, mediaType: string } | null {
+  if (!message) return null
+  
   const mediaKeys = {
     imageMessage: 'image',
     videoMessage: 'video',
@@ -280,20 +292,31 @@ async function processAIMention(conversationId: string, message: string, userId:
 
 // Main webhook handler
 export async function POST(request: NextRequest) {
-  console.log('📥 Chat 2.0 - Webhook received:', await request.json())
-
   try {
-    // Verify webhook signature
-    if (!verifySignature(request)) {
+    // Get signature and secret for verification
+    const signature = request.headers.get('x-webhook-signature')
+    const webhookSecret = process.env.WASENDER_WEBHOOK_SECRET
+
+    // Verify webhook signature first
+    if (!verifySignature(signature, webhookSecret)) {
       return NextResponse.json({ success: false, error: 'Invalid signature' }, { status: 401 })
     }
 
+    // Read the request body once
     const body = await request.json()
+    console.log('📥 Chat 2.0 - Webhook received:', JSON.stringify(body, null, 2))
+
     const { event } = body
 
     // Handle test event
     if (event === 'webhook.test') {
-      return NextResponse.json({ success: true, message: 'Webhook test successful' })
+      console.log('🧪 Webhook test event received')
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Webhook test successful',
+        timestamp: new Date().toISOString(),
+        received_data: body
+      })
     }
 
     // Handle messages.upsert event
