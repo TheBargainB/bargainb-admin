@@ -46,6 +46,69 @@ body {
   .animate-number-jump {
     animation: numberJump 0.4s ease-in-out;
   }
+
+  /* Chart background colors using CSS variables */
+  .bg-chart-1 {
+    background-color: hsl(var(--chart-1));
+  }
+  
+  .bg-chart-2 {
+    background-color: hsl(var(--chart-2));
+  }
+  
+  .bg-chart-3 {
+    background-color: hsl(var(--chart-3));
+  }
+  
+  .bg-chart-4 {
+    background-color: hsl(var(--chart-4));
+  }
+  
+  .bg-chart-5 {
+    background-color: hsl(var(--chart-5));
+  }
+
+  /* Chart text colors using CSS variables */
+  .text-chart-1 {
+    color: hsl(var(--chart-1));
+  }
+  
+  .text-chart-2 {
+    color: hsl(var(--chart-2));
+  }
+  
+  .text-chart-3 {
+    color: hsl(var(--chart-3));
+  }
+  
+  .text-chart-4 {
+    color: hsl(var(--chart-4));
+  }
+  
+  .text-chart-5 {
+    color: hsl(var(--chart-5));
+  }
+
+  /* Chart border colors using CSS variables */
+  .border-chart-1 {
+    border-color: hsl(var(--chart-1));
+  }
+  
+  .border-chart-2 {
+    border-color: hsl(var(--chart-2));
+  }
+  
+  .border-chart-3 {
+    border-color: hsl(var(--chart-3));
+  }
+  
+  .border-chart-4 {
+    border-color: hsl(var(--chart-4));
+  }
+  
+  .border-chart-5 {
+    border-color: hsl(var(--chart-5));
+  }
 }
 
 @keyframes fadeIn {

@@ -407,27 +407,30 @@ export type Database = {
       categories: {
         Row: {
           created_at: string | null
-          id: number
+          id: string
           level_1: string | null
           level_2: string | null
           level_3: string | null
           level_4: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          id?: number
+          id?: string
           level_1?: string | null
           level_2?: string | null
           level_3?: string | null
           level_4?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
-          id?: number
+          id?: string
           level_1?: string | null
           level_2?: string | null
           level_3?: string | null
           level_4?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -445,6 +448,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          last_message: string | null
           last_message_at: string | null
           status: string | null
           title: string | null
@@ -467,6 +471,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          last_message?: string | null
           last_message_at?: string | null
           status?: string | null
           title?: string | null
@@ -489,6 +494,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          last_message?: string | null
           last_message_at?: string | null
           status?: string | null
           title?: string | null
@@ -689,28 +695,31 @@ export type Database = {
         Row: {
           created_at: string | null
           feature: string
-          gtin: string | null
-          id: number
+          id: string
+          product_id: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           feature: string
-          gtin?: string | null
-          id?: number
+          id?: string
+          product_id?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           feature?: string
-          gtin?: string | null
-          id?: number
+          id?: string
+          product_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "features_gtin_fkey"
-            columns: ["gtin"]
+            foreignKeyName: "features_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["gtin"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -776,64 +785,70 @@ export type Database = {
       images: {
         Row: {
           created_at: string | null
-          gtin: string | null
-          id: number
+          id: string
+          product_id: string | null
           size: string | null
           source: string | null
+          updated_at: string | null
           url: string
         }
         Insert: {
           created_at?: string | null
-          gtin?: string | null
-          id?: number
+          id?: string
+          product_id?: string | null
           size?: string | null
           source?: string | null
+          updated_at?: string | null
           url: string
         }
         Update: {
           created_at?: string | null
-          gtin?: string | null
-          id?: number
+          id?: string
+          product_id?: string | null
           size?: string | null
           source?: string | null
+          updated_at?: string | null
           url?: string
         }
         Relationships: [
           {
-            foreignKeyName: "images_gtin_fkey"
-            columns: ["gtin"]
+            foreignKeyName: "images_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["gtin"]
+            referencedColumns: ["id"]
           },
         ]
       }
       ingredients: {
         Row: {
           created_at: string | null
-          gtin: string | null
-          id: number
+          id: string
           ingredient: string
+          product_id: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
-          gtin?: string | null
-          id?: number
+          id?: string
           ingredient: string
+          product_id?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
-          gtin?: string | null
-          id?: number
+          id?: string
           ingredient?: string
+          product_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "ingredients_gtin_fkey"
-            columns: ["gtin"]
+            foreignKeyName: "ingredients_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
-            referencedColumns: ["gtin"]
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -841,22 +856,25 @@ export type Database = {
         Row: {
           address: string | null
           created_at: string | null
-          id: number
+          id: string
           name: string
+          updated_at: string | null
           website: string | null
         }
         Insert: {
           address?: string | null
           created_at?: string | null
-          id?: number
+          id?: string
           name: string
+          updated_at?: string | null
           website?: string | null
         }
         Update: {
           address?: string | null
           created_at?: string | null
-          id?: number
+          id?: string
           name?: string
+          updated_at?: string | null
           website?: string | null
         }
         Relationships: []
@@ -1000,12 +1018,15 @@ export type Database = {
           energy_kcal: number | null
           energy_kj: number | null
           fat: number | null
-          gtin: string
+          fiber: number | null
           polyols: number | null
-          protein: number | null
+          product_id: string
+          proteins: number | null
           salt: number | null
           saturated_fat: number | null
+          sodium: number | null
           sugars: number | null
+          updated_at: string | null
         }
         Insert: {
           carbohydrates?: number | null
@@ -1013,12 +1034,15 @@ export type Database = {
           energy_kcal?: number | null
           energy_kj?: number | null
           fat?: number | null
-          gtin: string
+          fiber?: number | null
           polyols?: number | null
-          protein?: number | null
+          product_id: string
+          proteins?: number | null
           salt?: number | null
           saturated_fat?: number | null
+          sodium?: number | null
           sugars?: number | null
+          updated_at?: string | null
         }
         Update: {
           carbohydrates?: number | null
@@ -1026,20 +1050,76 @@ export type Database = {
           energy_kcal?: number | null
           energy_kj?: number | null
           fat?: number | null
-          gtin?: string
+          fiber?: number | null
           polyols?: number | null
-          protein?: number | null
+          product_id?: string
+          proteins?: number | null
           salt?: number | null
           saturated_fat?: number | null
+          sodium?: number | null
           sugars?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "nutrition_gtin_fkey"
-            columns: ["gtin"]
+            foreignKeyName: "nutrition_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: true
             referencedRelation: "products"
-            referencedColumns: ["gtin"]
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_history: {
+        Row: {
+          created_at: string | null
+          id: string
+          price: number
+          price_change_amount: number | null
+          price_change_percentage: number | null
+          price_change_type: string | null
+          promo_price: number | null
+          recorded_at: string | null
+          source: string | null
+          store_product_id: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          price: number
+          price_change_amount?: number | null
+          price_change_percentage?: number | null
+          price_change_type?: string | null
+          promo_price?: number | null
+          recorded_at?: string | null
+          source?: string | null
+          store_product_id: string
+          valid_from: string
+          valid_to?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          price?: number
+          price_change_amount?: number | null
+          price_change_percentage?: number | null
+          price_change_type?: string | null
+          promo_price?: number | null
+          recorded_at?: string | null
+          source?: string | null
+          store_product_id?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_history_store_product_id_fkey"
+            columns: ["store_product_id"]
+            isOneToOne: false
+            referencedRelation: "store_products"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1047,56 +1127,83 @@ export type Database = {
         Row: {
           additives: string | null
           brand: string | null
-          category_id: number | null
+          category_id: string | null
           created_at: string | null
           description: string | null
+          embedding: string | null
           gtin: string | null
           id: string
           is_variant: boolean | null
-          manufacturer_id: number | null
+          manufacturer_id: string | null
+          pk_amount: string | null
+          pk_qty: number | null
           preparation_usage: string | null
+          quantity: string | null
           recycling_info: string | null
           regulated_product_name: string | null
+          serving_size: number | null
+          serving_unit: string | null
           source: string | null
           storage_info: string | null
           title: string
-          variant_group: string | null
+          unit: string | null
+          unit_amount: number | null
+          updated_at: string | null
+          variant_group_id: string | null
         }
         Insert: {
           additives?: string | null
           brand?: string | null
-          category_id?: number | null
+          category_id?: string | null
           created_at?: string | null
           description?: string | null
+          embedding?: string | null
           gtin?: string | null
           id?: string
           is_variant?: boolean | null
-          manufacturer_id?: number | null
+          manufacturer_id?: string | null
+          pk_amount?: string | null
+          pk_qty?: number | null
           preparation_usage?: string | null
+          quantity?: string | null
           recycling_info?: string | null
           regulated_product_name?: string | null
+          serving_size?: number | null
+          serving_unit?: string | null
           source?: string | null
           storage_info?: string | null
           title: string
-          variant_group?: string | null
+          unit?: string | null
+          unit_amount?: number | null
+          updated_at?: string | null
+          variant_group_id?: string | null
         }
         Update: {
           additives?: string | null
           brand?: string | null
-          category_id?: number | null
+          category_id?: string | null
           created_at?: string | null
           description?: string | null
+          embedding?: string | null
           gtin?: string | null
           id?: string
           is_variant?: boolean | null
-          manufacturer_id?: number | null
+          manufacturer_id?: string | null
+          pk_amount?: string | null
+          pk_qty?: number | null
           preparation_usage?: string | null
+          quantity?: string | null
           recycling_info?: string | null
           regulated_product_name?: string | null
+          serving_size?: number | null
+          serving_unit?: string | null
           source?: string | null
           storage_info?: string | null
           title?: string
-          variant_group?: string | null
+          unit?: string | null
+          unit_amount?: number | null
+          updated_at?: string | null
+          variant_group_id?: string | null
         }
         Relationships: [
           {
@@ -1221,6 +1328,170 @@ export type Database = {
           },
         ]
       }
+      store_prices: {
+        Row: {
+          created_at: string | null
+          id: string
+          normalized_price_per_kg: number | null
+          normalized_price_per_l: number | null
+          normalized_price_per_piece: number | null
+          price: number
+          price_normalization_confidence: number | null
+          price_per_unit: number | null
+          price_unit: string | null
+          promo_price: number | null
+          store_product_id: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          normalized_price_per_kg?: number | null
+          normalized_price_per_l?: number | null
+          normalized_price_per_piece?: number | null
+          price: number
+          price_normalization_confidence?: number | null
+          price_per_unit?: number | null
+          price_unit?: string | null
+          promo_price?: number | null
+          store_product_id: string
+          valid_from: string
+          valid_to?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          normalized_price_per_kg?: number | null
+          normalized_price_per_l?: number | null
+          normalized_price_per_piece?: number | null
+          price?: number
+          price_normalization_confidence?: number | null
+          price_per_unit?: number | null
+          price_unit?: string | null
+          promo_price?: number | null
+          store_product_id?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_prices_store_product_id_fkey"
+            columns: ["store_product_id"]
+            isOneToOne: false
+            referencedRelation: "store_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_products: {
+        Row: {
+          brand: string | null
+          canonical_url: string | null
+          created_at: string | null
+          embedding: string | null
+          gtin: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          match_confidence: number | null
+          match_method: string | null
+          product_id: string | null
+          size: string | null
+          source_data: Json | null
+          store_id: string
+          store_product_id: string
+          title: string
+          unit: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          brand?: string | null
+          canonical_url?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          gtin?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          match_confidence?: number | null
+          match_method?: string | null
+          product_id?: string | null
+          size?: string | null
+          source_data?: Json | null
+          store_id: string
+          store_product_id: string
+          title: string
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          brand?: string | null
+          canonical_url?: string | null
+          created_at?: string | null
+          embedding?: string | null
+          gtin?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          match_confidence?: number | null
+          match_method?: string | null
+          product_id?: string | null
+          size?: string | null
+          source_data?: Json | null
+          store_id?: string
+          store_product_id?: string
+          title?: string
+          unit?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stores: {
+        Row: {
+          country: string
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          slug: string
+          website: string
+        }
+        Insert: {
+          country: string
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          slug: string
+          website: string
+        }
+        Update: {
+          country?: string
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          slug?: string
+          website?: string
+        }
+        Relationships: []
+      }
       whatsapp_contacts: {
         Row: {
           created_at: string | null
@@ -1327,9 +1598,245 @@ export type Database = {
       }
     }
     Functions: {
+      ai_agent_demo: {
+        Args: { user_request?: string }
+        Returns: {
+          demo_section: string
+          function_used: string
+          product_title: string
+          store_name: string
+          price: number
+          relevance_score: number
+          ai_suggestion: string
+        }[]
+      }
+      binary_quantize: {
+        Args: { "": string } | { "": unknown }
+        Returns: unknown
+      }
+      build_grocery_list: {
+        Args: { product_ids: string[]; budget: number }
+        Returns: {
+          product_id: string
+          gtin: string
+          product_title: string
+          store_name: string
+          price: number
+          promo_price: number
+          cumulative_cost: number
+          within_budget: boolean
+        }[]
+      }
+      calculate_and_store_normalized_prices: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          success_count: number
+          error_count: number
+        }[]
+      }
+      calculate_meal_cost: {
+        Args: { ingredient_ids: string[] }
+        Returns: {
+          total_cost: number
+          ingredient_count: number
+          average_cost_per_ingredient: number
+          cost_breakdown: Json
+        }[]
+      }
+      calculate_normalized_unit_price: {
+        Args: {
+          product_price: number
+          product_size: string
+          existing_price_per_unit?: number
+          existing_price_unit?: string
+        }
+        Returns: {
+          normalized_price_per_kg: number
+          normalized_price_per_l: number
+          normalized_price_per_piece: number
+          base_quantity: number
+          base_unit: string
+          confidence_score: number
+        }[]
+      }
+      compare_product_prices: {
+        Args: { gtin_input: string }
+        Returns: {
+          store_name: string
+          product_title: string
+          price: number
+          promo_price: number
+          price_difference: number
+          cheapest_store: boolean
+          store_url: string
+        }[]
+      }
+      compare_unit_prices: {
+        Args: { product_name: string; min_size?: number }
+        Returns: {
+          product_title: string
+          store_name: string
+          total_price: number
+          package_size: string
+          price_per_kg: number
+          price_per_l: number
+          price_per_piece: number
+          best_unit_price: number
+          unit_type: string
+          value_rating: string
+        }[]
+      }
+      convert_to_base_unit: {
+        Args: { quantity: number; unit_text: string }
+        Returns: Record<string, unknown>
+      }
+      extract_quantity_and_unit: {
+        Args: { size_text: string }
+        Returns: Record<string, unknown>
+      }
       generate_assistant_name: {
         Args: { phone_number: string }
         Returns: string
+      }
+      generate_product_embeddings: {
+        Args: { batch_size?: number }
+        Returns: number
+      }
+      get_budget_meal_options: {
+        Args: { budget_per_meal: number; dietary_preferences?: string[] }
+        Returns: {
+          meal_concept: string
+          total_cost: number
+          ingredient_count: number
+          main_ingredients: Json
+          stores_needed: string[]
+          cost_per_serving: number
+          dietary_tags: string[]
+          savings_opportunity: number
+        }[]
+      }
+      get_meal_planning_categories: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          category_id: string
+          category_name: string
+          category_path: string
+          level: number
+          parent_name: string
+          product_count: number
+        }[]
+      }
+      get_price_alerts: {
+        Args: { price_change_threshold?: number; days_back?: number }
+        Returns: {
+          product_title: string
+          gtin: string
+          store_name: string
+          old_price: number
+          new_price: number
+          change_amount: number
+          change_percentage: number
+          change_type: string
+          change_date: string
+        }[]
+      }
+      get_price_alternatives: {
+        Args: { target_product_id: string; max_price: number }
+        Returns: {
+          alternative_product_id: string
+          gtin: string
+          product_title: string
+          brand: string
+          category_match: boolean
+          price: number
+          store_name: string
+          savings: number
+          similarity_score: number
+        }[]
+      }
+      get_price_trends: {
+        Args: { product_gtin: string; days_back?: number }
+        Returns: {
+          store_name: string
+          current_price: number
+          lowest_price: number
+          highest_price: number
+          average_price: number
+          price_changes: number
+          trend_direction: string
+          last_change_date: string
+          last_change_amount: number
+        }[]
+      }
+      get_products_by_meal_category: {
+        Args: {
+          meal_category_name: string
+          max_price?: number
+          store_preference?: string
+        }
+        Returns: {
+          product_id: string
+          product_title: string
+          brand: string
+          gtin: string
+          best_price: number
+          best_store: string
+          importance_score: number
+          meal_category: string
+        }[]
+      }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_avg: {
+        Args: { "": number[] }
+        Returns: unknown
+      }
+      halfvec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      halfvec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      halfvec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      hnsw_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnsw_sparsevec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      hnswhandler: {
+        Args: { "": unknown }
+        Returns: unknown
       }
       import_json_array: {
         Args: { products_json: Json }
@@ -1342,6 +1849,202 @@ export type Database = {
       increment_conversation_stats: {
         Args: { conversation_id: string; is_inbound: boolean }
         Returns: undefined
+      }
+      ivfflat_bit_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflat_halfvec_support: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      ivfflathandler: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      l2_norm: {
+        Args: { "": unknown } | { "": unknown }
+        Returns: number
+      }
+      l2_normalize: {
+        Args: { "": string } | { "": unknown } | { "": unknown }
+        Returns: unknown
+      }
+      link_store_products_to_master: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          processed_count: number
+          total_linked: number
+        }[]
+      }
+      normalize_unit: {
+        Args: { unit_text: string }
+        Returns: string
+      }
+      search_cheapest_products: {
+        Args: { query_text: string; max_price?: number }
+        Returns: {
+          gtin: string
+          product_title: string
+          store_name: string
+          price: number
+          promo_price: number
+          price_per_unit: number
+          price_unit: string
+          store_url: string
+          product_url: string
+        }[]
+      }
+      search_cheapest_products_normalized: {
+        Args: {
+          query_text: string
+          max_price?: number
+          compare_by_unit?: boolean
+        }
+        Returns: {
+          gtin: string
+          product_title: string
+          store_name: string
+          total_price: number
+          size_info: string
+          price_per_kg: number
+          price_per_l: number
+          price_per_piece: number
+          best_unit_price: string
+          store_url: string
+        }[]
+      }
+      semantic_product_search: {
+        Args: {
+          search_query: string
+          similarity_threshold?: number
+          max_results?: number
+        }
+        Returns: {
+          product_id: string
+          gtin: string
+          title: string
+          brand: string
+          similarity_score: number
+          search_rank: number
+        }[]
+      }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
+      }
+      smart_grocery_search: {
+        Args: {
+          user_query: string
+          max_budget?: number
+          store_preference?: string
+        }
+        Returns: {
+          search_type: string
+          product_id: string
+          gtin: string
+          product_title: string
+          brand: string
+          store_name: string
+          price: number
+          relevance_score: number
+          price_rank: number
+          suggestion: string
+        }[]
+      }
+      smart_meal_planning: {
+        Args: {
+          meal_description: string
+          budget_per_meal?: number
+          dietary_restrictions?: string[]
+        }
+        Returns: {
+          meal_component: string
+          product_id: string
+          gtin: string
+          product_title: string
+          store_name: string
+          price: number
+          quantity_needed: string
+          component_cost: number
+          dietary_flags: string[]
+        }[]
+      }
+      sparsevec_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      sparsevec_send: {
+        Args: { "": unknown }
+        Returns: string
+      }
+      sparsevec_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
+      }
+      suggest_store_split: {
+        Args: { product_ids: string[] }
+        Returns: {
+          strategy: string
+          total_cost: number
+          store_breakdown: Json
+          savings_amount: number
+          recommendation: string
+        }[]
+      }
+      test_ai_agent_integration: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          function_name: string
+          status: string
+          result_count: number
+          sample_result: string
+        }[]
+      }
+      test_ai_agent_workflow: {
+        Args: { test_budget?: number; test_store_preference?: string }
+        Returns: {
+          test_name: string
+          test_result: string
+          execution_time_ms: number
+          details: Json
+        }[]
+      }
+      upgrade_to_real_embeddings: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      vector_avg: {
+        Args: { "": number[] }
+        Returns: string
+      }
+      vector_dims: {
+        Args: { "": string } | { "": unknown }
+        Returns: number
+      }
+      vector_norm: {
+        Args: { "": string }
+        Returns: number
+      }
+      vector_out: {
+        Args: { "": string }
+        Returns: unknown
+      }
+      vector_send: {
+        Args: { "": string }
+        Returns: string
+      }
+      vector_typmod_in: {
+        Args: { "": unknown[] }
+        Returns: number
       }
     }
     Enums: {
