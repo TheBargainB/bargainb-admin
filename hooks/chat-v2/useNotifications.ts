@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import type { 
   NotificationData,
@@ -35,7 +34,6 @@ interface NotificationSummary {
 // =============================================================================
 
 export interface UseNotificationsOptions {
-  enable_realtime?: boolean
   enable_sound?: boolean
   poll_interval?: number
   max_notifications?: number
@@ -72,25 +70,26 @@ export interface UseNotificationsReturn {
   playNotificationSound: () => void
   is_sound_enabled: boolean
   
-  // Real-time status
-  is_realtime_connected: boolean
+  // State setters for unified real-time manager
+  setNotificationData: React.Dispatch<React.SetStateAction<NotificationData | null>>
+  setNotificationItems: React.Dispatch<React.SetStateAction<NotificationItem[]>>
+  
+  // Utilities
   last_updated: Date | null
 }
 
 // =============================================================================
-// HOOK
+// HOOK - PURE DATA MANAGER (NO SUBSCRIPTIONS)
 // =============================================================================
 
 export const useNotifications = (options: UseNotificationsOptions = {}): UseNotificationsReturn => {
   const {
-    enable_realtime = true,
     enable_sound = false,
     poll_interval = 30000, // 30 seconds
     max_notifications = 10
   } = options
 
   const { toast } = useToast()
-  const supabase = createClient()
 
   // =============================================================================
   // STATE
@@ -111,8 +110,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   // Sound settings
   const [is_sound_enabled, setIsSoundEnabled] = useState(enable_sound)
   
-  // Real-time and polling
-  const [is_realtime_connected, setIsRealtimeConnected] = useState(false)
+  // Last updated timestamp
   const [last_updated, setLastUpdated] = useState<Date | null>(null)
 
   // =============================================================================
@@ -196,8 +194,8 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
       // Map UnreadConversation to NotificationItem
       const notificationItems: NotificationItem[] = unreadConversations.map(conv => ({
         conversation_id: conv.conversation_id,
-        contact_name: conv.contact_name,
-        phone_number: conv.contact?.phone_number || 'Unknown',
+        contact_name: conv.contact_name || 'Unknown Contact',
+        phone_number: 'Unknown', // UnreadConversation doesn't include phone number
         last_message: conv.last_message,
         unread_count: conv.unread_count,
         created_at: conv.last_message_at
@@ -332,95 +330,18 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   }, [is_sound_enabled])
 
   // =============================================================================
-  // REAL-TIME SUBSCRIPTIONS
+  // POLLING FALLBACK (OPTIONAL)
   // =============================================================================
 
   useEffect(() => {
-    if (!enable_realtime) return
-
-    // Subscribe to conversation changes for notifications
-    const conversationsChannel = supabase
-      .channel('notifications_conversations')
-      .on(
-        'postgres_changes' as any,
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'conversations' 
-        },
-        (payload: any) => {
-          console.log('📡 Notification real-time update (conversations):', payload.eventType)
-          
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedConversation = payload.new
-            
-            // Check if unread count changed
-            if (payload.old && updatedConversation.unread_count !== payload.old.unread_count) {
-              // Refresh notifications to get updated counts
-              refreshNotifications()
-              
-              // Play sound for new messages (when unread count increases)
-              if (updatedConversation.unread_count > (payload.old.unread_count || 0)) {
-                playNotificationSound()
-              }
-            }
-          }
-        }
-      )
-      .subscribe((status) => {
-        setIsRealtimeConnected(status === 'SUBSCRIBED')
-        console.log('📡 Notifications subscription status:', status)
-      })
-
-    // Subscribe to message changes for real-time notifications
-    const messagesChannel = supabase
-      .channel('notifications_messages')
-      .on(
-        'postgres_changes' as any,
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages',
-          filter: 'direction=eq.inbound'
-        },
-        (payload: any) => {
-          console.log('📡 New inbound message for notifications:', payload.new?.id)
-          
-          // Process new message for notifications
-          if (payload.new) {
-            processWebhookNotification(payload.new)
-              .then(() => {
-                refreshNotifications()
-                playNotificationSound()
-              })
-              .catch(err => {
-                console.error('❌ Error processing webhook notification:', err)
-              })
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(conversationsChannel)
-      supabase.removeChannel(messagesChannel)
-      setIsRealtimeConnected(false)
-    }
-  }, [enable_realtime, supabase, refreshNotifications, playNotificationSound])
-
-  // =============================================================================
-  // POLLING FALLBACK
-  // =============================================================================
-
-  useEffect(() => {
-    if (enable_realtime || !poll_interval) return
+    if (!poll_interval) return
 
     const interval = setInterval(() => {
       refreshNotifications()
     }, poll_interval)
 
     return () => clearInterval(interval)
-  }, [enable_realtime, poll_interval, refreshNotifications])
+  }, [poll_interval, refreshNotifications])
 
   // =============================================================================
   // INITIAL FETCH
@@ -465,8 +386,11 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
     playNotificationSound,
     is_sound_enabled,
     
-    // Real-time status
-    is_realtime_connected,
+    // State setters for unified real-time manager
+    setNotificationData,
+    setNotificationItems,
+    
+    // Utilities
     last_updated
   }
 } 

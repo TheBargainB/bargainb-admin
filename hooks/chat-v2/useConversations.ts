@@ -1,13 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import type { 
   Conversation, 
   ConversationFilters,
-  ConversationsResponse,
-  RealtimeConversationPayload
+  ConversationsResponse
 } from '@/types/chat-v2.types'
 import {
   getConversations,
@@ -24,7 +22,6 @@ import {
 
 export interface UseConversationsOptions {
   auto_fetch?: boolean
-  enable_realtime?: boolean
   initial_filters?: ConversationFilters
 }
 
@@ -58,23 +55,23 @@ export interface UseConversationsReturn {
   setSearchTerm: (term: string) => void
   clearError: () => void
   
-  // Real-time status
-  is_realtime_connected: boolean
+  // State setters for unified real-time manager
+  setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>
+  setSelectedConversation: React.Dispatch<React.SetStateAction<Conversation | null>>
+  setTotalUnread: React.Dispatch<React.SetStateAction<number>>
 }
 
 // =============================================================================
-// HOOK
+// HOOK - PURE DATA MANAGER (NO SUBSCRIPTIONS)
 // =============================================================================
 
 export const useConversations = (options: UseConversationsOptions = {}): UseConversationsReturn => {
   const {
     auto_fetch = true,
-    enable_realtime = true,
     initial_filters = {}
   } = options
 
   const { toast } = useToast()
-  const supabase = createClient()
 
   // =============================================================================
   // STATE
@@ -97,9 +94,6 @@ export const useConversations = (options: UseConversationsOptions = {}): UseConv
   // Filters
   const [filters, setFilters] = useState<ConversationFilters>(initial_filters)
   const [search_term, setSearchTerm] = useState('')
-  
-  // Real-time connection status
-  const [is_realtime_connected, setIsRealtimeConnected] = useState(false)
 
   // =============================================================================
   // COMPUTED VALUES
@@ -265,87 +259,6 @@ export const useConversations = (options: UseConversationsOptions = {}): UseConv
   }, [])
 
   // =============================================================================
-  // REAL-TIME SUBSCRIPTIONS
-  // =============================================================================
-
-  useEffect(() => {
-    if (!enable_realtime) return
-
-    const channel = supabase
-      .channel('conversations_realtime')
-      .on(
-        'postgres_changes' as any,
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'conversations' 
-        },
-        (payload: any) => {
-          console.log('📡 Conversation real-time update:', payload.eventType)
-          
-          if (payload.eventType === 'INSERT' && payload.new) {
-            // Add new conversation to the list
-            const newConversation = payload.new as any // Will be properly typed by actions
-            setConversations(prev => {
-              // Avoid duplicates
-              if (prev.some(conv => conv.id === newConversation.id)) {
-                return prev
-              }
-              return [newConversation, ...prev]
-            })
-            setTotalCount(prev => prev + 1)
-          }
-          
-          else if (payload.eventType === 'UPDATE' && payload.new) {
-            const updatedConversation = payload.new as any
-            
-            setConversations(prev => prev.map(conv => 
-              conv.id === updatedConversation.id 
-                ? { ...conv, ...updatedConversation }
-                : conv
-            ))
-            
-            // Update selected conversation if it matches
-            setSelectedConversation(prev => 
-              prev?.id === updatedConversation.id 
-                ? { ...prev, ...updatedConversation }
-                : prev
-            )
-            
-            // Recalculate total unread
-            setTotalUnread(prev => {
-              const oldConversation = conversations.find(conv => conv.id === updatedConversation.id)
-              const oldUnread = oldConversation?.unread_count || 0
-              const newUnread = updatedConversation.unread_count || 0
-              return Math.max(0, prev - oldUnread + newUnread)
-            })
-          }
-          
-          else if (payload.eventType === 'DELETE' && payload.old) {
-            const deletedId = (payload.old as any).id
-            
-            setConversations(prev => prev.filter(conv => conv.id !== deletedId))
-            setTotalCount(prev => Math.max(0, prev - 1))
-            
-            // Clear selected conversation if it was deleted
-            setSelectedConversation(prev => 
-              prev?.id === deletedId ? null : prev
-            )
-          }
-        }
-      )
-      .subscribe((status) => {
-        setIsRealtimeConnected(status === 'SUBSCRIBED')
-        console.log('📡 Conversations subscription status:', status)
-      })
-
-    return () => {
-      supabase.removeChannel(channel)
-      setIsRealtimeConnected(false)
-    }
-  }, [enable_realtime, supabase, conversations])
-
-  // =============================================================================
   // EFFECTS
   // =============================================================================
 
@@ -390,7 +303,9 @@ export const useConversations = (options: UseConversationsOptions = {}): UseConv
     setSearchTerm,
     clearError,
     
-    // Real-time status
-    is_realtime_connected
+    // State setters for unified real-time manager
+    setConversations,
+    setSelectedConversation,
+    setTotalUnread
   }
 } 
