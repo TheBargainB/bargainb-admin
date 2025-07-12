@@ -141,8 +141,9 @@ export async function POST(request: NextRequest) {
         if (!conversationData?.whatsapp_contact_id) {
           console.error('❌ Could not find WhatsApp contact ID for conversation:', conversationId)
         } else {
-          // Call the AI processing API
-          const aiResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/whatsapp/ai`, {
+          // Call the AI processing API using request URL origin (like the old system)
+          const requestUrl = new URL(request.url);
+          const aiResponse = await fetch(`${requestUrl.origin}/api/whatsapp/ai`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

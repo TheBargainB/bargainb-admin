@@ -438,11 +438,8 @@ export async function POST(request: NextRequest) {
         console.log('🤖 @bb mention detected, triggering AI processing...');
         
         try {
-          // Get the base URL for the API call
-          const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.thebargainb.com';
-          
-          // Call the AI processing API
-          const aiResponse = await fetch(`${baseUrl}/api/whatsapp/ai`, {
+          // Call the AI processing API using request origin (like the old system)
+          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
