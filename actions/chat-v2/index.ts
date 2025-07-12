@@ -26,8 +26,27 @@ export {
   extractPhoneNumber,
   processWASenderWebhookMessage,
   updateConversationLastMessage,
-  incrementUnreadCount as incrementMessageUnreadCount
+  incrementUnreadCount as incrementMessageUnreadCount,
+  // BB Mention Detection exports
+  detectBBMention,
+  processIncomingMessageWithBBDetection,
+  hasBBMention,
+  extractBBQuery,
+  processMessageForBBMention,
+  processIncomingMessageWithFullPipeline
 } from './messages.actions'
+
+// Assistant Assignment exports
+export {
+  checkConversationAssistant,
+  getDefaultAssistant,
+  assignAssistantToConversation,
+  ensureConversationHasAssistant,
+  getConversationPhoneNumber,
+  processBBMentionWithAssignment,
+  type AssistantAssignmentResult,
+  type ConversationAssistantInfo
+} from './assistant-assignment.actions'
 
 // Contact actions
 export {
@@ -74,5 +93,6 @@ export type {
   ProcessedWebhookMessage,
   MessageStatus,
   MessageType,
-  SenderType
+  SenderType,
+  BBMentionDetection
 } from '@/types/chat-v2.types' 

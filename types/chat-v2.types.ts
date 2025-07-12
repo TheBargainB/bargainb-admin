@@ -162,6 +162,17 @@ export interface CrmProfile {
 }
 
 // =============================================================================
+// BB MENTION DETECTION TYPES
+// =============================================================================
+
+export interface BBMentionDetection {
+  is_bb_mention: boolean
+  user_query: string
+  original_content: string
+  mention_patterns: string[]
+}
+
+// =============================================================================
 // NOTIFICATION TYPES - For the notification bell system
 // =============================================================================
 
@@ -307,4 +318,5 @@ export interface ProcessedWebhookMessage {
     url: string
     local_path?: string
   }[]
+  bb_mention_data?: BBMentionDetection
 } 
