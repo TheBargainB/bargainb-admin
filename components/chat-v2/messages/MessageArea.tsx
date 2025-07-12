@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 import { MessageBubble } from './MessageBubble'
 import { MessageInput } from './MessageInput'
+import { ChatHelpers } from '@/lib/chat-helpers'
 import type { 
   Message, 
   Conversation, 
@@ -242,7 +243,7 @@ export const MessageArea = memo<MessageAreaProps>(({
             </h3>
             <p className="text-xs text-muted-foreground">
               {contact?.last_seen_at 
-                ? `Last seen ${new Date(contact.last_seen_at).toLocaleTimeString()}`
+                ? `Last seen ${ChatHelpers.formatMessageTime(contact.last_seen_at)}`
                 : 'Online'
               }
             </p>

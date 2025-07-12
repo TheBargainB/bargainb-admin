@@ -113,7 +113,7 @@ export const useUnifiedRealTime = ({
       console.log('🔄 Unified refresh: Loading all data...')
       
       // Load conversations and calculate unread count
-      const response = await fetch('/admin/chat-v2/api/conversations')
+      const response = await fetch('/api/admin/chat/conversations')
       if (response.ok) {
         const data = await response.json()
         const conversations = data.conversations || []

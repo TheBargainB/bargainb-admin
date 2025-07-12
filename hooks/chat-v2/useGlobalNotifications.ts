@@ -58,7 +58,7 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
       console.log('📝 Marking all conversations as read...')
       
       // Get all conversations first
-      const response = await fetch('/admin/chat-v2/api/conversations')
+      const response = await fetch('/api/admin/chat/conversations')
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       
       const data = await response.json()
@@ -68,7 +68,7 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
       const markAsReadPromises = conversations
         .filter((conv: any) => conv.unread_count > 0)
         .map((conv: any) => 
-          fetch(`/admin/chat-v2/api/conversations/${conv.id}/read`, {
+          fetch(`/api/admin/chat/conversations/${conv.id}/read`, {
             method: 'POST'
           })
         )
@@ -97,7 +97,7 @@ export const useGlobalNotifications = (enabled: boolean = true): GlobalNotificat
 // Export function for backward compatibility
 export const refreshGlobalUnreadCount = async () => {
   try {
-    const response = await fetch('/admin/chat-v2/api/conversations')
+          const response = await fetch('/api/admin/chat/conversations')
     if (response.ok) {
       const data = await response.json()
       const conversations = data.conversations || []

@@ -14,6 +14,7 @@ import { MessageArea } from '@/components/chat-v2/messages/MessageArea'
 import { ContactProfile } from '@/components/chat-v2/contacts/ContactProfile'
 import { ContactsDialog } from '@/components/chat-v2/contacts/ContactsDialog'
 import { NewContactDialog } from '@/components/chat-v2/contacts/NewContactDialog'
+import { AssistantAssignmentDialog } from '@/components/chat-v2/contacts/AssistantAssignmentDialog'
 import { MessageInput } from '@/components/chat-v2/messages/MessageInput'
 
 // Chat 2.0 Hooks
@@ -73,7 +74,9 @@ export default function ChatV2Page() {
   // Local state for dialogs
   const [isContactsDialogOpen, setIsContactsDialogOpen] = useState(false)
   const [isNewContactDialogOpen, setIsNewContactDialogOpen] = useState(false)
+  const [isAssistantAssignmentDialogOpen, setIsAssistantAssignmentDialogOpen] = useState(false)
   const [selectedContactIds, setSelectedContactIds] = useState<string[]>([])
+  const [contactForAssignment, setContactForAssignment] = useState<Contact | null>(null)
 
   // State for loading messages
   const [isLoading, setIsLoading] = useState(false)
@@ -174,6 +177,35 @@ export default function ChatV2Page() {
     }
   }
 
+  const handleAssignAI = (contactId: string) => {
+    // Find the contact by ID
+    const contact = conversations.selected_conversation?.contact
+    if (contact) {
+      setContactForAssignment(contact)
+      setIsAssistantAssignmentDialogOpen(true)
+    }
+  }
+
+  const handleAssignmentDialogClose = () => {
+    setIsAssistantAssignmentDialogOpen(false)
+    setContactForAssignment(null)
+  }
+
+  const handleAssignmentChange = () => {
+    // Refresh data after assignment change
+    conversations.refreshConversations()
+    toast({
+      title: "Assignment Updated",
+      description: "AI assistant assignment has been updated successfully.",
+    })
+  }
+
+  // Handle contact profile collapse/expand
+  const [isContactPanelCollapsed, setIsContactPanelCollapsed] = useState(false)
+
+  const handleContactPanelToggle = (collapsed: boolean) => {
+    setIsContactPanelCollapsed(collapsed)
+  }
 
 
   const handleContactSelection = (contact: Contact) => {
@@ -275,7 +307,7 @@ export default function ChatV2Page() {
       
       {/* Left Panel - Conversations (Extra Wide for Full Message Preview) */}
       <div className={cn(
-        'w-[42rem] flex-shrink-0 bg-white dark:bg-gray-900',
+        'w-[28rem] flex-shrink-0 bg-white dark:bg-gray-900',
         'border-r border-gray-200 dark:border-gray-700',
         'overflow-hidden flex flex-col h-full'
       )}>
@@ -323,15 +355,19 @@ export default function ChatV2Page() {
           )}
       </div>
 
-      {/* Right Panel - Contact Profile (Wider Fixed Width) */}
+      {/* Right Panel - Contact Profile (Collapsible) */}
       {panel_state.is_contact_panel_visible && conversations.selected_conversation && (
-        <div className="w-[28rem] flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden h-full">
+        <div className={cn(
+          "flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden h-full transition-all duration-300",
+          isContactPanelCollapsed ? "w-16" : "w-[28rem]"
+        )}>
           <ContactProfile
             contact={conversations.selected_conversation?.contact}
             conversation={conversations.selected_conversation}
             is_visible={true}
             onSendMessage={handleContactProfileSendMessage}
-       
+            onDeleteContact={handleContactDelete}
+            onCollapseToggle={handleContactPanelToggle}
           />
         </div>
       )}
@@ -357,6 +393,14 @@ export default function ChatV2Page() {
         is_open={isNewContactDialogOpen}
         onClose={() => setIsNewContactDialogOpen(false)}
         onContactCreated={handleCreateNewContact}
+      />
+
+      {/* Assistant Assignment Dialog */}
+      <AssistantAssignmentDialog
+        isOpen={isAssistantAssignmentDialogOpen}
+        contact={contactForAssignment}
+        onClose={handleAssignmentDialogClose}
+        onAssignmentChange={handleAssignmentChange}
       />
 
       {/* Connection status indicator */}

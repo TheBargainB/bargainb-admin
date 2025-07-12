@@ -1,6 +1,7 @@
 import { supabaseAdmin } from './supabase';
 import { getOrCreateAssistantForConversation } from './assistant-service';
 import { createClient } from '@/utils/supabase/client'
+import { formatPhoneNumber as formatPhoneNumberUtil, isValidPhoneNumber as isValidPhoneNumberUtil, extractPhoneNumber as extractPhoneNumberUtil, normalizePhoneNumber } from './api-utils'
 
 // =============================================================================
 // WASENDER API CONFIGURATION
@@ -448,45 +449,10 @@ export const wasenderClient = new WASenderClient()
 // UTILITY FUNCTIONS
 // =============================================================================
 
-export function formatPhoneNumber(phoneNumber: string): string {
-  // Remove all non-digit characters except +
-  const cleaned = phoneNumber.replace(/[^\d+]/g, '')
-  
-  // If it already starts with +, use as is
-  if (cleaned.startsWith('+')) {
-    return cleaned
-  }
-  
-  // Remove any leading zeros or other non-standard formatting
-  const digitsOnly = cleaned.replace(/\D/g, '')
-  
-  // If it looks like an international number (10+ digits), add +
-  if (digitsOnly.length >= 10) {
-    // Handle common cases
-    if (digitsOnly.length === 10) {
-      // Assume US if 10 digits
-      return `+1${digitsOnly}`
-    } else if (digitsOnly.length === 11 && digitsOnly.startsWith('1')) {
-      // US number with country code
-      return `+${digitsOnly}`
-    } else {
-      // International number (like Dutch +31...)
-      return `+${digitsOnly}`
-    }
-  }
-  
-  // Return original if we can't format it properly
-  return phoneNumber
-}
-
-export function extractPhoneNumber(remoteJid: string): string {
-  return remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '')
-}
-
-export function isValidPhoneNumber(phoneNumber: string): boolean {
-  const cleaned = phoneNumber.replace(/\D/g, '')
-  return cleaned.length >= 10 && cleaned.length <= 15
-}
+// Phone utility functions moved to api-utils.ts for consolidation
+export const formatPhoneNumber = formatPhoneNumberUtil
+export const extractPhoneNumber = extractPhoneNumberUtil
+export const isValidPhoneNumber = isValidPhoneNumberUtil
 
 // =============================================================================
 // MESSAGE SENDING HELPERS FOR CHAT 2.0
@@ -1168,12 +1134,9 @@ export class WhatsAppAIService {
 
   private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string, phoneNumber: string) {
     try {
-      // Clean and format phone number for WASender API
-      let cleanPhoneNumber = phoneNumber.replace(/[^\d]/g, ''); // Remove all non-digits
-      
-      // Don't assume country code - preserve the original format
-      // The phone number should already include the correct country code
-      cleanPhoneNumber = `+${cleanPhoneNumber}`; // Add + prefix for WASender API
+      // Clean and format phone number for WASender API using consolidated function
+      const normalizedPhone = normalizePhoneNumber(phoneNumber);
+      const cleanPhoneNumber = `+${normalizedPhone}`; // Add + prefix for WASender API
 
       console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber.replace(/(\+\d{1,3})\d{4,}(\d{4})/, '$1***$2'));
 

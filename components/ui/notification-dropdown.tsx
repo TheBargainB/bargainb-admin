@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
-import { formatDistanceToNow } from "date-fns"
+import { ChatHelpers } from '@/lib/chat-helpers'
 
 interface RecentMessage {
   id: string
@@ -47,7 +47,7 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
     setIsLoading(true)
     try {
       console.log('🔔 DROPDOWN: Fetching recent messages from Chat 2.0 API')
-      const response = await fetch('/admin/chat-v2/api/recent-messages')
+      const response = await fetch('/api/admin/chat-v2/recent-messages')
       if (response.ok) {
         const data = await response.json()
         setRecentMessages(data.messages || [])
@@ -80,7 +80,7 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
 
   const formatMessageTime = (timestamp: string) => {
     try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true })
+      return ChatHelpers.formatMessageTime(timestamp)
     } catch {
       return 'Recently'
     }
@@ -213,7 +213,7 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
           <>
             <DropdownMenuSeparator />
             <div className="p-2">
-              <Link href="/admin/chat" onClick={() => setIsOpen(false)}>
+              <Link href="/admin/chat-v2" onClick={() => setIsOpen(false)}>
                 <Button variant="ghost" className="w-full text-xs">
                   View all conversations
                 </Button>

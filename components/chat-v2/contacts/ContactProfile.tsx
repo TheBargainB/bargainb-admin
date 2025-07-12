@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useState, useEffect } from 'react'
-import { Edit3, Save, X, Users, MessageCircle, Clock, Star, MoreVertical, Bot, UserPlus, Settings, TrendingUp, Calendar, Phone, Mail, MapPin, Building } from 'lucide-react'
+import { Edit3, Save, X, Users, MessageCircle, Clock, Star, MoreVertical, Bot, UserPlus, Settings, TrendingUp, Calendar, Phone, Mail, MapPin, Building, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,6 +33,8 @@ interface ContactProfileProps {
   onSendMessage?: () => void
   onEditContact?: (contactId: string, updates: Partial<Contact>) => void
   onBlockContact?: (contactId: string) => void
+  onDeleteContact?: (contactId: string) => void
+  onCollapseToggle?: (collapsed: boolean) => void
   
   className?: string
 }
@@ -46,6 +48,8 @@ export const ContactProfile = memo<ContactProfileProps>(({
   onSendMessage,
   onEditContact,
   onBlockContact,
+  onDeleteContact,
+  onCollapseToggle,
   className
 }) => {
   // =============================================================================
@@ -55,6 +59,7 @@ export const ContactProfile = memo<ContactProfileProps>(({
   const [is_editing, setIsEditing] = useState(false)
   const [edit_fields, setEditFields] = useState<Record<string, string>>({})
   const [is_assignment_dialog_open, setIsAssignmentDialogOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   // =============================================================================
   // AI MANAGEMENT
@@ -114,8 +119,20 @@ export const ContactProfile = memo<ContactProfileProps>(({
     }
   }
 
+  const handleDeleteContact = () => {
+    if (contact && onDeleteContact) {
+      onDeleteContact(contact.id)
+    }
+  }
+
   const handleAssignAssistant = () => {
     setIsAssignmentDialogOpen(true)
+  }
+
+  const handleToggleCollapse = () => {
+    const newCollapsedState = !isCollapsed
+    setIsCollapsed(newCollapsedState)
+    onCollapseToggle?.(newCollapsedState)
   }
 
   // =============================================================================
@@ -442,12 +459,25 @@ export const ContactProfile = memo<ContactProfileProps>(({
   }
 
   return (
-    <div className="h-full bg-background flex flex-col">
+    <div className={cn(
+      "h-full bg-background flex flex-col transition-all duration-200",
+      isCollapsed ? "w-12" : "w-full"
+    )}>
       {/* Header */}
       <div className="p-4 border-b border-border bg-card">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Contact Info</h2>
-          <DropdownMenu>
+          {!isCollapsed && <h2 className="text-lg font-semibold text-foreground">Contact Info</h2>}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleCollapse}
+              className="p-1"
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </Button>
+            {!isCollapsed && (
+              <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <MoreVertical className="w-4 h-4" />
@@ -467,17 +497,30 @@ export const ContactProfile = memo<ContactProfileProps>(({
                 View in CRM
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">
+              <DropdownMenuItem 
+                onClick={handleBlockContact}
+                className="text-orange-600"
+              >
                 <Users className="w-4 h-4 mr-2" />
                 Block Customer
               </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleDeleteContact}
+                className="text-red-600"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Delete Contact
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 p-4 space-y-6">
+      {/* Content - Only show when not collapsed */}
+      {!isCollapsed && (
+        <div className="flex-1 p-4 space-y-6">
         {/* Contact Header */}
         <div className="flex items-center space-x-4">
           <Avatar className="w-16 h-16">
@@ -646,6 +689,7 @@ export const ContactProfile = memo<ContactProfileProps>(({
           </div>
         </div>
       </div>
+      )}
 
       {/* Assignment Dialog */}
       {is_assignment_dialog_open && (

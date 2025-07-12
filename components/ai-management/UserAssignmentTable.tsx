@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Users, UserPlus, UserMinus, Phone } from 'lucide-react'
 import { UserAssignment } from '@/types/ai-management.types'
+import { ContactService } from '@/lib/ContactService'
 
 interface UserAssignmentTableProps {
   assignments: UserAssignment[]
@@ -29,12 +30,7 @@ export const UserAssignmentTable = ({
   )
 
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
+    return ContactService.getInitials({ display_name: name } as any)
   }
 
   const handleUnassign = (assignment: UserAssignment) => {

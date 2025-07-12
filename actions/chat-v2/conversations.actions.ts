@@ -52,12 +52,10 @@ export async function getConversations(
 
     // Apply search filter
     if (filters.search) {
-      query = query.or(`
-        title.ilike.%${filters.search}%,
-        whatsapp_contacts.display_name.ilike.%${filters.search}%,
-        whatsapp_contacts.push_name.ilike.%${filters.search}%,
-        whatsapp_contacts.phone_number.ilike.%${filters.search}%
-      `)
+      const searchTerm = filters.search.trim()
+      // Use PostgREST filter syntax for OR conditions across related tables
+      // Fix: Remove potential double parentheses by using proper escaping
+      query = query.or(`title.ilike.*${searchTerm}*,whatsapp_contacts.display_name.ilike.*${searchTerm}*,whatsapp_contacts.push_name.ilike.*${searchTerm}*,whatsapp_contacts.phone_number.ilike.*${searchTerm}*`)
     }
 
     // Apply status filter

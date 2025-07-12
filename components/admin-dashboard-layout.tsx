@@ -19,7 +19,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
   useEffect(() => {
     const fetchNotificationCount = async () => {
       try {
-        const response = await fetch('/admin/chat-v2/api/notifications')
+        const response = await fetch('/api/admin/chat-v2/notifications')
         if (response.ok) {
           const data = await response.json()
           setUnreadCount(data.total_unread || 0)

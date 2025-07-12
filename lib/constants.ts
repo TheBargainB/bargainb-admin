@@ -12,7 +12,23 @@ export const API_ENDPOINTS = {
   AI_ANALYTICS: '/api/admin/ai-management/analytics',
   AI_STATS: '/api/ai/stats',
   
-  // Contact APIs
+  // Unified Chat APIs
+  CHAT_CONVERSATIONS: '/api/admin/chat/conversations',
+  CHAT_MESSAGES: '/api/admin/chat/messages',
+  CHAT_RECENT_MESSAGES: '/api/admin/chat/recent-messages',
+  CHAT_SEND_MESSAGE: '/api/admin/chat/send-message',
+  CHAT_NOTIFICATIONS: '/api/admin/chat/notifications',
+  CHAT_WEBHOOK: '/api/admin/chat/webhook',
+  CHAT_ASSISTANTS: '/api/admin/chat/assistants',
+  CHAT_ASSISTANTS_CREATE: '/api/admin/chat/assistants/create',
+  CHAT_ASSISTANTS_BY_ID: (id: string) => `/api/admin/chat/assistants/${id}`,
+  
+  // Unified CRM Contact APIs
+  CONTACTS_SYNC: '/api/admin/contacts/sync',
+  CONTACTS_BY_PHONE: (phoneNumber: string) => `/api/admin/contacts/${phoneNumber}`,
+  CONTACTS_PICTURE: (phoneNumber: string) => `/api/admin/contacts/picture/${phoneNumber}`,
+  
+  // Legacy APIs (to be deprecated)
   CONTACTS_DB: '/admin/chat/api/contacts/db',
   CONTACTS: '/admin/chat/api/contacts',
   CONTACT_SYNC: '/admin/chat/api/contacts/sync',

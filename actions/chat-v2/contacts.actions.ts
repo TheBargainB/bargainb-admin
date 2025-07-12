@@ -39,12 +39,8 @@ export async function getContacts(
 
     // Apply search filter
     if (filters.search) {
-      query = query.or(`
-        display_name.ilike.%${filters.search}%,
-        push_name.ilike.%${filters.search}%,
-        verified_name.ilike.%${filters.search}%,
-        phone_number.ilike.%${filters.search}%
-      `)
+      const searchTerm = filters.search.trim()
+      query = query.or(`display_name.ilike.%${searchTerm}%,push_name.ilike.%${searchTerm}%,verified_name.ilike.%${searchTerm}%,phone_number.ilike.%${searchTerm}%`)
     }
 
     // Apply active filter
@@ -66,7 +62,7 @@ export async function getContacts(
     }
 
     // Transform data to match our clean types
-    const contacts: Contact[] = (data || []).map(contact => ({
+    const contacts: Contact[] = (data || []).map((contact: any) => ({
       id: contact.id,
       phone_number: contact.phone_number,
       whatsapp_jid: contact.whatsapp_jid,
@@ -412,17 +408,66 @@ export async function updateContact(
 
 export async function deleteContact(contactId: string): Promise<void> {
   try {
-    const { error } = await supabase
+    console.log('🗑️ Starting comprehensive contact deletion:', contactId)
+    
+    // Get contact info first for logging
+    const contact = await getContactById(contactId)
+    if (!contact) {
+      console.warn('⚠️ Contact not found for deletion:', contactId)
+      return
+    }
+    
+    // Step 1: Delete all messages where this contact was involved
+    console.log('🗑️ Deleting messages for contact:', contact.phone_number)
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('contact_id', contactId)
+    
+    if (messagesError) {
+      console.error('❌ Error deleting messages:', messagesError)
+      // Continue with deletion, don't throw here
+    }
+    
+    // Step 2: Delete all conversations where this contact was involved
+    console.log('🗑️ Deleting conversations for contact:', contact.phone_number)
+    const { error: conversationsError } = await supabase
+      .from('conversations')
+      .delete()
+      .eq('contact_id', contactId)
+    
+    if (conversationsError) {
+      console.error('❌ Error deleting conversations:', conversationsError)
+      // Continue with deletion, don't throw here
+    }
+    
+    // Step 3: Delete CRM profile if exists
+    if (contact.crm_profile?.id) {
+      console.log('🗑️ Deleting CRM profile for contact:', contact.phone_number)
+      const { error: crmError } = await supabase
+        .from('crm_profiles')
+        .delete()
+        .eq('id', contact.crm_profile.id)
+      
+      if (crmError) {
+        console.error('❌ Error deleting CRM profile:', crmError)
+        // Continue with deletion, don't throw here
+      }
+    }
+    
+    // Step 4: Finally delete the contact itself
+    console.log('🗑️ Deleting contact record:', contact.phone_number)
+    const { error: contactError } = await supabase
       .from('whatsapp_contacts')
       .delete()
       .eq('id', contactId)
 
-    if (error) {
-      console.error('❌ Error deleting contact:', error)
-      throw new Error(`Failed to delete contact: ${error.message}`)
+    if (contactError) {
+      console.error('❌ Error deleting contact:', contactError)
+      throw new Error(`Failed to delete contact: ${contactError.message}`)
     }
 
-    console.log('✅ Contact deleted:', contactId)
+    console.log('✅ Contact completely deleted:', contact.phone_number)
 
   } catch (error) {
     console.error('❌ Error in deleteContact:', error)
@@ -654,12 +699,7 @@ export async function searchContacts(
           total_messages
         )
       `)
-      .or(`
-        display_name.ilike.%${query}%,
-        push_name.ilike.%${query}%,
-        verified_name.ilike.%${query}%,
-        phone_number.ilike.%${query}%
-      `)
+      .or(`display_name.ilike.%${query}%,push_name.ilike.%${query}%,verified_name.ilike.%${query}%,phone_number.ilike.%${query}%`)
       .eq('is_active', true)
       .order('last_seen_at', { ascending: false, nullsFirst: false })
       .limit(limit)
@@ -670,7 +710,7 @@ export async function searchContacts(
     }
 
     // Transform to clean types
-    const contacts: Contact[] = (data || []).map(contact => ({
+    const contacts: Contact[] = (data || []).map((contact: any) => ({
       id: contact.id,
       phone_number: contact.phone_number,
       whatsapp_jid: contact.whatsapp_jid,

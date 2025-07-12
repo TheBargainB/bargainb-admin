@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useToast } from '@/hooks/use-toast'
+import { normalizePhoneNumber } from '@/lib/api-utils'
 import type { 
   Contact, 
   ContactFilters,
@@ -458,9 +459,9 @@ export const useContacts = (options: UseContactsOptions = {}): UseContactsReturn
   // =============================================================================
 
   const findContactByPhone = useCallback((phoneNumber: string): Contact | null => {
-    const cleanPhone = phoneNumber.replace(/[^\d]/g, '')
+    const cleanPhone = normalizePhoneNumber(phoneNumber)
     return contacts.find(contact => 
-      contact.phone_number.replace(/[^\d]/g, '').includes(cleanPhone) ||
+      normalizePhoneNumber(contact.phone_number).includes(cleanPhone) ||
       contact.whatsapp_jid.includes(cleanPhone)
     ) || null
   }, [contacts])

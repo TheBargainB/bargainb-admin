@@ -3,6 +3,7 @@
 import { memo } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
+import { ChatHelpers } from '@/lib/chat-helpers'
 import type { Conversation } from '@/types/chat-v2.types'
 
 // =============================================================================
@@ -41,8 +42,9 @@ export const ConversationItem = memo<ConversationItemProps>(({
                      conversation.contact?.whatsapp_jid?.split('@')[0] ||
                      'Unknown Contact'
   
-  const lastMessagePreview = conversation.last_message && conversation.last_message.length > 120 
-    ? `${conversation.last_message.substring(0, 120)}...` 
+  // Reduced text preview to 60 characters for more compact display
+  const lastMessagePreview = conversation.last_message && conversation.last_message.length > 60 
+    ? `${conversation.last_message.substring(0, 60)}...` 
     : conversation.last_message || 'No messages yet'
 
   const avatarFallback = displayName
@@ -52,8 +54,9 @@ export const ConversationItem = memo<ConversationItemProps>(({
     .toUpperCase()
     .substring(0, 2)
 
+  // Use ChatHelpers for consistent time formatting
   const formattedTime = conversation.last_message_at 
-    ? formatMessageTime(conversation.last_message_at)
+    ? ChatHelpers.formatConversationTime(conversation.last_message_at)
     : ''
 
   // =============================================================================
@@ -90,8 +93,8 @@ export const ConversationItem = memo<ConversationItemProps>(({
       aria-label={`Conversation with ${displayName}`}
       aria-selected={is_selected}
       className={cn(
-        // Base styles
-        'flex items-center gap-3 p-3 w-full transition-all duration-200',
+        // Base styles with reduced padding for more compact display
+        'flex items-center gap-2 p-2 w-full transition-all duration-200',
         'border-b border-gray-100 dark:border-gray-800',
         'cursor-pointer select-none',
         
@@ -118,14 +121,14 @@ export const ConversationItem = memo<ConversationItemProps>(({
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
     >
-      {/* Avatar */}
+      {/* Avatar - reduced size for more compact display */}
       <div className="relative flex-shrink-0">
-        <Avatar className="h-12 w-12">
+        <Avatar className="h-10 w-10">
           <AvatarImage 
             src={conversation.contact?.profile_picture_url} 
             alt={displayName}
           />
-          <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 font-medium">
+          <AvatarFallback className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 font-medium text-sm">
             {avatarFallback}
           </AvatarFallback>
         </Avatar>
@@ -159,7 +162,7 @@ export const ConversationItem = memo<ConversationItemProps>(({
         {/* Message preview row */}
         <div className="flex items-center justify-between">
           <p className={cn(
-            'text-sm truncate',
+            'text-xs truncate', // Reduced from text-sm to text-xs for more compact display
             hasUnread 
               ? 'text-gray-600 dark:text-gray-300 font-medium' 
               : 'text-gray-500 dark:text-gray-400'
@@ -174,58 +177,4 @@ export const ConversationItem = memo<ConversationItemProps>(({
   )
 })
 
-ConversationItem.displayName = 'ConversationItem'
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-const formatMessageTime = (timestamp: string): string => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const yesterday = new Date(now)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  // Today - show time
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    })
-  }
-  
-  // Yesterday
-  if (date.toDateString() === yesterday.toDateString()) {
-    return 'Yesterday'
-  }
-  
-  // This week - show day
-  const daysAgo = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-  if (daysAgo < 7) {
-    return date.toLocaleDateString('en-US', { weekday: 'short' })
-  }
-  
-  // Older - show date
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric' 
-  })
-}
-
-const getMessageStatusIcon = (status?: string): string => {
-  switch (status) {
-    case 'sent':
-      return '✓'
-    case 'delivered':
-      return '✓✓'
-    case 'read':
-      return '✓✓'
-    case 'pending':
-      return '⏳'
-    case 'failed':
-      return '❌'
-    default:
-      return ''
-  }
-} 
+ConversationItem.displayName = 'ConversationItem' 

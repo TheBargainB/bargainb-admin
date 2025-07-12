@@ -252,7 +252,7 @@ export const useMessages = (options: UseMessagesOptions = {}): UseMessagesReturn
       }
 
       // Call the send-message API endpoint
-      const response = await fetch('/admin/chat-v2/api/send-message', {
+      const response = await fetch('/api/admin/chat/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

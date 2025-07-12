@@ -223,6 +223,57 @@ export const whatsAppJidToPhone = (jid: string): string => {
   return jid.split('@')[0]
 }
 
+// Normalize phone number to consistent format
+export const normalizePhoneNumber = (phoneNumber: string): string => {
+  if (!phoneNumber) return ''
+  
+  // Remove all non-digit characters except +
+  const cleaned = phoneNumber.replace(/[^\d+]/g, '')
+  
+  // Add + prefix if not present
+  if (!cleaned.startsWith('+')) {
+    return `+${cleaned}`
+  }
+  
+  return cleaned
+}
+
+// Validate phone number format
+export const isValidPhoneNumber = (phoneNumber: string): boolean => {
+  if (!phoneNumber) return false
+  
+  const cleaned = phoneNumber.replace(/\D/g, '')
+  return cleaned.length >= 10 && cleaned.length <= 15
+}
+
+// Extract phone number from WhatsApp JID (alias for whatsAppJidToPhone)
+export const extractPhoneFromJid = (jid: string): string => {
+  if (!jid) return ''
+  
+  const phoneMatch = jid.match(/^(\+?\d+)@/)
+  if (phoneMatch) {
+    return phoneMatch[1]
+  }
+  
+  return jid.replace('@s.whatsapp.net', '').replace('@c.us', '')
+}
+
+// Extract phone number from JID or email (flexible version)
+export const extractPhoneNumber = (jidOrEmail: string): string => {
+  if (!jidOrEmail) return ''
+  
+  // Remove @s.whatsapp.net suffix
+  const cleaned = jidOrEmail.replace('@s.whatsapp.net', '').replace('@c.us', '')
+  
+  // If it looks like a phone number (starts with + or is all digits), return as-is
+  if (cleaned.match(/^\+?\d+$/)) {
+    return cleaned
+  }
+  
+  // Otherwise, it might be an email or other identifier
+  return cleaned
+}
+
 // Sanitize user input
 export const sanitizeInput = (input: string): string => {
   return input.trim().replace(/[<>]/g, '')
