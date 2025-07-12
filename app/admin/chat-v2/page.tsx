@@ -16,6 +16,7 @@ import { ContactsDialog } from '@/components/chat-v2/contacts/ContactsDialog'
 import { NewContactDialog } from '@/components/chat-v2/contacts/NewContactDialog'
 import { AssistantAssignmentDialog } from '@/components/chat-v2/contacts/AssistantAssignmentDialog'
 import { MessageInput } from '@/components/chat-v2/messages/MessageInput'
+import { RealTimeDebugger } from '@/components/chat-v2/RealTimeDebugger'
 
 // Chat 2.0 Hooks
 import { useChatManagement } from '@/hooks/chat-v2/useChatManagement'
@@ -359,7 +360,7 @@ export default function ChatV2Page() {
       {panel_state.is_contact_panel_visible && conversations.selected_conversation && (
         <div className={cn(
           "flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden h-full transition-all duration-300",
-          isContactPanelCollapsed ? "w-16" : "w-[28rem]"
+          "w-[28rem]"
         )}>
           <ContactProfile
             contact={conversations.selected_conversation?.contact}
@@ -409,6 +410,14 @@ export default function ChatV2Page() {
           Reconnecting...
         </div>
       )}
+
+      {/* Debug Panel - Temporary for troubleshooting */}
+      <div className="absolute bottom-4 right-4 w-80">
+        <RealTimeDebugger
+          selectedConversationId={selected_conversation_id}
+          className="w-full"
+        />
+      </div>
     </div>
   )
 } 

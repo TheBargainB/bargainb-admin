@@ -15,19 +15,14 @@ interface ChatMessage {
 
 interface ChatConversation {
   id: string
+  title: string
   user: string
-  email: string
-  avatar: string
-  lastMessage: string
   timestamp: string
-  status: 'active' | 'resolved' | 'escalated'
+  lastMessage: string
   unread_count: number
-  type: string
-  aiConfidence: number
-  lastMessageAt?: string
-  remoteJid?: string
-  conversationId?: string
-  phoneNumber?: string
+  avatar?: string
+  phone_number?: string
+  contact?: any
 }
 
 interface NotificationItem {
@@ -53,13 +48,12 @@ interface UnifiedRealTimeReturn {
   isConnected: boolean
   connectionStatus: string
   globalUnreadCount: number
-  retryCount: number
+  refreshAll: () => Promise<void>
   cleanup: () => void
-  refreshAll: () => void
 }
 
 /**
- * 🎯 UNIFIED REAL-TIME MANAGER
+ * 🎯 UNIFIED REAL-TIME MANAGER - FIXED VERSION
  * 
  * Centralized real-time subscription manager that handles:
  * - ✅ Messages for selected conversation
@@ -67,8 +61,7 @@ interface UnifiedRealTimeReturn {
  * - ✅ Global notifications and unread counts
  * - ✅ Proper cleanup and unique channel names
  * - ✅ Smart reconnection logic
- * 
- * Following the old system's proven patterns with improvements.
+ * - 🔧 FIXED: Better error handling and UI update propagation
  */
 export const useUnifiedRealTime = ({
   selectedConversationId,
@@ -107,7 +100,7 @@ export const useUnifiedRealTime = ({
     }
   }, [onMessagesUpdate, onConversationsUpdate, onNotificationsUpdate, onGlobalUnreadUpdate])
 
-  // 🔄 Refresh all data function
+  // 🔄 Refresh all data function - ENHANCED
   const refreshAll = useCallback(async () => {
     try {
       console.log('🔄 Unified refresh: Loading all data...')
@@ -116,11 +109,15 @@ export const useUnifiedRealTime = ({
       const response = await fetch('/api/admin/chat/conversations')
       if (response.ok) {
         const data = await response.json()
-        const conversations = data.conversations || []
+        const conversations = data.data?.conversations || []
         
-        // Update conversations
+        // Update conversations with better error handling
         if (callbacksRef.current.onConversationsUpdate) {
-          callbacksRef.current.onConversationsUpdate(conversations)
+          try {
+            callbacksRef.current.onConversationsUpdate(conversations)
+          } catch (error) {
+            console.error('❌ Error in onConversationsUpdate callback:', error)
+          }
         }
         
         // Calculate global unread count
@@ -130,7 +127,11 @@ export const useUnifiedRealTime = ({
         
         setGlobalUnreadCount(totalUnread)
         if (callbacksRef.current.onGlobalUnreadUpdate) {
-          callbacksRef.current.onGlobalUnreadUpdate(totalUnread)
+          try {
+            callbacksRef.current.onGlobalUnreadUpdate(totalUnread)
+          } catch (error) {
+            console.error('❌ Error in onGlobalUnreadUpdate callback:', error)
+          }
         }
         
         // Create notifications from unread conversations
@@ -138,17 +139,21 @@ export const useUnifiedRealTime = ({
           .filter((conv: any) => conv.unread_count > 0)
           .map((conv: any) => ({
             id: conv.id,
-            title: conv.user || 'Unknown Contact',
-            message: conv.lastMessage || 'New message',
-            timestamp: conv.timestamp || new Date().toISOString(),
+            title: conv.contact?.display_name || conv.contact?.push_name || 'Unknown Contact',
+            message: conv.last_message || 'New message',
+            timestamp: conv.last_message_at || new Date().toISOString(),
             type: 'message' as const,
             unread: true,
             conversationId: conv.id,
-            avatar: conv.avatar
+            avatar: conv.contact?.profile_picture_url
           }))
         
         if (callbacksRef.current.onNotificationsUpdate) {
-          callbacksRef.current.onNotificationsUpdate(notifications)
+          try {
+            callbacksRef.current.onNotificationsUpdate(notifications)
+          } catch (error) {
+            console.error('❌ Error in onNotificationsUpdate callback:', error)
+          }
         }
         
         console.log('✅ Unified refresh completed:', {
@@ -156,28 +161,42 @@ export const useUnifiedRealTime = ({
           unread: totalUnread,
           notifications: notifications.length
         })
+      } else {
+        console.error('❌ Failed to fetch conversations:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('❌ Unified refresh error:', error)
     }
   }, [])
 
-  // 🧹 Cleanup function
+  // 🧹 Cleanup function - ENHANCED
   const cleanup = useCallback(() => {
     console.log('🧹 Unified cleanup: Removing all subscriptions...')
     
     if (messageSubscription.current) {
-      supabase.removeChannel(messageSubscription.current)
+      try {
+        supabase.removeChannel(messageSubscription.current)
+      } catch (error) {
+        console.error('❌ Error removing message subscription:', error)
+      }
       messageSubscription.current = null
     }
     
     if (conversationSubscription.current) {
-      supabase.removeChannel(conversationSubscription.current)
+      try {
+        supabase.removeChannel(conversationSubscription.current)
+      } catch (error) {
+        console.error('❌ Error removing conversation subscription:', error)
+      }
       conversationSubscription.current = null
     }
     
     if (globalSubscription.current) {
-      supabase.removeChannel(globalSubscription.current)
+      try {
+        supabase.removeChannel(globalSubscription.current)
+      } catch (error) {
+        console.error('❌ Error removing global subscription:', error)
+      }
       globalSubscription.current = null
     }
     
@@ -188,13 +207,17 @@ export const useUnifiedRealTime = ({
     console.log('✅ Unified cleanup completed')
   }, [])
 
-  // 📡 Setup message subscription for selected conversation
+  // 📡 Setup message subscription for selected conversation - ENHANCED
   useEffect(() => {
     if (!selectedConversationId) {
       // Clean up message subscription when no conversation selected
       if (messageSubscription.current) {
         console.log('🧹 Cleaning up message subscription (no conversation)')
-        supabase.removeChannel(messageSubscription.current)
+        try {
+          supabase.removeChannel(messageSubscription.current)
+        } catch (error) {
+          console.error('❌ Error cleaning up message subscription:', error)
+        }
         messageSubscription.current = null
       }
       return
@@ -204,10 +227,14 @@ export const useUnifiedRealTime = ({
     
     // Clean up existing subscription
     if (messageSubscription.current) {
-      supabase.removeChannel(messageSubscription.current)
+      try {
+        supabase.removeChannel(messageSubscription.current)
+      } catch (error) {
+        console.error('❌ Error removing existing message subscription:', error)
+      }
     }
 
-    // Create unique channel name with timestamp (following old system pattern)
+    // Create unique channel name with timestamp
     const channelName = `unified-messages-${selectedConversationId}-${Date.now()}`
     
     const newSubscription = supabase
@@ -225,23 +252,27 @@ export const useUnifiedRealTime = ({
           
           const rawMessage = payload.new
           if (rawMessage && callbacksRef.current.onMessagesUpdate) {
-            // Format message following old system pattern
-            const formattedMessage: ChatMessage = {
-              id: rawMessage.id,
-              content: rawMessage.content || '',
-              sender: rawMessage.direction === 'outbound' ? 'admin' : 'user',
-              senderName: rawMessage.direction === 'outbound' ? 'BargainB' : 'User',
-              timestamp: new Date(rawMessage.created_at).toLocaleTimeString(),
-              status: rawMessage.whatsapp_status || 'sent',
-              metadata: rawMessage.raw_message_data || {}
+            try {
+              // Format message following old system pattern
+              const formattedMessage: ChatMessage = {
+                id: rawMessage.id,
+                content: rawMessage.content || '',
+                sender: rawMessage.direction === 'outbound' ? 'admin' : 'user',
+                senderName: rawMessage.direction === 'outbound' ? 'BargainB' : 'User',
+                timestamp: new Date(rawMessage.created_at).toLocaleTimeString(),
+                status: rawMessage.whatsapp_status || 'sent',
+                metadata: rawMessage.raw_message_data || {}
+              }
+              
+              // Update messages via callback
+              callbacksRef.current.onMessagesUpdate([formattedMessage])
+            } catch (error) {
+              console.error('❌ Error processing new message:', error)
             }
-            
-            // Update messages via callback
-            callbacksRef.current.onMessagesUpdate([formattedMessage])
           }
           
           // Refresh conversations to update last message
-          refreshAll()
+          setTimeout(() => refreshAll(), 100) // Small delay to ensure message is processed
         }
       )
       .on(
@@ -254,7 +285,7 @@ export const useUnifiedRealTime = ({
         },
         async (payload) => {
           console.log('🔄 Message updated:', payload.new?.id)
-          refreshAll()
+          setTimeout(() => refreshAll(), 100)
         }
       )
       .subscribe((status) => {
@@ -271,10 +302,11 @@ export const useUnifiedRealTime = ({
           
           // Retry logic (max 3 times)
           if (retryCount < 3) {
+            const retryDelay = 2000 * (retryCount + 1)
+            console.log(`🔄 Retrying message subscription in ${retryDelay}ms...`)
             setTimeout(() => {
               setRetryCount(prev => prev + 1)
-              console.log('🔄 Retrying message subscription...')
-            }, 2000 * (retryCount + 1))
+            }, retryDelay)
           }
         }
       })
@@ -282,13 +314,17 @@ export const useUnifiedRealTime = ({
     messageSubscription.current = newSubscription
   }, [selectedConversationId, retryCount, refreshAll])
 
-  // 📡 Setup global subscription for conversations and notifications
+  // 📡 Setup global subscription for conversations and notifications - ENHANCED
   useEffect(() => {
     console.log('📡 Setting up global subscription...')
     
     // Clean up existing subscription
     if (globalSubscription.current) {
-      supabase.removeChannel(globalSubscription.current)
+      try {
+        supabase.removeChannel(globalSubscription.current)
+      } catch (error) {
+        console.error('❌ Error removing existing global subscription:', error)
+      }
     }
 
     // Create unique channel name
@@ -305,7 +341,7 @@ export const useUnifiedRealTime = ({
         },
         async (payload) => {
           console.log('🔔 New conversation created')
-          refreshAll()
+          setTimeout(() => refreshAll(), 100)
         }
       )
       .on(
@@ -317,7 +353,7 @@ export const useUnifiedRealTime = ({
         },
         async (payload) => {
           console.log('🔔 Conversation updated')
-          refreshAll()
+          setTimeout(() => refreshAll(), 100)
         }
       )
       .on(
@@ -329,7 +365,7 @@ export const useUnifiedRealTime = ({
         },
         async (payload) => {
           console.log('🔔 New message globally - updating conversations')
-          refreshAll()
+          setTimeout(() => refreshAll(), 100)
         }
       )
       .subscribe((status) => {
@@ -337,15 +373,17 @@ export const useUnifiedRealTime = ({
         
         if (status === 'SUBSCRIBED') {
           console.log('✅ Global subscription CONNECTED')
+          setIsConnected(true)
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           console.warn('⚠️ Global subscription DISCONNECTED:', status)
+          setIsConnected(false)
         }
       })
 
     globalSubscription.current = newSubscription
     
     // Initial data load
-    refreshAll()
+    setTimeout(() => refreshAll(), 100)
   }, [refreshAll])
 
   // Cleanup on unmount
@@ -359,8 +397,7 @@ export const useUnifiedRealTime = ({
     isConnected,
     connectionStatus,
     globalUnreadCount,
-    retryCount,
-    cleanup,
-    refreshAll
+    refreshAll,
+    cleanup
   }
 } 
