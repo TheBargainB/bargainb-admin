@@ -20,6 +20,7 @@ import { RealTimeDebugger } from '@/components/chat-v2/RealTimeDebugger'
 
 // Chat 2.0 Hooks
 import { useChatManagement } from '@/hooks/chat-v2/useChatManagement'
+import { useUnifiedRealTime } from '@/hooks/chat-v2/useUnifiedRealTime'
 import { createClient } from '@/utils/supabase/client'
 
 // Types
@@ -72,6 +73,40 @@ export default function ChatV2Page() {
     setIsClient(true)
   }, [])
 
+  // =============================================================================
+  // REAL-TIME INTEGRATION
+  // =============================================================================
+
+  // Connect to unified real-time system to ensure UI updates
+  const { 
+    isConnected: realtimeConnected, 
+    connectionStatus: realtimeStatus,
+    refreshAll: realtimeRefreshAll 
+  } = useUnifiedRealTime({
+    selectedConversationId: selected_conversation_id,
+    onMessagesUpdate: (newMessages) => {
+      // Trigger refresh instead of direct state update to avoid type issues
+      if (newMessages.length > 0) {
+        console.log('🔔 CHAT-V2: New messages received, refreshing messages...')
+        messages.refreshMessages()
+      }
+    },
+    onConversationsUpdate: (updatedConversations) => {
+      // Trigger refresh instead of direct state update to avoid type issues
+      console.log('🔔 CHAT-V2: Conversations updated, refreshing conversations...')
+      conversations.refreshConversations()
+    },
+    onNotificationsUpdate: (newNotifications) => {
+      // Notifications are handled by the admin layout
+      console.log('🔔 CHAT-V2: Notifications updated:', newNotifications.length)
+    },
+    onGlobalUnreadUpdate: (unreadCount) => {
+      // Update unread count in conversations
+      console.log('🔔 CHAT-V2: Global unread count updated:', unreadCount)
+      conversations.setTotalUnread(unreadCount)
+    }
+  })
+
   // Local state for dialogs
   const [isContactsDialogOpen, setIsContactsDialogOpen] = useState(false)
   const [isNewContactDialogOpen, setIsNewContactDialogOpen] = useState(false)
@@ -122,13 +157,6 @@ export default function ChatV2Page() {
   }, [messages, conversations, toast])
 
   // =============================================================================
-  // REAL-TIME UPDATES SETUP
-  // =============================================================================
-
-  // Real-time subscriptions are handled by individual hooks (useMessages, useConversations, etc.)
-  // No additional page-level subscriptions needed to avoid conflicts
-
-  // =============================================================================
   // PERIODIC REFRESH FOR RELIABILITY (REDUCED FREQUENCY)
   // =============================================================================
 
@@ -137,14 +165,15 @@ export default function ChatV2Page() {
 
     // Set up periodic refresh as backup when disconnected (reduced frequency)
     const interval = setInterval(() => {
-      if (!is_connected) {
+      if (!realtimeConnected) {
         console.log('🔄 Backup refresh while disconnected...')
+        realtimeRefreshAll()
         refreshAll()
       }
     }, 60000) // 60 seconds
 
     return () => clearInterval(interval)
-  }, [isClient, is_connected, refreshAll])
+  }, [isClient, realtimeConnected, realtimeRefreshAll, refreshAll])
 
   const handleContactProfileSendMessage = () => {
     console.log('Send message clicked from contact profile')
@@ -405,7 +434,7 @@ export default function ChatV2Page() {
       />
 
       {/* Connection status indicator */}
-      {!is_connected && (
+      {!realtimeConnected && (
         <div className="absolute top-4 right-4 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 px-3 py-1 rounded-full text-sm">
           Reconnecting...
         </div>

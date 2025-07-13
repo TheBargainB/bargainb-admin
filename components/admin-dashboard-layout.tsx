@@ -7,6 +7,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/co
 import { NotificationDropdown } from "@/components/ui/notification-dropdown"
 import { ThemeToggle } from "@/components/theme-toggle"
 import LogoutButton from '@/components/logout-button'
+import { useUnifiedRealTime } from '@/hooks/chat-v2/useUnifiedRealTime'
 
 interface AdminDashboardLayoutProps {
   children: React.ReactNode
@@ -15,14 +16,40 @@ interface AdminDashboardLayoutProps {
 export default function AdminDashboardLayout({ children }: AdminDashboardLayoutProps) {
   const [unreadCount, setUnreadCount] = useState(0)
 
+  // Connect to real-time updates for notification count
+  const {
+    globalUnreadCount,
+    isConnected
+  } = useUnifiedRealTime({
+    selectedConversationId: null, // No specific conversation selected in admin layout
+    onMessagesUpdate: (messages) => {
+      // Messages updated, but we rely on globalUnreadCount for the notification badge
+      console.log('📨 ADMIN: Messages updated:', messages.length)
+    },
+    onConversationsUpdate: (conversations) => {
+      // Conversations updated, but we rely on globalUnreadCount for the notification badge
+      console.log('💬 ADMIN: Conversations updated:', conversations.length)
+    },
+    onNotificationsUpdate: (notifications) => {
+      // Notifications updated, but we rely on globalUnreadCount for the notification badge
+      console.log('🔔 ADMIN: Notifications updated:', notifications.length)
+    },
+    onGlobalUnreadUpdate: (count) => {
+      console.log('📊 ADMIN: Global unread count updated:', count)
+      setUnreadCount(count)
+    }
+  })
+
   // Fetch initial notification count
   useEffect(() => {
     const fetchNotificationCount = async () => {
       try {
-        const response = await fetch('/api/admin/chat-v2/notifications')
+        const response = await fetch('/api/admin/chat/notifications')
         if (response.ok) {
           const data = await response.json()
-          setUnreadCount(data.total_unread || 0)
+          const initialCount = data.total_unread || 0
+          setUnreadCount(initialCount)
+          console.log('📊 ADMIN: Initial notification count loaded:', initialCount)
         }
       } catch (error) {
         console.error('Error fetching notification count:', error)
@@ -30,17 +57,32 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
     }
 
     fetchNotificationCount()
-
-    // Set up periodic refresh for notification count
-    const interval = setInterval(fetchNotificationCount, 30000) // 30 seconds
-
-    return () => clearInterval(interval)
   }, [])
+
+  // Update unread count when real-time globalUnreadCount changes
+  useEffect(() => {
+    if (isConnected && globalUnreadCount !== undefined) {
+      setUnreadCount(globalUnreadCount)
+      console.log('📊 ADMIN: Real-time unread count updated:', globalUnreadCount)
+    }
+  }, [globalUnreadCount, isConnected])
 
   const handleMarkAllAsRead = async () => {
     try {
-      // TODO: Implement mark all as read functionality
-      setUnreadCount(0)
+      const response = await fetch('/api/admin/chat/notifications', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'mark_all_read'
+        })
+      })
+
+      if (response.ok) {
+        setUnreadCount(0)
+        console.log('✅ ADMIN: All notifications marked as read')
+      }
     } catch (error) {
       console.error('Error marking all as read:', error)
     }

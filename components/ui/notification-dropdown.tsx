@@ -21,11 +21,11 @@ interface RecentMessage {
   conversation_id: string
   content: string
   sender_name: string
-  sender_avatar?: string
+  contact_picture?: string
   created_at: string
-  unread_count: number
+  unread: boolean
   contact_name: string
-  phone_number: string
+  contact_phone: string
 }
 
 interface NotificationDropdownProps {
@@ -47,7 +47,7 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
     setIsLoading(true)
     try {
       console.log('🔔 DROPDOWN: Fetching recent messages from Chat 2.0 API')
-      const response = await fetch('/api/admin/chat-v2/recent-messages')
+      const response = await fetch('/api/admin/chat/recent-messages')
       if (response.ok) {
         const data = await response.json()
         setRecentMessages(data.messages || [])
@@ -166,7 +166,7 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
                   <DropdownMenuItem className="p-3 cursor-pointer hover:bg-muted/50 focus:bg-muted/50">
                     <div className="flex items-start gap-3 w-full">
                       <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarImage src={message.sender_avatar} />
+                        <AvatarImage src={message.contact_picture} />
                         <AvatarFallback className="text-xs">
                           {getInitials(message.contact_name || message.sender_name)}
                         </AvatarFallback>
@@ -178,9 +178,9 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
                             {message.contact_name || message.sender_name}
                           </p>
                           <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                            {message.unread_count > 0 && (
+                            {message.unread && (
                               <Badge variant="destructive" className="h-4 text-xs px-1">
-                                {message.unread_count}
+                                Unread
                               </Badge>
                             )}
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -194,9 +194,9 @@ export function NotificationDropdown({ unreadCount, onMarkAllAsRead }: Notificat
                           {truncateMessage(message.content)}
                         </p>
                         
-                        {message.phone_number && (
+                        {message.contact_phone && (
                           <p className="text-xs text-muted-foreground/70 mt-1">
-                            {message.phone_number}
+                            {message.contact_phone}
                           </p>
                         )}
                       </div>
