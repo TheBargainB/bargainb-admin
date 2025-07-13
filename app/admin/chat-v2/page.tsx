@@ -392,8 +392,12 @@ export default function ChatV2Page() {
         />
       </div>
 
-      {/* Center Panel - Messages (Expanded) */}
-      <div className="flex-1 flex flex-col min-w-0 max-w-none h-full overflow-hidden">
+      {/* Center Panel - Messages (Responsive Width) */}
+      <div className={cn(
+        "flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ease-in-out",
+        // Chat area takes full remaining space when contact panel is collapsed
+        "flex-1"
+      )}>
           {/* Message Area */}
           {conversations.selected_conversation ? (
             <MessageArea
@@ -417,11 +421,11 @@ export default function ChatV2Page() {
           )}
       </div>
 
-      {/* Right Panel - Contact Profile (Collapsible) */}
+      {/* Right Panel - Contact Profile (Collapsible with smooth transition) */}
       {panel_state.is_contact_panel_visible && conversations.selected_conversation && (
         <div className={cn(
-          "flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden h-full transition-all duration-300",
-          "w-[28rem]"
+          "flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden h-full",
+          "w-[28rem] transition-all duration-300 ease-in-out"
         )}>
           <ContactProfile
             contact={conversations.selected_conversation?.contact}

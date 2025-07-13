@@ -5,8 +5,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Wifi, WifiOff, RefreshCw, Bell, MessageSquare } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, Bell, MessageSquare, Minimize2, Maximize2 } from 'lucide-react'
 import { useUnifiedRealTime } from '@/hooks/chat-v2/useUnifiedRealTime'
+import { cn } from '@/lib/utils'
 
 interface RealTimeDebuggerProps {
   selectedConversationId?: string | null
@@ -22,6 +23,7 @@ export const RealTimeDebugger: React.FC<RealTimeDebuggerProps> = ({
   const [messageCount, setMessageCount] = useState(0)
   const [conversationCount, setConversationCount] = useState(0)
   const [notificationCount, setNotificationCount] = useState(0)
+  const [isMinimized, setIsMinimized] = useState(false)
 
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString()
@@ -94,6 +96,10 @@ export const RealTimeDebugger: React.FC<RealTimeDebuggerProps> = ({
     addLog('🧹 Debug logs cleared')
   }
 
+  const handleToggleMinimize = () => {
+    setIsMinimized(!isMinimized)
+  }
+
   const getConnectionBadge = () => {
     if (isConnected) {
       return (
@@ -113,112 +119,129 @@ export const RealTimeDebugger: React.FC<RealTimeDebuggerProps> = ({
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
+    <Card className={cn(className, "transition-all duration-300", isMinimized && "h-auto")}>
+      <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between">
-          <span>Real-Time Debug</span>
-          {getConnectionBadge()}
+          <span className="text-sm">Real-Time Debug</span>
+          <div className="flex items-center gap-2">
+            {getConnectionBadge()}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleToggleMinimize}
+              className="h-6 w-6 p-0"
+            >
+              {isMinimized ? (
+                <Maximize2 className="w-3 h-3" />
+              ) : (
+                <Minimize2 className="w-3 h-3" />
+              )}
+            </Button>
+          </div>
         </CardTitle>
-        <CardDescription>
-          Monitor real-time connection status and test notifications
-        </CardDescription>
+        {!isMinimized && (
+          <CardDescription className="text-xs">
+            Monitor real-time connection status and test notifications
+          </CardDescription>
+        )}
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Connection Status */}
-        <div className="grid grid-cols-2 gap-4">
+      
+      {/* Minimized status indicator */}
+      {isMinimized && (
+        <CardContent className="py-2 px-4">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Status:</span>
+            {getConnectionBadge()}
+          </div>
+        </CardContent>
+      )}
+      
+      {!isMinimized && (
+        <CardContent className="space-y-4 pt-0">
+          {/* Connection Status */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium">Status</p>
+              <p className="text-sm text-muted-foreground">{connectionStatus}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Unread Count</p>
+              <p className="text-sm text-muted-foreground">{globalUnreadCount}</p>
+            </div>
+          </div>
+
+          {/* Counters */}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center">
+              <MessageSquare className="w-4 h-4 mx-auto mb-1" />
+              <p className="text-sm font-medium">{messageCount}</p>
+              <p className="text-xs text-muted-foreground">Messages</p>
+            </div>
+            <div className="text-center">
+              <div className="w-4 h-4 mx-auto mb-1 bg-blue-500 rounded-full" />
+              <p className="text-sm font-medium">{conversationCount}</p>
+              <p className="text-xs text-muted-foreground">Conversations</p>
+            </div>
+            <div className="text-center">
+              <Bell className="w-4 h-4 mx-auto mb-1" />
+              <p className="text-sm font-medium">{notificationCount}</p>
+              <p className="text-xs text-muted-foreground">Notifications</p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleManualRefresh}
+              className="flex-1"
+            >
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Refresh
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleTestNotification}
+              className="flex-1"
+            >
+              <Bell className="w-3 h-3 mr-1" />
+              Test
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleClearLogs}
+              className="flex-1"
+            >
+              Clear
+            </Button>
+          </div>
+
+          {/* Debug Logs */}
           <div>
-            <p className="text-sm font-medium">Status</p>
-            <p className="text-sm text-muted-foreground">{connectionStatus}</p>
+            <p className="text-sm font-medium mb-2">Debug Logs</p>
+            <div className="bg-muted p-2 rounded-md max-h-32 overflow-y-auto">
+              {debugLogs.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No logs yet...</p>
+              ) : (
+                debugLogs.map((log, index) => (
+                  <p key={index} className="text-xs font-mono">
+                    {log}
+                  </p>
+                ))
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium">Unread Count</p>
-            <p className="text-sm text-muted-foreground">{globalUnreadCount}</p>
-          </div>
-        </div>
 
-        {/* Counters */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <MessageSquare className="w-4 h-4 mx-auto mb-1" />
-            <p className="text-sm font-medium">{messageCount}</p>
-            <p className="text-xs text-muted-foreground">Messages</p>
-          </div>
-          <div className="text-center">
-            <div className="w-4 h-4 mx-auto mb-1 bg-blue-500 rounded-full" />
-            <p className="text-sm font-medium">{conversationCount}</p>
-            <p className="text-xs text-muted-foreground">Conversations</p>
-          </div>
-          <div className="text-center">
-            <Bell className="w-4 h-4 mx-auto mb-1" />
-            <p className="text-sm font-medium">{notificationCount}</p>
-            <p className="text-xs text-muted-foreground">Notifications</p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleManualRefresh}
-            className="flex-1"
-          >
-            <RefreshCw className="w-3 h-3 mr-1" />
-            Refresh
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleTestNotification}
-            className="flex-1"
-          >
-            <Bell className="w-3 h-3 mr-1" />
-            Test
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleClearLogs}
-            className="flex-1"
-          >
-            Clear
-          </Button>
-        </div>
-
-        {/* Debug Logs */}
-        <div>
-          <p className="text-sm font-medium mb-2">Debug Logs</p>
-          <div className="bg-muted p-2 rounded-md max-h-32 overflow-y-auto">
-            {debugLogs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No logs yet...</p>
-            ) : (
-              debugLogs.map((log, index) => (
-                <p key={index} className="text-xs font-mono">
-                  {log}
-                </p>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Last Update */}
-        {lastUpdate && (
-          <Alert>
-            <AlertDescription className="text-xs">
+          {lastUpdate && (
+            <div className="text-xs text-muted-foreground">
               Last update: {lastUpdate.toLocaleTimeString()}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Selected Conversation */}
-        {selectedConversationId && (
-          <Alert>
-            <AlertDescription className="text-xs">
-              Monitoring conversation: {selectedConversationId.substring(0, 8)}...
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
+            </div>
+          )}
+        </CardContent>
+      )}
     </Card>
   )
 } 
