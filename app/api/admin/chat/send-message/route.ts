@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normalizePhoneNumber } from '@/lib/api-utils'
+import { detectBBMention } from '@/actions/chat-v2/messages.actions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -113,44 +114,56 @@ export async function POST(request: NextRequest) {
       })
       .eq('id', conversationId)
 
-    // Check for @bb mention and trigger AI processing
-    if (message && /@bb/i.test(message)) {
-      console.log('🤖 @bb mention detected, triggering AI processing...')
+    // Check for @bb mention and trigger AI processing using enhanced detection
+    if (message) {
+      console.log('🔍 Checking for @bb mention in outgoing message...')
       
-      try {
-        // Get the WhatsApp contact ID for the conversation
-        const { data: conversationData } = await supabaseAdmin
-          .from('conversations')
-          .select('whatsapp_contact_id')
-          .eq('id', conversationId)
-          .single()
+      // Use enhanced @bb detection instead of simple regex
+      const bbDetection = detectBBMention(message)
+      
+      if (bbDetection.is_bb_mention) {
+        console.log('🤖 @bb mention detected in outgoing message:', {
+          patterns: bbDetection.mention_patterns,
+          userQuery: bbDetection.user_query
+        })
         
-        if (!conversationData?.whatsapp_contact_id) {
-          console.error('❌ Could not find WhatsApp contact ID for conversation:', conversationId)
-        } else {
-          // Call the AI processing API using request URL origin (like the old system)
-          const requestUrl = new URL(request.url);
-          const aiResponse = await fetch(`${requestUrl.origin}/api/whatsapp/ai`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              chatId: conversationId,
-              message: message,
-              userId: conversationData.whatsapp_contact_id
-            })
-          })
-
-          if (aiResponse.ok) {
-            const aiResult = await aiResponse.json()
-            console.log('✅ AI processing successful:', aiResult.success)
+        try {
+          // Get the WhatsApp contact ID for the conversation
+          const { data: conversationData } = await supabaseAdmin
+            .from('conversations')
+            .select('whatsapp_contact_id')
+            .eq('id', conversationId)
+            .single()
+          
+          if (!conversationData?.whatsapp_contact_id) {
+            console.error('❌ Could not find WhatsApp contact ID for conversation:', conversationId)
           } else {
-            console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText)
+            // Call the AI processing API using request URL origin (like the old system)
+            const requestUrl = new URL(request.url);
+            const aiResponse = await fetch(`${requestUrl.origin}/api/whatsapp/ai`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                chatId: conversationId,
+                message: message,
+                userId: conversationData.whatsapp_contact_id
+              })
+            })
+
+            if (aiResponse.ok) {
+              const aiResult = await aiResponse.json()
+              console.log('✅ AI processing successful:', aiResult.success)
+            } else {
+              console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText)
+            }
           }
+        } catch (error) {
+          console.error('❌ Error calling AI API:', error)
         }
-      } catch (error) {
-        console.error('❌ Error calling AI API:', error)
+      } else {
+        console.log('📝 No @bb mention detected in outgoing message')
       }
     }
 
