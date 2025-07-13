@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { AlertCircle, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -35,6 +36,9 @@ export default function ChatV2Page() {
   // =============================================================================
   // HOOKS & STATE
   // =============================================================================
+
+  const searchParams = useSearchParams()
+  const conversationFromUrl = searchParams.get('conversation')
 
   const {
     // Sub-hooks
@@ -74,6 +78,30 @@ export default function ChatV2Page() {
   }, [])
 
   // =============================================================================
+  // URL PARAMETER HANDLING
+  // =============================================================================
+
+  // Auto-select conversation from URL parameter
+  useEffect(() => {
+    if (conversationFromUrl && conversations.conversations.length > 0) {
+      const targetConversation = conversations.conversations.find(
+        conv => conv.id === conversationFromUrl
+      )
+      
+      if (targetConversation && selected_conversation_id !== conversationFromUrl) {
+        console.log('🔗 Auto-selecting conversation from URL:', conversationFromUrl)
+        selectConversation(conversationFromUrl)
+        
+        // Auto-mark as read when coming from notification
+        conversations.markAsRead(conversationFromUrl)
+        
+        // Show contact panel
+        setContactPanelVisible(true)
+      }
+    }
+  }, [conversationFromUrl, conversations.conversations, selected_conversation_id, selectConversation, conversations.markAsRead, setContactPanelVisible])
+
+  // =============================================================================
   // REAL-TIME INTEGRATION
   // =============================================================================
 
@@ -85,15 +113,19 @@ export default function ChatV2Page() {
   } = useUnifiedRealTime({
     selectedConversationId: selected_conversation_id,
     onMessagesUpdate: (newMessages) => {
-      // Trigger refresh instead of direct state update to avoid type issues
+      // Handle new messages in the selected conversation
       if (newMessages.length > 0) {
-        console.log('🔔 CHAT-V2: New messages received, refreshing messages...')
+        console.log('🔔 CHAT-V2: New messages received for selected conversation, refreshing...')
+        // Refresh messages to get the latest data with proper typing
         messages.refreshMessages()
+        
+        // Also refresh conversations to update last message and unread counts
+        conversations.refreshConversations()
       }
     },
     onConversationsUpdate: (updatedConversations) => {
-      // Trigger refresh instead of direct state update to avoid type issues
-      console.log('🔔 CHAT-V2: Conversations updated, refreshing conversations...')
+      // Handle conversation list updates (new conversations, unread count changes, etc.)
+      console.log('🔔 CHAT-V2: Conversations updated, refreshing list...')
       conversations.refreshConversations()
     },
     onNotificationsUpdate: (newNotifications) => {
@@ -101,7 +133,7 @@ export default function ChatV2Page() {
       console.log('🔔 CHAT-V2: Notifications updated:', newNotifications.length)
     },
     onGlobalUnreadUpdate: (unreadCount) => {
-      // Update unread count in conversations
+      // Update global unread count
       console.log('🔔 CHAT-V2: Global unread count updated:', unreadCount)
       conversations.setTotalUnread(unreadCount)
     }

@@ -2,6 +2,7 @@
 
 import { memo } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { ChatHelpers } from '@/lib/chat-helpers'
 import type { Conversation } from '@/types/chat-v2.types'
@@ -162,7 +163,7 @@ export const ConversationItem = memo<ConversationItemProps>(({
         {/* Message preview row */}
         <div className="flex items-center justify-between">
           <p className={cn(
-            'text-xs truncate', // Reduced from text-sm to text-xs for more compact display
+            'text-xs truncate flex-1', // Added flex-1 to take remaining space
             hasUnread 
               ? 'text-gray-600 dark:text-gray-300 font-medium' 
               : 'text-gray-500 dark:text-gray-400'
@@ -170,7 +171,15 @@ export const ConversationItem = memo<ConversationItemProps>(({
             {lastMessagePreview}
           </p>
           
-          {/* Unread badge removed - handled by admin notification bell */}
+          {/* Unread badge */}
+          {hasUnread && (
+            <Badge 
+              variant="destructive" 
+              className="h-5 min-w-5 text-xs px-1.5 ml-2 flex-shrink-0"
+            >
+              {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
+            </Badge>
+          )}
         </div>
       </div>
     </div>
