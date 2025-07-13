@@ -1135,8 +1135,7 @@ export class WhatsAppAIService {
   private async sendAIResponseToWhatsApp(chatId: string, aiResponse: string, phoneNumber: string) {
     try {
       // Clean and format phone number for WASender API using consolidated function
-      const normalizedPhone = normalizePhoneNumber(phoneNumber);
-      const cleanPhoneNumber = `+${normalizedPhone}`; // Add + prefix for WASender API
+      const cleanPhoneNumber = normalizePhoneNumber(phoneNumber); // Already includes + prefix
 
       console.log('📤 Sending AI response to WhatsApp:', cleanPhoneNumber.replace(/(\+\d{1,3})\d{4,}(\d{4})/, '$1***$2'));
 
