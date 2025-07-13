@@ -556,7 +556,7 @@ export async function sendMessage(
       
       const messageData = {
         conversation_id: options.conversationId,
-        whatsapp_message_id: response.data?.msgId?.toString() || '',
+        whatsapp_message_id: response.data?.msgId?.toString() || null, // Use null instead of empty string
         content: message,
         message_type: options.messageType || 'text',
         direction: 'outbound',
@@ -1057,7 +1057,7 @@ export class WhatsAppAIService {
           direction: 'outbound',
           from_me: true,
           whatsapp_status: 'pending',
-          whatsapp_message_id: '',
+          whatsapp_message_id: null, // Use null instead of empty string to avoid constraint violation
           raw_message_data: {
             ai_generated: true,
             from_ai: true,
