@@ -1359,7 +1359,7 @@ export class WhatsAppAIService {
         },
         body: JSON.stringify({
           metadata: {},
-          graph_id: "product_retrieval_agent",
+          graph_id: "chatbot_agent",
           limit: 1,
           offset: 0,
           sort_by: "created_at",

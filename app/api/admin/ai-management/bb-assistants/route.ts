@@ -21,6 +21,7 @@ export async function GET() {
       },
       body: JSON.stringify({
         metadata: {},
+        graph_id: "chatbot_agent",
         limit: 100,
         offset: 0
       })

@@ -24,6 +24,17 @@ export interface AssistantConfig {
       price_sensitivity?: 'budget' | 'balanced' | 'premium'
       health_focus?: boolean
     }
+    ENABLE_TOOLS?: boolean
+    ENABLE_PRODUCT_SEARCH?: boolean
+    ENABLE_PRICE_COMPARISON?: boolean
+    ENABLE_SHOPPING_LIST?: boolean
+    ENABLE_STORE_LOCATOR?: boolean
+    ENABLE_RECIPE_SUGGESTIONS?: boolean
+    ENABLE_FALLBACK_RESPONSES?: boolean
+    MAX_TOOL_CALLS_PER_REQUEST?: number
+    REQUEST_TIMEOUT_SECONDS?: number
+    TEMPERATURE?: number
+    RESPONSE_STYLE?: string
   }
 }
 
@@ -142,6 +153,27 @@ class LangGraphPlatformClient {
 export const langGraphClient = new LangGraphPlatformClient(AI_API_URL, AI_API_KEY)
 
 /**
+ * Default assistant configuration with tools enabled
+ */
+const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
+  tags: ['bargainb', 'grocery', 'whatsapp'],
+  recursion_limit: 25,
+  configurable: {
+    ENABLE_TOOLS: true,
+    ENABLE_PRODUCT_SEARCH: true,
+    ENABLE_PRICE_COMPARISON: true,
+    ENABLE_SHOPPING_LIST: true,
+    ENABLE_STORE_LOCATOR: true,
+    ENABLE_RECIPE_SUGGESTIONS: true,
+    ENABLE_FALLBACK_RESPONSES: true,
+    MAX_TOOL_CALLS_PER_REQUEST: 5,
+    REQUEST_TIMEOUT_SECONDS: 30,
+    TEMPERATURE: 0.7,
+    RESPONSE_STYLE: 'helpful'
+  }
+}
+
+/**
  * Create a new assistant for a specific conversation/user
  */
 export const createUserAssistant = async (
@@ -158,11 +190,11 @@ export const createUserAssistant = async (
       ? `BargainB Assistant for ${contactName}`
       : `BargainB Assistant for ${phoneNumber}`
     
-    // Prepare assistant configuration
+    // Merge default config with user preferences
     const assistantConfig: AssistantConfig = {
-      tags: ['bargainb', 'grocery', 'personalized'],
-      recursion_limit: 25,
+      ...DEFAULT_ASSISTANT_CONFIG,
       configurable: {
+        ...DEFAULT_ASSISTANT_CONFIG.configurable,
         user_preferences: {
           budget_limit: 100, // Default €100 budget
           dietary_restrictions: [],
@@ -191,43 +223,38 @@ export const createUserAssistant = async (
     }
     
     // Call LangGraph Create Assistant API
-         const assistant = await langGraphClient.createAssistant({
-       graph_id: "product_retrieval_agent",
-       config: assistantConfig,
-       metadata: metadata,
-       name: assistantName
-     })
+    const assistant = await langGraphClient.createAssistant({
+      graph_id: "chatbot_agent",
+      config: assistantConfig,
+      metadata: metadata,
+      name: assistantName
+    })
     
     console.log('✅ Assistant created successfully:', assistant.assistant_id)
     
     // Store assistant info in database
-    const { data, error } = await supabaseAdmin
+    const { error: updateError } = await supabaseAdmin
       .from('conversations')
       .update({
+        assistant_id: assistant.assistant_id,
+        assistant_name: assistantName,
         assistant_config: assistantConfig as unknown as Json,
         assistant_metadata: metadata as unknown as Json,
-        assistant_id: assistant.assistant_id,
-        assistant_name: assistantName || 'Shopping Assistant',
         assistant_created_at: new Date().toISOString(),
-        ai_enabled: true,
-        updated_at: new Date().toISOString()
+        ai_enabled: true
       })
       .eq('id', conversationId)
-      .select()
-      .single()
     
-    if (error) {
-      console.error('❌ Failed to store assistant in database:', error)
-      // Don't throw error - assistant was created successfully
-    } else {
-      console.log('✅ Assistant info stored in database')
+    if (updateError) {
+      console.error('❌ Error updating conversation with assistant info:', updateError)
+      // Assistant was created but database update failed - not critical
     }
     
     return assistant.assistant_id
     
   } catch (error) {
-    console.error('❌ Error creating user assistant:', error)
-    throw new Error(`Failed to create personal assistant: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    console.error('❌ Error creating assistant:', error)
+    throw error
   }
 }
 
@@ -318,39 +345,29 @@ export const getOrCreateAssistantForConversation = async (
 }
 
 /**
- * Update assistant configuration
+ * Update assistant configuration to enable tools
  */
-export const updateAssistantConfig = async (
+export const updateAssistantConfiguration = async (
   assistantId: string,
-  config: Partial<AssistantConfig>,
-  metadata?: Partial<AssistantMetadata>
+  config?: Partial<AssistantConfig>
 ): Promise<boolean> => {
   try {
-    console.log('🔧 Updating assistant config:', assistantId)
+    console.log('🔧 Updating assistant configuration:', assistantId)
     
-    const assistant = await langGraphClient.updateAssistant(assistantId, {
-      config: config,
-      metadata: metadata
-    })
-    
-    // Update database record
-    const { error: dbError } = await supabaseAdmin
-      .from('conversations')
-      .update({
-        assistant_config: config,
-        assistant_metadata: metadata
-      })
-      .eq('assistant_id', assistantId)
-    
-    if (dbError) {
-      console.error('❌ Failed to update assistant in database:', dbError)
+    const updateConfig = {
+      ...DEFAULT_ASSISTANT_CONFIG,
+      ...config
     }
     
-    console.log('✅ Assistant config updated successfully')
+    const updatedAssistant = await langGraphClient.updateAssistant(assistantId, {
+      config: updateConfig
+    })
+    
+    console.log('✅ Assistant configuration updated successfully')
     return true
     
   } catch (error) {
-    console.error('❌ Error updating assistant config:', error)
+    console.error('❌ Error updating assistant configuration:', error)
     return false
   }
 }
@@ -417,6 +434,162 @@ export const listAllAssistants = async (): Promise<AssistantResponse[]> => {
   } catch (error) {
     console.error('❌ Error listing assistants:', error)
     return []
+  }
+}
+
+/**
+ * Sync configurations for all existing assistants to ensure they have proper tool access
+ */
+export const syncAllAssistantConfigurations = async (): Promise<{
+  success: boolean
+  updated: number
+  failed: number
+  errors: string[]
+}> => {
+  try {
+    console.log('🔄 Starting assistant configuration sync...')
+    
+    // Get all assistants from BB Agent
+    const assistants = await langGraphClient.searchAssistants({
+      metadata: {},
+      limit: 100,
+      offset: 0
+    })
+    
+    let updated = 0
+    let failed = 0
+    const errors: string[] = []
+    
+    for (const assistant of assistants) {
+      try {
+        // Check if assistant needs configuration update
+        const needsUpdate = !assistant.config || 
+                          !assistant.config.configurable || 
+                          !assistant.config.configurable.ENABLE_TOOLS
+        
+        if (needsUpdate) {
+          console.log(`🔧 Updating configuration for assistant: ${assistant.name}`)
+          
+          const success = await updateAssistantConfiguration(assistant.assistant_id, {
+            configurable: {
+              ENABLE_TOOLS: true,
+              ENABLE_PRODUCT_SEARCH: true,
+              ENABLE_PRICE_COMPARISON: true,
+              ENABLE_SHOPPING_LIST: true,
+              ENABLE_STORE_LOCATOR: true,
+              ENABLE_RECIPE_SUGGESTIONS: true,
+              ENABLE_FALLBACK_RESPONSES: true,
+              MAX_TOOL_CALLS_PER_REQUEST: 5,
+              REQUEST_TIMEOUT_SECONDS: 30,
+              TEMPERATURE: 0.7,
+              RESPONSE_STYLE: 'helpful'
+            }
+          })
+          
+          if (success) {
+            updated++
+            console.log(`✅ Updated configuration for: ${assistant.name}`)
+          } else {
+            failed++
+            errors.push(`Failed to update: ${assistant.name}`)
+          }
+        }
+      } catch (error) {
+        failed++
+        const errorMsg = `Error updating ${assistant.name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        errors.push(errorMsg)
+        console.error('❌', errorMsg)
+      }
+    }
+    
+    console.log(`✅ Configuration sync completed: ${updated} updated, ${failed} failed`)
+    
+    return {
+      success: true,
+      updated,
+      failed,
+      errors
+    }
+    
+  } catch (error) {
+    console.error('❌ Error during configuration sync:', error)
+    return {
+      success: false,
+      updated: 0,
+      failed: 0,
+      errors: [error instanceof Error ? error.message : 'Unknown error']
+    }
+  }
+}
+
+/**
+ * Fix a specific assistant that's giving "trouble accessing tools" errors
+ */
+export const fixAssistantToolAccess = async (assistantId: string): Promise<{
+  success: boolean
+  message: string
+}> => {
+  try {
+    console.log('🔧 Fixing tool access for assistant:', assistantId)
+    
+    // Get current assistant details
+    const assistant = await langGraphClient.getAssistant(assistantId)
+    
+    if (!assistant) {
+      return {
+        success: false,
+        message: 'Assistant not found'
+      }
+    }
+    
+    // Update configuration with proper tool access
+    const success = await updateAssistantConfiguration(assistantId, {
+      configurable: {
+        ENABLE_TOOLS: true,
+        ENABLE_PRODUCT_SEARCH: true,
+        ENABLE_PRICE_COMPARISON: true,
+        ENABLE_SHOPPING_LIST: true,
+        ENABLE_STORE_LOCATOR: true,
+        ENABLE_RECIPE_SUGGESTIONS: true,
+        ENABLE_FALLBACK_RESPONSES: true,
+        MAX_TOOL_CALLS_PER_REQUEST: 5,
+        REQUEST_TIMEOUT_SECONDS: 30,
+        TEMPERATURE: 0.7,
+        RESPONSE_STYLE: 'helpful'
+      }
+    })
+    
+    if (success) {
+      // Update database records for conversations using this assistant
+      const { error: dbError } = await supabaseAdmin
+        .from('conversations')
+        .update({
+          assistant_config: DEFAULT_ASSISTANT_CONFIG as unknown as Json,
+          updated_at: new Date().toISOString()
+        })
+        .eq('assistant_id', assistantId)
+      
+      if (dbError) {
+        console.warn('⚠️ Database update failed:', dbError)
+      }
+      
+      return {
+        success: true,
+        message: `Successfully fixed tool access for assistant: ${assistant.name}`
+      }
+    } else {
+      return {
+        success: false,
+        message: 'Failed to update assistant configuration'
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Error fixing assistant tool access:', error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }
 

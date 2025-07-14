@@ -98,7 +98,8 @@ export async function getDefaultAssistant(): Promise<string | null> {
     const defaultAssistant = assistants.find(assistant => 
       assistant.name.toLowerCase().includes('default') ||
       assistant.name.toLowerCase().includes('bargainb') ||
-      assistant.name.toLowerCase().includes('grocery')
+      assistant.name.toLowerCase().includes('grocery') ||
+      assistant.name.toLowerCase().includes('beeb')
     ) || assistants[0]
 
     console.log('✅ Using default assistant:', defaultAssistant.name, '(ID:', defaultAssistant.assistant_id, ')')
@@ -252,7 +253,7 @@ export async function ensureConversationHasAssistant(
 
     if (result.success) {
       console.log('🤖 Conversation has assistant:', result.assistant_id)
-      return result.assistant_id
+      return result.assistant_id ?? null
     } else {
       console.error('❌ Failed to ensure assistant assignment:', result.error)
       return null
@@ -295,7 +296,7 @@ export async function getConversationPhoneNumber(
       : data.whatsapp_contacts
 
     const phoneNumber = contact?.phone_number
-    return phoneNumber !== undefined ? phoneNumber : null
+    return phoneNumber ?? null
 
   } catch (error) {
     console.error('❌ Error in getConversationPhoneNumber:', error)
