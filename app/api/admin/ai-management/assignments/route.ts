@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AGENT_BB_CONFIG } from '@/lib/constants'
+import { upsertContact } from '@/actions/chat-v2/contacts.actions'
+import { phoneToWhatsAppJid } from '@/lib/phone-utils'
 
 const BB_AGENT_URL = AGENT_BB_CONFIG.BASE_URL
 const LANGSMITH_API_KEY = process.env[AGENT_BB_CONFIG.API_KEY_ENV]
@@ -63,24 +65,62 @@ export async function POST(request: NextRequest) {
 
     console.log('🔧 Creating assignment for:', phone_number, 'with assistant:', assistant_id, force_update ? '(FORCE UPDATE)' : '')
 
-    // Find the WhatsApp contact by phone number
+    // Ensure contact exists - create if missing using upsertContact
     const phoneWithoutPlus = phone_number.replace('+', '')
-    console.log('🔍 Looking for contact with phone:', phoneWithoutPlus)
+    console.log('🔍 Ensuring contact exists for phone:', phoneWithoutPlus)
     
-    const { data: contact, error: contactError } = await supabaseAdmin
-      .from('whatsapp_contacts')
-      .select('id, phone_number, display_name, push_name')
-      .eq('phone_number', phoneWithoutPlus)
-      .single()
+    let contact: { id: string; phone_number: string; display_name: string | null; push_name: string | null } | null = null
+    
+    try {
+      // First try to find existing contact
+      const { data: existingContact, error: contactError } = await supabaseAdmin
+        .from('whatsapp_contacts')
+        .select('id, phone_number, display_name, push_name')
+        .eq('phone_number', phoneWithoutPlus)
+        .single()
 
-    if (contactError || !contact) {
-      console.error('❌ Contact not found for phone:', phoneWithoutPlus, 'Error:', contactError)
+      if (contactError && contactError.code === 'PGRST116') {
+        // Contact doesn't exist, create it
+        console.log('📝 Contact not found, creating new contact for:', phoneWithoutPlus)
+        
+        const newContact = await upsertContact(phoneWithoutPlus, {
+          phone_number: phoneWithoutPlus,
+          whatsapp_jid: phoneToWhatsAppJid(phone_number),
+          display_name: `Contact ${phoneWithoutPlus}`, // Default display name
+          is_active: true
+        })
+        
+        contact = {
+          id: newContact.id,
+          phone_number: newContact.phone_number,
+          display_name: newContact.display_name || null,
+          push_name: newContact.push_name || null
+        }
+        
+        console.log('✅ Created new contact:', contact.id, contact.display_name)
+      } else if (contactError) {
+        // Some other error occurred
+        console.error('❌ Error looking up contact:', contactError)
+        return NextResponse.json({ 
+          error: `Error accessing contact database: ${contactError.message}` 
+        }, { status: 500 })
+      } else if (existingContact) {
+        contact = existingContact
+        console.log('✅ Found existing contact:', contact.id, contact.display_name || contact.push_name)
+      }
+
+      if (!contact) {
+        console.error('❌ Failed to create or find contact for:', phoneWithoutPlus)
+        return NextResponse.json({ 
+          error: `Failed to create contact for phone: ${phoneWithoutPlus}` 
+        }, { status: 500 })
+      }
+    } catch (error) {
+      console.error('❌ Error in contact creation/lookup:', error)
       return NextResponse.json({ 
-        error: `WhatsApp contact not found for phone: ${phoneWithoutPlus}` 
-      }, { status: 404 })
+        error: `Contact management error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      }, { status: 500 })
     }
-
-    console.log('✅ Found contact:', contact.id, contact.display_name || contact.push_name)
 
     // Find or create the conversation for this contact
     console.log('🔍 Looking for conversation with whatsapp_contact_id:', contact.id)
