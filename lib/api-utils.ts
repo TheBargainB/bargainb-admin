@@ -183,99 +183,20 @@ export const calculateBackoffDelay = (
   return Math.min(delay, maxDelay)
 }
 
-// Parse phone number to consistent format
-export const parsePhoneNumber = (phone: string): string => {
-  // Remove all non-digit characters
-  const cleaned = phone.replace(/\D/g, '')
-  
-  // Ensure it starts with country code
-  if (cleaned.length === 10) {
-    return `1${cleaned}` // Assume US if 10 digits
-  }
-  
-  return cleaned
-}
+// Re-export phone utilities for backward compatibility
+export { 
+  normalizePhoneNumber,
+  isValidPhoneNumber,
+  formatPhoneNumber,
+  phoneToWhatsAppJid,
+  extractPhoneFromJid,
+  getCountryFromPhoneNumber,
+  parsePhoneNumber
+} from './phone-utils'
 
-// Format phone number for display
-export const formatPhoneNumber = (phone: string): string => {
-  const cleaned = parsePhoneNumber(phone)
-  
-  if (cleaned.length === 11 && cleaned.startsWith('1')) {
-    // US number: +1 (555) 123-4567
-    const area = cleaned.slice(1, 4)
-    const prefix = cleaned.slice(4, 7)
-    const line = cleaned.slice(7)
-    return `+1 (${area}) ${prefix}-${line}`
-  }
-  
-  // International or other format
-  return `+${cleaned}`
-}
-
-// Extract WhatsApp JID from phone number
-export const phoneToWhatsAppJid = (phone: string): string => {
-  const cleaned = parsePhoneNumber(phone)
-  return `${cleaned}@s.whatsapp.net`
-}
-
-// Extract phone number from WhatsApp JID
+// Extract phone number from WhatsApp JID (legacy function)
 export const whatsAppJidToPhone = (jid: string): string => {
   return jid.split('@')[0]
-}
-
-// Normalize phone number to consistent format
-export const normalizePhoneNumber = (phoneNumber: string): string => {
-  if (!phoneNumber) return ''
-  
-  // Remove spaces, dashes, parentheses, but preserve + sign
-  const cleaned = phoneNumber.replace(/[^\d+]/g, '')
-  
-  // Handle different input formats
-  if (cleaned.startsWith('+')) {
-    // Already has country code, just clean it
-    return cleaned
-  } else if (cleaned.startsWith('00')) {
-    // Replace 00 with +
-    return '+' + cleaned.substring(2)
-  } else if (cleaned.length >= 7) {
-    // For numbers without country code, add + but don't assume country
-    return '+' + cleaned
-  } else {
-    // Very short numbers, just add +
-    return '+' + cleaned
-  }
-}
-
-// Validate phone number format
-export const isValidPhoneNumber = (phoneNumber: string): boolean => {
-  if (!phoneNumber) return false
-  
-  // Remove all non-digit characters except +
-  const cleaned = phoneNumber.replace(/[^\d+]/g, '')
-  
-  // Must start with + for international format
-  if (!cleaned.startsWith('+')) {
-    return false
-  }
-  
-  // Remove + and check digit count
-  const digitsOnly = cleaned.substring(1)
-  
-  // International phone numbers: 7-15 digits (ITU-T E.164 standard)
-  // Country code: 1-3 digits, National number: 4-12 digits
-  return digitsOnly.length >= 7 && digitsOnly.length <= 15 && /^\d+$/.test(digitsOnly)
-}
-
-// Extract phone number from WhatsApp JID (alias for whatsAppJidToPhone)
-export const extractPhoneFromJid = (jid: string): string => {
-  if (!jid) return ''
-  
-  const phoneMatch = jid.match(/^(\+?\d+)@/)
-  if (phoneMatch) {
-    return phoneMatch[1]
-  }
-  
-  return jid.replace('@s.whatsapp.net', '').replace('@c.us', '')
 }
 
 // Extract phone number from JID or email (flexible version)

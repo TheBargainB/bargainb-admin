@@ -15,6 +15,12 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 import { createContact } from '@/actions/chat-v2/contacts.actions'
 import type { Contact, ContactInsert } from '@/types/chat-v2.types'
+import { 
+  formatPhoneNumber, 
+  isValidPhoneNumber, 
+  phoneToWhatsAppJid,
+  getCountryFromPhoneNumber 
+} from '@/lib/phone-utils'
 
 // =============================================================================
 // TYPES
@@ -35,49 +41,6 @@ interface NewContactForm {
 // =============================================================================
 // UTILS
 // =============================================================================
-
-const formatPhoneNumber = (phoneNumber: string): string => {
-  // Remove spaces, dashes, parentheses, but preserve + sign
-  let cleaned = phoneNumber.replace(/[^\d+]/g, '')
-  
-  // Handle different input formats
-  if (cleaned.startsWith('+')) {
-    // Already has country code, just clean it
-    return cleaned
-  } else if (cleaned.startsWith('00')) {
-    // Replace 00 with +
-    return '+' + cleaned.substring(2)
-  } else if (cleaned.length >= 10) {
-    // For numbers without country code, don't assume - require explicit input
-    // This prevents incorrect country code assignment
-    return '+' + cleaned
-  } else {
-    // Short numbers, just add +
-    return '+' + cleaned
-  }
-}
-
-const generateWhatsAppJid = (phoneNumber: string): string => {
-  const cleanNumber = phoneNumber.replace(/\D/g, '')
-  return `${cleanNumber}@s.whatsapp.net`
-}
-
-const validatePhoneNumber = (phoneNumber: string): boolean => {
-  // Remove all non-digit characters except +
-  const cleanNumber = phoneNumber.replace(/[^\d+]/g, '')
-  
-  // Must start with + for international format
-  if (!cleanNumber.startsWith('+')) {
-    return false
-  }
-  
-  // Remove + and check digit count
-  const digitsOnly = cleanNumber.substring(1)
-  
-  // International phone numbers: 7-15 digits (ITU-T E.164 standard)
-  // Country code: 1-3 digits, National number: 4-12 digits
-  return digitsOnly.length >= 7 && digitsOnly.length <= 15 && /^\d+$/.test(digitsOnly)
-}
 
 const validateEmail = (email: string): boolean => {
   if (!email) return true // Email is optional
@@ -130,7 +93,7 @@ export const NewContactDialog = memo<NewContactDialogProps>(({
     // Validate phone number
     if (!form.phone_number.trim()) {
       newErrors.phone_number = 'Phone number is required'
-    } else if (!validatePhoneNumber(form.phone_number)) {
+    } else if (!isValidPhoneNumber(form.phone_number)) {
       newErrors.phone_number = 'Please enter a valid phone number'
     }
     
@@ -151,7 +114,7 @@ export const NewContactDialog = memo<NewContactDialogProps>(({
     try {
       const contactData: ContactInsert = {
         phone_number: form.phone_number.trim(),
-        whatsapp_jid: generateWhatsAppJid(form.phone_number),
+        whatsapp_jid: phoneToWhatsAppJid(form.phone_number),
         display_name: form.display_name.trim() || undefined,
         is_active: true
       }
