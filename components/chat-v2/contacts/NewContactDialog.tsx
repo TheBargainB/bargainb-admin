@@ -191,7 +191,7 @@ export const NewContactDialog = memo<NewContactDialogProps>(({
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                               <Input
                   id="phone_number"
-                  placeholder="+20 114 351 5957 (Egypt) or +31 6 12345678 (Netherlands)"
+                  placeholder="Phone number"
                   value={form.phone_number}
                   onChange={(e) => handlePhoneNumberChange(e.target.value)}
                   onKeyDown={handleKeyDown}
