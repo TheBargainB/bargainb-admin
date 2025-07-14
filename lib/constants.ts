@@ -1,8 +1,9 @@
 // API Endpoints
 export const API_ENDPOINTS = {
-  // BB Agent Assistant APIs
+  // BB Agent Assistant APIs - Local routes that proxy to LangGraph Platform
   BB_ASSISTANTS: '/api/admin/ai-management/bb-assistants',
   BB_ASSISTANT_BY_ID: (id: string) => `/api/admin/ai-management/bb-assistants/${id}`,
+  BB_ASSISTANTS_CREATE: '/api/admin/ai-management/bb-assistants',
   
   // User Assignment APIs  
   USER_ASSIGNMENTS: '/api/admin/ai-management/assignments',
@@ -29,9 +30,9 @@ export const API_ENDPOINTS = {
   CONTACTS_PICTURE: (phoneNumber: string) => `/api/admin/contacts/picture/${phoneNumber}`,
   
   // Legacy APIs (to be deprecated)
-  CONTACTS_DB: '/admin/chat/api/contacts/db',
-  CONTACTS: '/admin/chat/api/contacts',
-  CONTACT_SYNC: '/admin/chat/api/contacts/sync',
+  CONTACTS_DB: '/api/admin/contacts',
+  CONTACTS: '/api/admin/contacts',
+  CONTACT_SYNC: '/api/admin/contacts/sync',
   
   // WhatsApp APIs
   WHATSAPP_AI: '/api/whatsapp/ai',

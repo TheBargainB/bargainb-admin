@@ -111,6 +111,23 @@ export async function PATCH(
     const body = await request.json()
     const { name, description, config } = body
 
+    const payload: any = {}
+    
+    if (name) {
+      payload.name = name
+    }
+    
+    if (config) {
+      payload.config = config
+    }
+    
+    if (description !== undefined) {
+      payload.metadata = {
+        description: description,
+        updated_via: 'bargainb-admin'
+      }
+    }
+
     // Update assistant using BB Agent API
     const response = await fetch(`${BB_AGENT_URL}/assistants/${assistantId}`, {
       method: 'PATCH',
@@ -118,11 +135,7 @@ export async function PATCH(
         'Content-Type': 'application/json',
         'X-Api-Key': LANGSMITH_API_KEY
       },
-      body: JSON.stringify({
-        name: name,
-        description: description,
-        config: config
-      })
+      body: JSON.stringify(payload)
     })
 
     if (!response.ok) {

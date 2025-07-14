@@ -21,11 +21,8 @@ export async function GET() {
       },
       body: JSON.stringify({
         metadata: {},
-        graph_id: "product_retrieval_agent",
         limit: 100,
-        offset: 0,
-        sort_by: "created_at",
-        sort_order: "desc"
+        offset: 0
       })
     })
 
@@ -82,13 +79,14 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         graph_id: "product_retrieval_agent",
         name: name,
-        description: description || null,
         config: {
           recursion_limit: config?.recursion_limit || 25,
           configurable: config?.configurable || {}
         },
-        metadata: {},
-        if_exists: "raise"
+        metadata: {
+          description: description || '',
+          created_via: 'bargainb-admin'
+        }
       })
     })
 

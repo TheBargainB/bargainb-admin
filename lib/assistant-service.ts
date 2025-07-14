@@ -52,6 +52,95 @@ export interface AssistantResponse {
 const AI_API_URL = 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app'
 const AI_API_KEY = process.env.LANGSMITH_API_KEY || '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'
 
+// LangGraph Platform API Client
+class LangGraphPlatformClient {
+  private baseUrl: string
+  private apiKey: string
+
+  constructor(baseUrl: string, apiKey: string) {
+    this.baseUrl = baseUrl
+    this.apiKey = apiKey
+  }
+
+  private async request<T>(
+    endpoint: string, 
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`
+    
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': this.apiKey,
+        ...options.headers,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`LangGraph API Error: ${response.status} ${response.statusText}`)
+    }
+
+    return response.json()
+  }
+
+  // Search assistants
+  async searchAssistants(params: {
+    metadata?: Record<string, any>
+    limit?: number
+    offset?: number
+  } = {}): Promise<any[]> {
+    return this.request('/assistants/search', {
+      method: 'POST',
+      body: JSON.stringify({
+        metadata: {},
+        limit: 10,
+        offset: 0,
+        ...params
+      })
+    })
+  }
+
+  // Get assistant by ID
+  async getAssistant(assistantId: string): Promise<any> {
+    return this.request(`/assistants/${assistantId}`)
+  }
+
+  // Create assistant
+  async createAssistant(data: {
+    graph_id: string
+    config?: Record<string, any>
+    metadata?: Record<string, any>
+    name?: string
+  }): Promise<any> {
+    return this.request('/assistants', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    })
+  }
+
+  // Update assistant
+  async updateAssistant(assistantId: string, data: {
+    config?: Record<string, any>
+    metadata?: Record<string, any>
+    name?: string
+  }): Promise<any> {
+    return this.request(`/assistants/${assistantId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    })
+  }
+
+  // Delete assistant
+  async deleteAssistant(assistantId: string): Promise<void> {
+    await this.request(`/assistants/${assistantId}`, {
+      method: 'DELETE'
+    })
+  }
+}
+
+export const langGraphClient = new LangGraphPlatformClient(AI_API_URL, AI_API_KEY)
+
 /**
  * Create a new assistant for a specific conversation/user
  */
@@ -102,29 +191,13 @@ export const createUserAssistant = async (
     }
     
     // Call LangGraph Create Assistant API
-    const response = await fetch(`${AI_API_URL}/assistants`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': AI_API_KEY
-      },
-      body: JSON.stringify({
-        graph_id: "product_retrieval_agent",
-        config: assistantConfig,
-        metadata: metadata,
-        if_exists: "do_nothing", // Don't error if assistant already exists
-        name: assistantName,
-        description: `Personalized grocery shopping assistant for ${phoneNumber}`
-      })
-    })
+         const assistant = await langGraphClient.createAssistant({
+       graph_id: "product_retrieval_agent",
+       config: assistantConfig,
+       metadata: metadata,
+       name: assistantName
+     })
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Failed to create assistant:', response.status, errorText)
-      throw new Error(`Assistant creation failed: ${response.status} ${errorText}`)
-    }
-    
-    const assistant: AssistantResponse = await response.json()
     console.log('✅ Assistant created successfully:', assistant.assistant_id)
     
     // Store assistant info in database
@@ -255,23 +328,10 @@ export const updateAssistantConfig = async (
   try {
     console.log('🔧 Updating assistant config:', assistantId)
     
-    const response = await fetch(`${AI_API_URL}/assistants/${assistantId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': AI_API_KEY
-      },
-      body: JSON.stringify({
-        config: config,
-        metadata: metadata
-      })
+    const assistant = await langGraphClient.updateAssistant(assistantId, {
+      config: config,
+      metadata: metadata
     })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Failed to update assistant:', response.status, errorText)
-      return false
-    }
     
     // Update database record
     const { error: dbError } = await supabaseAdmin
@@ -302,18 +362,7 @@ export const deleteAssistant = async (assistantId: string): Promise<boolean> => 
   try {
     console.log('🗑️ Deleting assistant:', assistantId)
     
-    const response = await fetch(`${AI_API_URL}/assistants/${assistantId}`, {
-      method: 'DELETE',
-      headers: {
-        'X-Api-Key': AI_API_KEY
-      }
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Failed to delete assistant:', response.status, errorText)
-      return false
-    }
+    await langGraphClient.deleteAssistant(assistantId)
     
     // Update database to remove assistant reference
     const { error: dbError } = await supabaseAdmin
@@ -346,18 +395,7 @@ export const deleteAssistant = async (assistantId: string): Promise<boolean> => 
  */
 export const getAssistantDetails = async (assistantId: string): Promise<AssistantResponse | null> => {
   try {
-    const response = await fetch(`${AI_API_URL}/assistants/${assistantId}`, {
-      headers: {
-        'X-Api-Key': AI_API_KEY
-      }
-    })
-    
-    if (!response.ok) {
-      console.error('❌ Failed to fetch assistant details:', response.status)
-      return null
-    }
-    
-    const assistant: AssistantResponse = await response.json()
+    const assistant = await langGraphClient.getAssistant(assistantId)
     return assistant
     
   } catch (error) {
@@ -371,26 +409,9 @@ export const getAssistantDetails = async (assistantId: string): Promise<Assistan
  */
 export const listAllAssistants = async (): Promise<AssistantResponse[]> => {
   try {
-    const response = await fetch(`${AI_API_URL}/assistants/search`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': AI_API_KEY
-      },
-      body: JSON.stringify({
-        graph_id: "product_retrieval_agent",
-        limit: 100,
-        sort_by: "created_at",
-        sort_order: "desc"
-      })
-    })
-    
-    if (!response.ok) {
-      console.error('❌ Failed to list assistants:', response.status)
-      return []
-    }
-    
-    const assistants: AssistantResponse[] = await response.json()
+         const assistants = await langGraphClient.searchAssistants({
+       limit: 100
+     })
     return assistants
     
   } catch (error) {

@@ -133,7 +133,7 @@ export const updateBBAssistant = async (
       }
     }
 
-    const response = await apiClient.put<BBAssistant>(
+    const response = await apiClient.patch<BBAssistant>(
       API_ENDPOINTS.BB_ASSISTANT_BY_ID(assistantId), 
       payload
     )
