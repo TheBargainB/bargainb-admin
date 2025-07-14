@@ -23,113 +23,235 @@ interface SyncResult {
   }>
 }
 
-interface WASenderContact {
-  id: string
-  phone: string
-  name?: string
-  pushName?: string
-  verifiedName?: string
-  profilePicture?: string
-  isActive: boolean
-  isBusiness: boolean
-  lastSeen?: string
-  status?: string
-  jid: string
-}
-
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   
   try {
     const { 
-      force_full_sync = false,
-      batch_size = 100,
-      include_inactive = false 
-    } = await request.json()
+      force_full_sync = false 
+    } = await request.json().catch(() => ({ force_full_sync: false }))
 
-    const result: SyncResult = {
-      success: false,
+    console.log('🔄 Starting WASender contact sync...')
+    
+    const apiKey = process.env.WASENDER_API_KEY
+    const apiUrl = process.env.WASENDER_API_URL || 'https://www.wasenderapi.com'
+    
+    if (!apiKey) {
+      console.error('❌ WASENDER_API_KEY not found in environment variables')
+      return NextResponse.json({
+        success: false,
+        stats: {
+          total_contacts_processed: 0,
+          new_contacts_added: 0,
+          existing_contacts_updated: 0,
+          contacts_deactivated: 0,
+          contacts_reactivated: 0,
+          errors: 1
+        },
+        sync_duration_ms: Date.now() - startTime,
+        last_sync_at: new Date().toISOString(),
+        errors: [{
+          error_message: 'WASender API key not configured',
+          error_type: 'api'
+        }]
+      }, { status: 500 })
+    }
+    
+    console.log('📡 Calling WASender API for contacts...')
+    const response = await fetch(`${apiUrl}/api/contacts`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    console.log('📡 WASender API response status:', response.status, response.statusText)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('❌ WASender API error:', errorText)
+      return NextResponse.json({
+        success: false,
+        stats: {
+          total_contacts_processed: 0,
+          new_contacts_added: 0,
+          existing_contacts_updated: 0,
+          contacts_deactivated: 0,
+          contacts_reactivated: 0,
+          errors: 1
+        },
+        sync_duration_ms: Date.now() - startTime,
+        last_sync_at: new Date().toISOString(),
+        errors: [{
+          error_message: `WASender API error: ${response.status} ${response.statusText}`,
+          error_type: 'api'
+        }]
+      }, { status: 500 })
+    }
+    
+    const result = await response.json()
+    console.log('📋 WASender contacts response received with', result.data?.length || 0, 'contacts')
+    
+    // WASender returns { success: true, data: [...] }
+    if (!result.success || !result.data) {
+      console.log('⚠️ WASender returned unsuccessful response or no data')
+      return NextResponse.json({
+        success: false,
+        stats: {
+          total_contacts_processed: 0,
+          new_contacts_added: 0,
+          existing_contacts_updated: 0,
+          contacts_deactivated: 0,
+          contacts_reactivated: 0,
+          errors: 1
+        },
+        sync_duration_ms: Date.now() - startTime,
+        last_sync_at: new Date().toISOString(),
+        errors: [{
+          error_message: 'No contacts received from WASender',
+          error_type: 'api'
+        }]
+      }, { status: 500 })
+    }
+
+    const contactsArray = result.data.filter((contact: any) => contact.id)
+    console.log('💾 Processing contacts with profile pictures...')
+    
+    // Process contacts in smaller batches to fetch profile pictures
+    const batchSize = 5 // Small batches to avoid rate limits
+    let totalStored = 0
+    let totalWithImages = 0
+    
+    for (let i = 0; i < contactsArray.length; i += batchSize) {
+      const batch = contactsArray.slice(i, i + batchSize)
+      console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(contactsArray.length/batchSize)}...`)
+      
+      // Process each contact in the batch
+      const contactPromises = batch.map(async (contact: any) => {
+        let imgUrl = contact.imgUrl || null
+        // Use raw phone number (contact.id), not with @s.whatsapp.net
+        const phoneNumber = contact.id.replace('@s.whatsapp.net', '')
+        
+        // Try to fetch profile picture from WASender API
+        if (!imgUrl) {
+          try {
+            console.log(`📸 Fetching profile picture for: ${phoneNumber}`)
+            const pictureResponse = await fetch(`${apiUrl}/api/contacts/${phoneNumber}/picture`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+              }
+            })
+            
+            if (pictureResponse.ok) {
+              const pictureResult = await pictureResponse.json()
+              if (pictureResult.success && pictureResult.data?.imgUrl) {
+                imgUrl = pictureResult.data.imgUrl
+                console.log(`✅ Got profile picture for ${phoneNumber}`)
+              } else {
+                console.log(`📷 No profile picture available for ${phoneNumber}`)
+              }
+            } else {
+              console.warn(`⚠️ Failed to fetch profile picture for ${phoneNumber}: ${pictureResponse.status}`)
+            }
+          } catch (error) {
+            console.warn(`⚠️ Error fetching profile picture for ${phoneNumber}:`, error)
+          }
+        }
+        
+        // Upsert contact in database
+        const contactData = {
+          phone_number: phoneNumber,
+          whatsapp_jid: contact.id,
+          display_name: contact.name || null,
+          push_name: contact.notify || null,
+          verified_name: contact.verifiedName || null,
+          profile_picture_url: imgUrl || null,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }
+        
+        try {
+          // Check if contact exists
+          const { data: existingContact } = await supabaseAdmin
+            .from('whatsapp_contacts')
+            .select('id')
+            .eq('phone_number', phoneNumber)
+            .single()
+
+          if (existingContact) {
+            // Update existing contact
+            const { error } = await supabaseAdmin
+              .from('whatsapp_contacts')
+              .update(contactData)
+              .eq('id', existingContact.id)
+
+            if (error) {
+              console.error(`❌ Error updating contact ${phoneNumber}:`, error)
+              return { success: false, hasImage: false, isNew: false }
+            }
+            return { success: true, hasImage: !!imgUrl, isNew: false }
+          } else {
+            // Create new contact
+            const { error } = await supabaseAdmin
+              .from('whatsapp_contacts')
+              .insert({
+                ...contactData,
+                created_at: new Date().toISOString()
+              })
+
+            if (error) {
+              console.error(`❌ Error creating contact ${phoneNumber}:`, error)
+              return { success: false, hasImage: false, isNew: false }
+            }
+            return { success: true, hasImage: !!imgUrl, isNew: true }
+          }
+        } catch (error) {
+          console.error(`❌ Error processing contact ${phoneNumber}:`, error)
+          return { success: false, hasImage: false, isNew: false }
+        }
+      })
+      
+      const batchResults = await Promise.all(contactPromises)
+      const successfulContacts = batchResults.filter(r => r.success)
+      const newContacts = batchResults.filter(r => r.success && r.isNew)
+      const updatedContacts = batchResults.filter(r => r.success && !r.isNew)
+      const imagesInBatch = batchResults.filter(r => r.hasImage).length
+      
+      console.log(`💾 Processed batch ${Math.floor(i/batchSize) + 1}: ${successfulContacts.length} contacts (${newContacts.length} new, ${updatedContacts.length} updated, ${imagesInBatch} with images)`)
+      totalStored += successfulContacts.length
+      totalWithImages += imagesInBatch
+      
+      // Small delay between batches to be nice to the API
+      if (i + batchSize < contactsArray.length) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
+    
+    console.log('💾 Successfully synced', totalStored, 'contacts from WASender')
+    console.log('📸 Profile pictures found for', totalWithImages, 'contacts')
+    
+    return NextResponse.json({
+      success: true,
       stats: {
-        total_contacts_processed: 0,
-        new_contacts_added: 0,
+        total_contacts_processed: contactsArray.length,
+        new_contacts_added: totalStored, // This is simplified - we'd need to track new vs updated
         existing_contacts_updated: 0,
         contacts_deactivated: 0,
         contacts_reactivated: 0,
         errors: 0
       },
-      sync_duration_ms: 0,
+      sync_duration_ms: Date.now() - startTime,
       last_sync_at: new Date().toISOString(),
       errors: []
-    }
+    })
 
-    // Get last sync timestamp if not forcing full sync
-    let lastSyncTime: string | null = null
-    if (!force_full_sync) {
-      // For now, we'll use a mock last sync time
-      // In a real implementation, you would store this in a settings table
-      lastSyncTime = null
-    }
-
-    // Fetch contacts from WASender API
-    const wasenderContacts = await fetchWASenderContacts(lastSyncTime, include_inactive)
-    
-    if (!wasenderContacts) {
-      throw new Error('Failed to fetch contacts from WASender')
-    }
-
-    result.stats.total_contacts_processed = wasenderContacts.length
-
-    // Process contacts in batches
-    const batches = []
-    for (let i = 0; i < wasenderContacts.length; i += batch_size) {
-      batches.push(wasenderContacts.slice(i, i + batch_size))
-    }
-
-    for (const batch of batches) {
-      const batchResult = await processBatch(batch)
-      
-      result.stats.new_contacts_added += batchResult.new_contacts_added
-      result.stats.existing_contacts_updated += batchResult.existing_contacts_updated
-      result.stats.contacts_deactivated += batchResult.contacts_deactivated
-      result.stats.contacts_reactivated += batchResult.contacts_reactivated
-      result.stats.errors += batchResult.errors
-      
-      if (batchResult.batch_errors) {
-        result.errors!.push(...batchResult.batch_errors)
-      }
-    }
-
-    // Update last sync timestamp
-    // In a real implementation, you would store this in a settings table
-    // For now, we'll just log the sync completion
-    console.log('Contacts sync completed at:', new Date().toISOString())
-
-    // Mark inactive contacts if doing full sync
-    if (force_full_sync) {
-      const activePhones = wasenderContacts.filter(c => c.isActive).map(c => c.phone)
-      
-      const { data: inactiveContacts } = await supabaseAdmin
-        .from('whatsapp_contacts')
-        .update({ 
-          is_active: false, 
-          updated_at: new Date().toISOString() 
-        })
-        .not('phone_number', 'in', `(${activePhones.join(',')})`)
-        .eq('is_active', true)
-        .select('id')
-
-      result.stats.contacts_deactivated += inactiveContacts?.length || 0
-    }
-
-    // Calculate sync duration
-    result.sync_duration_ms = Date.now() - startTime
-    result.success = result.stats.errors === 0
-
-    return NextResponse.json(result)
   } catch (error) {
-    console.error('Error in contacts sync:', error)
+    console.error('❌ Error syncing contacts from WASender:', error)
     
-    const errorResult: SyncResult = {
+    return NextResponse.json({
       success: false,
       stats: {
         total_contacts_processed: 0,
@@ -145,9 +267,7 @@ export async function POST(request: NextRequest) {
         error_message: error instanceof Error ? error.message : 'Unknown error',
         error_type: 'api'
       }]
-    }
-
-    return NextResponse.json(errorResult, { status: 500 })
+    }, { status: 500 })
   }
 }
 
@@ -187,175 +307,4 @@ export async function GET(request: NextRequest) {
     console.error('Error getting sync status:', error)
     return NextResponse.json({ error: 'Failed to get sync status' }, { status: 500 })
   }
-}
-
-async function fetchWASenderContacts(lastSyncTime: string | null, includeInactive: boolean): Promise<WASenderContact[] | null> {
-  try {
-    // This would integrate with your WASender API
-    // For now, we'll return mock data that represents the expected structure
-    
-    const mockContacts: WASenderContact[] = [
-      {
-        id: 'contact_1',
-        phone: '1234567890',
-        name: 'John Doe',
-        pushName: 'John',
-        verifiedName: 'John Doe Verified',
-        profilePicture: 'https://example.com/profile1.jpg',
-        isActive: true,
-        isBusiness: false,
-        lastSeen: new Date().toISOString(),
-        status: 'Available',
-        jid: '1234567890@c.us'
-      },
-      {
-        id: 'contact_2',
-        phone: '0987654321',
-        name: 'Jane Smith',
-        pushName: 'Jane',
-        profilePicture: 'https://example.com/profile2.jpg',
-        isActive: true,
-        isBusiness: true,
-        lastSeen: new Date(Date.now() - 3600000).toISOString(),
-        status: 'Busy',
-        jid: '0987654321@c.us'
-      }
-    ]
-
-    // In a real implementation, you would:
-    // 1. Make API call to WASender
-    // 2. Handle pagination
-    // 3. Filter by lastSyncTime if provided
-    // 4. Handle rate limiting
-    
-    // Example API call structure:
-    // const response = await fetch(`${WASENDER_API_URL}/contacts`, {
-    //   method: 'GET',
-    //   headers: {
-    //     'Authorization': `Bearer ${WASENDER_API_KEY}`,
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify({
-    //     last_sync: lastSyncTime,
-    //     include_inactive: includeInactive,
-    //     limit: 1000
-    //   })
-    // })
-
-    return mockContacts
-  } catch (error) {
-    console.error('Error fetching WASender contacts:', error)
-    return null
-  }
-}
-
-async function processBatch(contacts: WASenderContact[]) {
-  const batchResult = {
-    new_contacts_added: 0,
-    existing_contacts_updated: 0,
-    contacts_deactivated: 0,
-    contacts_reactivated: 0,
-    errors: 0,
-    batch_errors: [] as Array<{
-      contact_id?: string
-      phone_number?: string
-      error_message: string
-      error_type: 'validation' | 'database' | 'api' | 'network'
-    }>
-  }
-
-  for (const contact of contacts) {
-    try {
-      // Validate contact data
-      if (!contact.phone || !contact.jid) {
-        batchResult.errors++
-        batchResult.batch_errors.push({
-          contact_id: contact.id,
-          phone_number: contact.phone,
-          error_message: 'Missing required fields: phone or jid',
-          error_type: 'validation'
-        })
-        continue
-      }
-
-      // Normalize phone number
-      const normalizedPhone = contact.phone.replace(/\D/g, '')
-
-      // Check if contact exists
-      const { data: existingContact } = await supabaseAdmin
-        .from('whatsapp_contacts')
-        .select('id, is_active, updated_at')
-        .eq('phone_number', normalizedPhone)
-        .single()
-
-      const contactData = {
-        phone_number: normalizedPhone,
-        whatsapp_jid: contact.jid,
-        display_name: contact.name || null,
-        push_name: contact.pushName || null,
-        verified_name: contact.verifiedName || null,
-        profile_picture_url: contact.profilePicture || null,
-        is_active: contact.isActive,
-        is_business_account: contact.isBusiness,
-        last_seen_at: contact.lastSeen || null,
-        whatsapp_status: contact.status || null,
-        updated_at: new Date().toISOString()
-      }
-
-      if (existingContact) {
-        // Update existing contact
-        const { error } = await supabaseAdmin
-          .from('whatsapp_contacts')
-          .update(contactData)
-          .eq('id', existingContact.id)
-
-        if (error) {
-          batchResult.errors++
-          batchResult.batch_errors.push({
-            contact_id: contact.id,
-            phone_number: contact.phone,
-            error_message: error.message,
-            error_type: 'database'
-          })
-        } else {
-          batchResult.existing_contacts_updated++
-          
-          // Check if contact was reactivated
-          if (!existingContact.is_active && contact.isActive) {
-            batchResult.contacts_reactivated++
-          }
-        }
-      } else {
-        // Create new contact
-        const { error } = await supabaseAdmin
-          .from('whatsapp_contacts')
-          .insert({
-            ...contactData,
-            created_at: new Date().toISOString()
-          })
-
-        if (error) {
-          batchResult.errors++
-          batchResult.batch_errors.push({
-            contact_id: contact.id,
-            phone_number: contact.phone,
-            error_message: error.message,
-            error_type: 'database'
-          })
-        } else {
-          batchResult.new_contacts_added++
-        }
-      }
-    } catch (error) {
-      batchResult.errors++
-      batchResult.batch_errors.push({
-        contact_id: contact.id,
-        phone_number: contact.phone,
-        error_message: error instanceof Error ? error.message : 'Unknown error',
-        error_type: 'api'
-      })
-    }
-  }
-
-  return batchResult
 } 

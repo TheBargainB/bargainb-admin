@@ -17,8 +17,7 @@ import {
   deleteContact,
   upsertContact,
   searchContacts,
-  getContactDisplayName,
-  syncContactsFromWASender
+  getContactDisplayName
 } from '@/actions/chat-v2'
 
 // =============================================================================
@@ -298,18 +297,32 @@ export const useContacts = (options: UseContactsOptions = {}): UseContactsReturn
       setIsSyncing(true)
       setError(null)
       
-      const result = await syncContactsFromWASender()
+      const response = await fetch('/api/admin/contacts/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          force_full_sync: true
+        })
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      const result = await response.json()
       
       if (result.success) {
         toast({
           title: 'Sync Complete',
-          description: `Synced ${result.synced_count} contacts from WASender.`,
+          description: `Synced ${result.stats.total_contacts_processed} contacts from WASender.`,
         })
         
         // Refresh contacts list
         await refreshContacts()
       } else {
-        throw new Error(result.error || 'Sync failed')
+        throw new Error(result.errors?.[0]?.error_message || 'Sync failed')
       }
       
     } catch (err) {
