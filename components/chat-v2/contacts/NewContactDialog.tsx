@@ -37,24 +37,24 @@ interface NewContactForm {
 // =============================================================================
 
 const formatPhoneNumber = (phoneNumber: string): string => {
-  // Remove all non-digit characters
-  let cleaned = phoneNumber.replace(/\D/g, '')
+  // Remove spaces, dashes, parentheses, but preserve + sign
+  let cleaned = phoneNumber.replace(/[^\d+]/g, '')
   
-  // Add + prefix if not present
-  if (!cleaned.startsWith('+')) {
-    // If starts with 00, replace with +
-    if (cleaned.startsWith('00')) {
-      cleaned = '+' + cleaned.substring(2)
-    } else if (cleaned.length >= 10) {
-      // Assume it needs a country code - default to Netherlands (+31) for demo
-      // In production, you'd want better logic here
-      cleaned = '+31' + cleaned
-    } else {
-      cleaned = '+' + cleaned
-    }
+  // Handle different input formats
+  if (cleaned.startsWith('+')) {
+    // Already has country code, just clean it
+    return cleaned
+  } else if (cleaned.startsWith('00')) {
+    // Replace 00 with +
+    return '+' + cleaned.substring(2)
+  } else if (cleaned.length >= 10) {
+    // For numbers without country code, don't assume - require explicit input
+    // This prevents incorrect country code assignment
+    return '+' + cleaned
+  } else {
+    // Short numbers, just add +
+    return '+' + cleaned
   }
-  
-  return cleaned
 }
 
 const generateWhatsAppJid = (phoneNumber: string): string => {
@@ -63,8 +63,20 @@ const generateWhatsAppJid = (phoneNumber: string): string => {
 }
 
 const validatePhoneNumber = (phoneNumber: string): boolean => {
-  const cleanNumber = phoneNumber.replace(/\D/g, '')
-  return cleanNumber.length >= 8 && cleanNumber.length <= 15
+  // Remove all non-digit characters except +
+  const cleanNumber = phoneNumber.replace(/[^\d+]/g, '')
+  
+  // Must start with + for international format
+  if (!cleanNumber.startsWith('+')) {
+    return false
+  }
+  
+  // Remove + and check digit count
+  const digitsOnly = cleanNumber.substring(1)
+  
+  // International phone numbers: 7-15 digits (ITU-T E.164 standard)
+  // Country code: 1-3 digits, National number: 4-12 digits
+  return digitsOnly.length >= 7 && digitsOnly.length <= 15 && /^\d+$/.test(digitsOnly)
 }
 
 const validateEmail = (email: string): boolean => {
@@ -214,15 +226,15 @@ export const NewContactDialog = memo<NewContactDialogProps>(({
             </Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                id="phone_number"
-                placeholder="+31 6 12345678"
-                value={form.phone_number}
-                onChange={(e) => handlePhoneNumberChange(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="pl-10"
-                disabled={is_submitting}
-              />
+                              <Input
+                  id="phone_number"
+                  placeholder="+20 114 351 5957 (Egypt) or +31 6 12345678 (Netherlands)"
+                  value={form.phone_number}
+                  onChange={(e) => handlePhoneNumberChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="pl-10"
+                  disabled={is_submitting}
+                />
             </div>
             {errors.phone_number && (
               <p className="text-sm text-red-600">{errors.phone_number}</p>

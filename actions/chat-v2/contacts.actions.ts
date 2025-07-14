@@ -183,7 +183,13 @@ export async function getContactByPhone(phoneNumber: string): Promise<Contact | 
     const cleanPhone = phoneNumber
       .replace('@s.whatsapp.net', '')
       .replace('@c.us', '')
-      .replace('+', '')
+    
+    // Try multiple variations for lookup
+    const phoneVariations = [
+      cleanPhone,
+      cleanPhone.startsWith('+') ? cleanPhone : `+${cleanPhone}`,
+      cleanPhone.startsWith('+') ? cleanPhone.substring(1) : cleanPhone
+    ]
 
     const { data, error } = await supabase
       .from('whatsapp_contacts')
@@ -202,7 +208,7 @@ export async function getContactByPhone(phoneNumber: string): Promise<Contact | 
           total_messages
         )
       `)
-      .or(`phone_number.eq.${cleanPhone},phone_number.eq.+${cleanPhone},whatsapp_jid.eq.${cleanPhone}@s.whatsapp.net`)
+      .or(`phone_number.in.(${phoneVariations.join(',')}),whatsapp_jid.eq.${cleanPhone.replace('+', '')}@s.whatsapp.net`)
       .single()
 
     if (error) {
