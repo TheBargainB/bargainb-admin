@@ -417,33 +417,180 @@ export async function deleteContact(contactId: string): Promise<void> {
       return
     }
     
-    // Step 1: Delete all messages where this contact was involved
-    console.log('🗑️ Deleting messages for contact:', contact.phone_number)
-    const { error: messagesError } = await supabase
-      .from('messages')
-      .delete()
-      .eq('contact_id', contactId)
-    
-    if (messagesError) {
-      console.error('❌ Error deleting messages:', messagesError)
-      // Continue with deletion, don't throw here
-    }
-    
-    // Step 2: Delete all conversations where this contact was involved
-    console.log('🗑️ Deleting conversations for contact:', contact.phone_number)
-    const { error: conversationsError } = await supabase
+    // Get all conversations for this contact first
+    const { data: conversations } = await supabase
       .from('conversations')
-      .delete()
-      .eq('contact_id', contactId)
+      .select('id')
+      .eq('whatsapp_contact_id', contactId)
     
-    if (conversationsError) {
-      console.error('❌ Error deleting conversations:', conversationsError)
-      // Continue with deletion, don't throw here
+    const conversationIds = conversations?.map((c: { id: string }) => c.id) || []
+    
+    if (conversationIds.length > 0) {
+      console.log(`🗑️ Found ${conversationIds.length} conversations for contact:`, contact.phone_number)
+      
+      // Step 1: Delete AI interactions (references conversations)
+      console.log('🗑️ Deleting AI interactions...')
+      const { error: aiError } = await supabase
+        .from('ai_interactions')
+        .delete()
+        .in('conversation_id', conversationIds)
+      
+      if (aiError) {
+        console.error('❌ Error deleting AI interactions:', aiError)
+        // Continue with deletion, don't throw here
+      }
+      
+      // Step 2: Delete customer events (references conversations and messages)
+      console.log('🗑️ Deleting customer events...')
+      const { error: eventsError } = await supabase
+        .from('customer_events')
+        .delete()
+        .in('conversation_id', conversationIds)
+      
+      if (eventsError) {
+        console.error('❌ Error deleting customer events:', eventsError)
+        // Continue with deletion, don't throw here
+      }
+      
+      // Step 3: Delete message truncation logs
+      console.log('🗑️ Deleting message truncation logs...')
+      const { error: truncationError } = await supabase
+        .from('message_truncation_log')
+        .delete()
+        .in('conversation_id', conversationIds)
+      
+      if (truncationError) {
+        console.error('❌ Error deleting message truncation logs:', truncationError)
+        // Continue with deletion, don't throw here
+      }
+      
+      // Step 4: Delete conversation summaries
+      console.log('🗑️ Deleting conversation summaries...')
+      const { error: summariesError } = await supabase
+        .from('conversation_summaries')
+        .delete()
+        .in('conversation_id', conversationIds)
+      
+      if (summariesError) {
+        console.error('❌ Error deleting conversation summaries:', summariesError)
+        // Continue with deletion, don't throw here
+      }
+      
+      // Step 5: Delete messages (references conversations)
+      console.log('🗑️ Deleting messages...')
+      const { error: messagesError } = await supabase
+        .from('messages')
+        .delete()
+        .in('conversation_id', conversationIds)
+      
+      if (messagesError) {
+        console.error('❌ Error deleting messages:', messagesError)
+        // Continue with deletion, don't throw here
+      }
+      
+      // Step 6: Delete conversations themselves
+      console.log('🗑️ Deleting conversations...')
+      const { error: conversationsError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('whatsapp_contact_id', contactId)
+      
+      if (conversationsError) {
+        console.error('❌ Error deleting conversations:', conversationsError)
+        // Continue with deletion, don't throw here
+      }
     }
     
-    // Step 3: Delete CRM profile if exists
+    // Step 7: Delete CRM profile-related data if exists
     if (contact.crm_profile?.id) {
-      console.log('🗑️ Deleting CRM profile for contact:', contact.phone_number)
+      console.log('🗑️ Deleting CRM profile-related data...')
+      
+      // Get all budget periods for this CRM profile
+      const { data: budgetPeriods } = await supabase
+        .from('budget_periods')
+        .select('id')
+        .eq('crm_profile_id', contact.crm_profile.id)
+      
+      const budgetPeriodIds = budgetPeriods?.map((bp: { id: string }) => bp.id) || []
+      
+      if (budgetPeriodIds.length > 0) {
+        // Get all budget categories for these periods
+        const { data: budgetCategories } = await supabase
+          .from('budget_categories')
+          .select('id')
+          .in('budget_period_id', budgetPeriodIds)
+        
+        const budgetCategoryIds = budgetCategories?.map((bc: { id: string }) => bc.id) || []
+        
+        if (budgetCategoryIds.length > 0) {
+          // Delete budget expenses (depends on budget_categories and grocery_lists)
+          const { error: budgetExpensesError } = await supabase
+            .from('budget_expenses')
+            .delete()
+            .in('budget_category_id', budgetCategoryIds)
+        }
+        
+        // Delete budget categories (depends on budget_periods)
+        const { error: budgetCategoriesError } = await supabase
+          .from('budget_categories')
+          .delete()
+          .in('budget_period_id', budgetPeriodIds)
+      }
+      
+      // Delete budget periods
+      const { error: budgetPeriodsError } = await supabase
+        .from('budget_periods')
+        .delete()
+        .eq('crm_profile_id', contact.crm_profile.id)
+      
+      // Delete budget savings goals
+      const { error: savingsGoalsError } = await supabase
+        .from('budget_savings_goals')
+        .delete()
+        .eq('crm_profile_id', contact.crm_profile.id)
+      
+      // Get all recipes created by this CRM profile
+      const { data: recipes } = await supabase
+        .from('recipes')
+        .select('id')
+        .eq('created_by', contact.crm_profile.id)
+      
+      const recipeIds = recipes?.map((r: { id: string }) => r.id) || []
+      
+      if (recipeIds.length > 0) {
+        // Delete recipe ingredients (depends on recipes)
+        const { error: recipeIngredientsError } = await supabase
+          .from('recipe_ingredients')
+          .delete()
+          .in('recipe_id', recipeIds)
+      }
+      
+      // Delete meal plans
+      const { error: mealPlansError } = await supabase
+        .from('meal_plans')
+        .delete()
+        .eq('crm_profile_id', contact.crm_profile.id)
+      
+      // Delete recipes
+      const { error: recipesError } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('created_by', contact.crm_profile.id)
+      
+      // Delete grocery lists
+      const { error: groceryListsError } = await supabase
+        .from('grocery_lists')
+        .delete()
+        .eq('crm_profile_id', contact.crm_profile.id)
+      
+      // Delete customer events related to this CRM profile
+      const { error: crmEventsError } = await supabase
+        .from('customer_events')
+        .delete()
+        .eq('crm_profile_id', contact.crm_profile.id)
+      
+      // Delete CRM profile itself
+      console.log('🗑️ Deleting CRM profile...')
       const { error: crmError } = await supabase
         .from('crm_profiles')
         .delete()
@@ -455,7 +602,7 @@ export async function deleteContact(contactId: string): Promise<void> {
       }
     }
     
-    // Step 4: Finally delete the contact itself
+    // Step 8: Finally delete the contact itself
     console.log('🗑️ Deleting contact record:', contact.phone_number)
     const { error: contactError } = await supabase
       .from('whatsapp_contacts')
