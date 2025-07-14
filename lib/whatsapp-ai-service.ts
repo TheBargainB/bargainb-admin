@@ -706,7 +706,7 @@ export class WhatsAppAIService {
     }
 
     this.aiConfig = {
-      baseUrl: process.env.BARGAINB_API_URL || 'https://ht-ample-carnation-93-62e3a16b2190526eac38c74198169a7f.us.langgraph.app',
+      baseUrl: process.env.BARGAINB_API_URL || 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app',
       apiKey: process.env.LANGSMITH_API_KEY || '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'
     };
 
