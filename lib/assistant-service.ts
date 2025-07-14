@@ -6,6 +6,7 @@
 
 import { supabaseAdmin } from './supabase'
 import { Json, Database } from '../types/database.types'
+import { AGENT_BB_CONFIG, ASSISTANT_CONFIG_TEMPLATES } from '@/lib/constants'
 
 // Types based on LangGraph API documentation
 export interface AssistantConfig {
@@ -60,8 +61,8 @@ export interface AssistantResponse {
 }
 
 // Environment variables
-const AI_API_URL = 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app'
-const AI_API_KEY = process.env.LANGSMITH_API_KEY || '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'
+const AI_API_URL = AGENT_BB_CONFIG.BASE_URL
+const AI_API_KEY = process.env[AGENT_BB_CONFIG.API_KEY_ENV] || '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'
 
 // LangGraph Platform API Client
 class LangGraphPlatformClient {
@@ -155,23 +156,7 @@ export const langGraphClient = new LangGraphPlatformClient(AI_API_URL, AI_API_KE
 /**
  * Default assistant configuration with tools enabled
  */
-const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = {
-  tags: ['bargainb', 'grocery', 'whatsapp'],
-  recursion_limit: 25,
-  configurable: {
-    ENABLE_TOOLS: true,
-    ENABLE_PRODUCT_SEARCH: true,
-    ENABLE_PRICE_COMPARISON: true,
-    ENABLE_SHOPPING_LIST: true,
-    ENABLE_STORE_LOCATOR: true,
-    ENABLE_RECIPE_SUGGESTIONS: true,
-    ENABLE_FALLBACK_RESPONSES: true,
-    MAX_TOOL_CALLS_PER_REQUEST: 5,
-    REQUEST_TIMEOUT_SECONDS: 30,
-    TEMPERATURE: 0.7,
-    RESPONSE_STYLE: 'helpful'
-  }
-}
+const DEFAULT_ASSISTANT_CONFIG: AssistantConfig = ASSISTANT_CONFIG_TEMPLATES.DEFAULT
 
 /**
  * Create a new assistant for a specific conversation/user
@@ -224,7 +209,7 @@ export const createUserAssistant = async (
     
     // Call LangGraph Create Assistant API
     const assistant = await langGraphClient.createAssistant({
-      graph_id: "chatbot_agent",
+      graph_id: AGENT_BB_CONFIG.GRAPH_ID,
       config: assistantConfig,
       metadata: metadata,
       name: assistantName

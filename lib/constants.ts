@@ -40,6 +40,51 @@ export const API_ENDPOINTS = {
   WA_AI_CONFIG: (chatId: string) => `/api/whatsapp/chats/${chatId}/ai-config`,
 } as const
 
+// Agent BB API Configuration
+export const AGENT_BB_CONFIG = {
+  BASE_URL: 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app',
+  GRAPH_ID: 'chatbot_agent',
+  API_KEY_ENV: 'LANGSMITH_API_KEY',
+  DEFAULT_RECURSION_LIMIT: 25,
+  DEFAULT_TIMEOUT: 30000
+} as const
+
+// Assistant Configuration Templates
+export const ASSISTANT_CONFIG_TEMPLATES = {
+  DEFAULT: {
+    recursion_limit: AGENT_BB_CONFIG.DEFAULT_RECURSION_LIMIT,
+    configurable: {
+      ENABLE_TOOLS: true,
+      ENABLE_PRODUCT_SEARCH: true,
+      ENABLE_PRICE_COMPARISON: true,
+      ENABLE_STORE_LOCATOR: true,
+      ENABLE_RECIPE_SUGGESTIONS: true,
+      ENABLE_BUDGET_TRACKING: true,
+      ENABLE_DEAL_ALERTS: true,
+      ENABLE_NUTRITION_INFO: true,
+      ENABLE_SHOPPING_LISTS: true,
+      ENABLE_MEAL_PLANNING: true,
+      ENABLE_FALLBACK_RESPONSES: true,
+      MAX_TOOL_CALLS_PER_REQUEST: 3,
+      REQUEST_TIMEOUT_SECONDS: 30,
+      TEMPERATURE: 0.7,
+      RESPONSE_STYLE: 'helpful'
+    }
+  },
+  MINIMAL: {
+    recursion_limit: 15,
+    configurable: {
+      ENABLE_TOOLS: true,
+      ENABLE_PRODUCT_SEARCH: true,
+      ENABLE_FALLBACK_RESPONSES: true,
+      MAX_TOOL_CALLS_PER_REQUEST: 2,
+      REQUEST_TIMEOUT_SECONDS: 15,
+      TEMPERATURE: 0.5,
+      RESPONSE_STYLE: 'concise'
+    }
+  }
+} as const
+
 // HTTP Configuration
 export const HTTP_CONFIG = {
   TIMEOUT: 30000, // 30 seconds

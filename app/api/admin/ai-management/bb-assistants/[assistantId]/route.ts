@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { AGENT_BB_CONFIG } from '@/lib/constants'
 
-const BB_AGENT_URL = 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app'
-const LANGSMITH_API_KEY = process.env.LANGSMITH_API_KEY
+const BB_AGENT_URL = AGENT_BB_CONFIG.BASE_URL
+const LANGSMITH_API_KEY = process.env[AGENT_BB_CONFIG.API_KEY_ENV]
 
 export async function GET(
   request: NextRequest,

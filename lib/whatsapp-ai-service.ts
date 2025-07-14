@@ -2,6 +2,7 @@ import { supabaseAdmin } from './supabase';
 import { getOrCreateAssistantForConversation } from './assistant-service';
 import { createClient } from '@/utils/supabase/client'
 import { formatPhoneNumber as formatPhoneNumberUtil, isValidPhoneNumber as isValidPhoneNumberUtil, extractPhoneNumber as extractPhoneNumberUtil, normalizePhoneNumber } from './api-utils'
+import { AGENT_BB_CONFIG } from '@/lib/constants'
 
 // =============================================================================
 // WASENDER API CONFIGURATION
@@ -706,8 +707,8 @@ export class WhatsAppAIService {
     }
 
     this.aiConfig = {
-      baseUrl: process.env.BARGAINB_API_URL || 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app',
-      apiKey: process.env.LANGSMITH_API_KEY || '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'
+      baseUrl: process.env.BARGAINB_API_URL || AGENT_BB_CONFIG.BASE_URL,
+      apiKey: process.env[AGENT_BB_CONFIG.API_KEY_ENV] || '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'
     };
 
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -1359,7 +1360,7 @@ export class WhatsAppAIService {
         },
         body: JSON.stringify({
           metadata: {},
-          graph_id: "chatbot_agent",
+          graph_id: AGENT_BB_CONFIG.GRAPH_ID,
           limit: 1,
           offset: 0,
           sort_by: "created_at",

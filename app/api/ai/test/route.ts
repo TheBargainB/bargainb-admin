@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AGENT_BB_CONFIG } from '@/lib/constants';
 
 const config = {
-  baseUrl: process.env.BARGAINB_API_URL || 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app',
-  apiKey: process.env.LANGSMITH_API_KEY || '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',
+  baseUrl: process.env.BARGAINB_API_URL || AGENT_BB_CONFIG.BASE_URL,
+  apiKey: process.env[AGENT_BB_CONFIG.API_KEY_ENV] || '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',
   assistantId: process.env.BARGAINB_ASSISTANT_ID || '5fd12ecb-9268-51f0-8168-fc7952c7c8b8'
 }
 

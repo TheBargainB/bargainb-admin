@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { AGENT_BB_CONFIG, ASSISTANT_CONFIG_TEMPLATES } from '@/lib/constants'
 
-const BB_AGENT_URL = 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app'
-const LANGSMITH_API_KEY = process.env.LANGSMITH_API_KEY
+const BB_AGENT_URL = AGENT_BB_CONFIG.BASE_URL
+const LANGSMITH_API_KEY = process.env[AGENT_BB_CONFIG.API_KEY_ENV]
 
 export async function GET() {
   try {
@@ -21,7 +22,7 @@ export async function GET() {
       },
       body: JSON.stringify({
         metadata: {},
-        graph_id: "chatbot_agent",
+        graph_id: AGENT_BB_CONFIG.GRAPH_ID,
         limit: 100,
         offset: 0
       })
@@ -70,6 +71,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Use template-based configuration with overrides
+    const baseConfig = ASSISTANT_CONFIG_TEMPLATES.DEFAULT
+    const finalConfig = {
+      recursion_limit: config?.recursion_limit || baseConfig.recursion_limit,
+      configurable: {
+        ...baseConfig.configurable,
+        ...(config?.configurable || {})
+      }
+    }
+
     // Create assistant using BB Agent API
     const response = await fetch(`${BB_AGENT_URL}/assistants`, {
       method: 'POST',
@@ -78,15 +89,13 @@ export async function POST(request: NextRequest) {
         'X-Api-Key': LANGSMITH_API_KEY
       },
       body: JSON.stringify({
-        graph_id: "product_retrieval_agent",
+        graph_id: AGENT_BB_CONFIG.GRAPH_ID,
         name: name,
-        config: {
-          recursion_limit: config?.recursion_limit || 25,
-          configurable: config?.configurable || {}
-        },
+        config: finalConfig,
         metadata: {
           description: description || '',
-          created_via: 'bargainb-admin'
+          created_via: 'bargainb-admin',
+          template_used: 'DEFAULT'
         }
       })
     })

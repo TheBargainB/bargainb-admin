@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AGENT_BB_CONFIG } from '@/lib/constants'
 
-const BB_AGENT_URL = process.env.BARGAINB_API_URL || 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app'
-const LANGSMITH_API_KEY = process.env.LANGSMITH_API_KEY
+const BB_AGENT_URL = AGENT_BB_CONFIG.BASE_URL
+const LANGSMITH_API_KEY = process.env[AGENT_BB_CONFIG.API_KEY_ENV]
 
 interface DebugRequest {
   assistant_id?: string
@@ -112,6 +113,7 @@ async function debugApiConnectivity(): Promise<any> {
       },
       body: JSON.stringify({
         metadata: {},
+        graph_id: AGENT_BB_CONFIG.GRAPH_ID,
         limit: 1,
         offset: 0
       })
