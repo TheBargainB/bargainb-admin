@@ -912,11 +912,33 @@ export class WhatsAppAIService {
       throw new Error(`AI Agent error: ${data.__error__.message || 'Unknown AI error'}`);
     }
     
-    const aiResponse = data.messages?.[data.messages.length - 1]?.content;
-    if (!aiResponse || typeof aiResponse !== 'string') {
+    // Handle new LangGraph Platform API response format
+    let aiResponse;
+    
+    // Try new API format first (direct content)
+    if (typeof data === 'string') {
+      aiResponse = data;
+    }
+    // Try nested messages format (old API)
+    else if (data.messages && data.messages.length > 0) {
+      const lastMessage = data.messages[data.messages.length - 1];
+      aiResponse = lastMessage.content || lastMessage;
+    }
+    // Try direct content field
+    else if (data.content) {
+      aiResponse = data.content;
+    }
+    // Try response field
+    else if (data.response) {
+      aiResponse = data.response;
+    }
+    
+    if (!aiResponse || typeof aiResponse !== 'string' || aiResponse.trim().length === 0) {
       console.warn('⚠️ AI agent returned empty or invalid response:', data);
       return 'I apologize, but I was unable to generate a proper response. Please try again.';
     }
+    
+    console.log('✅ AI response received:', aiResponse.substring(0, 100) + '...');
     return aiResponse;
   }
 
