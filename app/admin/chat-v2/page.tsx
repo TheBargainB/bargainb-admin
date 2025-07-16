@@ -425,7 +425,7 @@ export default function ChatV2Page() {
       {panel_state.is_contact_panel_visible && conversations.selected_conversation && (
         <div className={cn(
           "flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-hidden h-full",
-          "w-[28rem] transition-all duration-300 ease-in-out"
+          " transition-all duration-300 ease-in-out"
         )}>
           <ContactProfile
             contact={conversations.selected_conversation?.contact}

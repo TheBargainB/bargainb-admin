@@ -111,7 +111,7 @@ export default function AdminDashboardLayout({ children }: AdminDashboardLayoutP
               <LogoutButton />
             </div>
           </div>
-          <main className="flex-1 w-full p-4 overflow-auto">
+          <main className="flex-1 w-full overflow-auto">
             <div className="container mx-auto max-w-[2560px]">
               {children}
             </div>

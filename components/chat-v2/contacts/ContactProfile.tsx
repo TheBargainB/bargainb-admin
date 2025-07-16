@@ -1,26 +1,23 @@
 'use client'
 
-import { memo, useState, useEffect } from 'react'
-import { Edit3, Save, X, Users, MessageCircle, Clock, Star, MoreVertical, Bot, UserPlus, Settings, TrendingUp, Calendar, Phone, Mail, MapPin, Building, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
 import { useAIManagement } from '@/hooks/ai-management'
-import { AssistantAssignmentDialog } from './AssistantAssignmentDialog'
+import { cn } from '@/lib/utils'
 import type { Contact, Conversation } from '@/types/chat-v2.types'
+import { Bot, Calendar, ChevronLeft, ChevronRight, Edit3, Mail, MessageCircle, MoreVertical, Phone, Save, Settings, TrendingUp, UserPlus, Users, X } from 'lucide-react'
+import { memo, useEffect, useState } from 'react'
+import { AssistantAssignmentDialog } from './AssistantAssignmentDialog'
 
 interface ContactProfileProps {
   contact?: Contact | null
@@ -460,8 +457,8 @@ export const ContactProfile = memo<ContactProfileProps>(({
 
   return (
     <div className={cn(
-      "h-full bg-background flex flex-col transition-all duration-200",
-      isCollapsed ? "w-12" : "w-full"
+      "h-full bg-background flex flex-col transition-all duration-200 ease-in-out",
+      isCollapsed ? "w-16" : "min-w-[28rem] max-w-full"
     )}>
       {/* Header */}
       <div className="p-4 border-b border-border bg-card">
@@ -470,9 +467,9 @@ export const ContactProfile = memo<ContactProfileProps>(({
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={handleToggleCollapse}
-              className="p-1"
+              className="p-1 size-10"
             >
               {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </Button>
