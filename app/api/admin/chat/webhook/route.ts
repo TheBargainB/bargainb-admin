@@ -65,25 +65,21 @@ function extractMediaInfo(message: any): { type: string, url?: string, mediaKey?
 
 // Find user by phone number in user_profiles
 async function findUserByPhone(phoneNumber: string) {
-  try {
-    const normalizedPhone = normalizePhoneNumber(phoneNumber)
-    
-    const { data: user, error } = await supabaseAdmin
-      .from('user_profiles')
-      .select('*')
-      .eq('phone_number', normalizedPhone)
-      .single()
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('❌ Error finding user by phone:', error)
-      throw error
-    }
-
-    return user || null
-  } catch (error) {
-    console.error('❌ Error in findUserByPhone:', error)
+  // Remove + prefix for database lookup since DB stores without +
+  const cleanPhone = normalizePhoneNumber(phoneNumber).replace(/^\+/, '')
+  
+  const { data: user, error } = await supabaseAdmin
+    .from('user_profiles')
+    .select('*')
+    .eq('phone_number', cleanPhone)
+    .single()
+  
+  if (error && error.code !== 'PGRST116') {
+    console.error('❌ Error finding user:', error)
     return null
   }
+  
+  return user
 }
 
 // Store incoming message in user_conversations
@@ -157,16 +153,18 @@ async function storeAIMessage(
   }
 }
 
-// Send onboarding invitation to unknown users
+// Send onboarding invitation via WhatsApp
 async function sendOnboardingInvitation(phoneNumber: string) {
   try {
     console.log('📧 Sending onboarding invitation to:', phoneNumber)
     
+    // Use hardcoded domain or fallback
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'
     const onboardingMessage = `Hi! 👋 I'm BargainB, your AI grocery assistant.
 
 To get started with personalized grocery deals and smart shopping lists, please complete your quick setup:
 
-🔗 ${process.env.NEXT_PUBLIC_APP_URL}/onboarding?phone=${encodeURIComponent('+' + phoneNumber)}
+🔗 ${baseUrl}/onboarding?phone=${encodeURIComponent('+' + phoneNumber)}
 
 This takes just 2 minutes and unlocks:
 ✅ Personalized grocery deals
@@ -193,11 +191,12 @@ Ready to save money on groceries? 🛒💰`
       const result = await response.json()
       console.log('✅ Onboarding invitation sent:', result.data?.msgId)
       
-      // Log invitation attempt
+      // Log invitation attempt (use phone number without + for consistency)
+      const cleanPhone = normalizePhoneNumber(phoneNumber).replace(/^\+/, '')
       await supabaseAdmin
         .from('onboarding_invitations')
         .upsert({
-          phone_number: normalizePhoneNumber(phoneNumber),
+          phone_number: cleanPhone,
           invitation_sent_at: new Date().toISOString(),
           invitation_count: 1
         })
