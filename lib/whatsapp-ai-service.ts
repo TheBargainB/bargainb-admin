@@ -415,7 +415,6 @@ async function processIncomingMessage(message: any) {
       direction: 'inbound',
       whatsapp_status: 'delivered',
       topic: 'general',
-      extension: 'whatsapp',
       from_me: false,
       sender_name: pushName || phoneNumber,
       created_at: new Date(messageTimestamp * 1000).toISOString(),
@@ -568,7 +567,6 @@ export async function sendMessage(
         direction: 'outbound',
         whatsapp_status: 'sent',
         topic: 'general',
-        extension: 'whatsapp',
         from_me: true,
         sender_name: 'Admin',
         media_url: options.mediaUrl || null,
@@ -1090,7 +1088,6 @@ export class WhatsAppAIService {
           from_me: true,
           whatsapp_status: 'pending',
           topic: 'ai_response',
-          extension: 'whatsapp',
           whatsapp_message_id: null, // Use null instead of empty string to avoid constraint violation
           created_at: new Date().toISOString(),
           inserted_at: new Date().toISOString(),

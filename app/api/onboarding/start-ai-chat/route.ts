@@ -109,7 +109,6 @@ export async function POST(request: NextRequest) {
         direction: 'outgoing',
         whatsapp_status: 'sent',
         topic: 'introduction',
-        extension: 'system',
         created_at: new Date().toISOString(),
         inserted_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
