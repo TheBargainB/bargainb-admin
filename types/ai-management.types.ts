@@ -4,7 +4,16 @@ import { Tables, Database } from './database.types'
 export type WhatsAppContact = Tables<'whatsapp_contacts'>
 export type AIInteraction = Tables<'ai_interactions'>
 export type UsageAnalytics = Tables<'ai_usage_analytics'>
-export type UserAssignment = Database['public']['Views']['conversation_assistants']['Row']
+// Note: conversation_assistants view needs to be created in database
+export type UserAssignment = {
+  conversation_id: string
+  assistant_id: string
+  assistant_name: string
+  phone_number: string
+  display_name: string
+  assistant_created_at: string
+  conversation_created_at: string
+}
 
 // External BB Agent Assistant interface (comes from BB Agent API)
 export interface BBAssistant {
@@ -45,3 +54,14 @@ export interface AssignUserData {
 // Component prop types
 export type AssistantTableMode = 'view' | 'select'
 export type DialogMode = 'view' | 'edit' | 'create' 
+
+// AI Message Status - matching database constraint
+export type AIMessageStatus = 
+  | 'pending'      // Message queued for processing
+  | 'processing'   // Currently being processed by AI
+  | 'completed'    // AI response generated and sent
+  | 'sending'      // Being sent via WhatsApp
+  | 'sent'         // Successfully sent via WhatsApp
+  | 'delivered'    // Delivered to WhatsApp user
+  | 'failed'       // Failed to process or send
+  | 'error'        // Error occurred during processing 
