@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
-import { agentBBService } from '@/lib/agent-bb-service'
+
+// Country name to ISO 2-letter code mapping
+const getCountryCode = (countryName: string): string => {
+  const countryMap: Record<string, string> = {
+    'Netherlands': 'NL',
+    'Germany': 'DE',
+    'Belgium': 'BE',
+    'France': 'FR',
+    'Spain': 'ES',
+    'Italy': 'IT',
+    'United Kingdom': 'GB',
+    'United States': 'US',
+    'Canada': 'CA',
+    'Australia': 'AU',
+    'Austria': 'AT',
+    'Switzerland': 'CH',
+    'Denmark': 'DK',
+    'Sweden': 'SE',
+    'Norway': 'NO',
+    'Finland': 'FI',
+    'Poland': 'PL',
+    'Czech Republic': 'CZ',
+    'Portugal': 'PT',
+    'Greece': 'GR',
+    'Ireland': 'IE',
+    'Luxembourg': 'LU'
+  }
+  
+  return countryMap[countryName] || countryName.substring(0, 2).toUpperCase()
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,11 +50,14 @@ export async function POST(request: NextRequest) {
     // Clean phone number (fix double + issue and formatting)
     const cleanPhone = rawPhone.replace(/^\++/, '+').replace(/\s+/g, '')
     
-    // Store phone number WITHOUT + sign (database format)
+    // Store phone number WITHOUT + sign for database (E.164 format without +)
     const phoneForStorage = cleanPhone.replace(/^\+/, '')
     
-    // Keep display version with + for user-facing purposes
-    const phoneDisplay = cleanPhone.startsWith('+') ? cleanPhone : '+' + cleanPhone
+    // Create WhatsApp JID from phone number
+    const whatsappJid = phoneForStorage + '@s.whatsapp.net'
+
+    // Convert country name to ISO 2-letter code
+    const countryCode = getCountryCode(country)
 
     if (!name || !cleanPhone || !email || !country || !city) {
       return NextResponse.json(
@@ -36,85 +68,209 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // First check if WhatsApp contact already exists (using phone number without +)
-    const { data: existingContact, error: checkError } = await supabase
-      .from('whatsapp_contacts')
-      .select('id')
-      .eq('phone_number', phoneForStorage)
+    // Check if user already exists (by phone number or whatsapp_jid)
+    const { data: existingUser, error: checkError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .or(`phone_number.eq.${phoneForStorage},whatsapp_jid.eq.${whatsappJid}`)
       .single()
 
-    let whatsappContact
-
-    if (existingContact) {
-      whatsappContact = existingContact
-      console.log('Using existing WhatsApp contact:', existingContact.id)
-    } else {
-      // Create WhatsApp contact
-      // Generate WhatsApp JID from phone number (required field)
-      const whatsappJid = phoneForStorage + '@s.whatsapp.net'
-      
-      const { data: newContact, error: contactError } = await supabase
-        .from('whatsapp_contacts')
-        .insert({
-          phone_number: phoneForStorage,
-          whatsapp_jid: whatsappJid,
-          display_name: name,
-          push_name: name.split(' ')[0],
-          is_business_account: false,
-          is_active: true,
-          created_at: new Date().toISOString()
-        })
-        .select('*')
-        .single()
-
-      if (contactError) {
-        console.error('Error creating WhatsApp contact:', contactError)
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Failed to create WhatsApp contact',
-            details: contactError.message 
-          },
-          { status: 500 }
-        )
-      }
-
-      whatsappContact = newContact
-      console.log('Created new WhatsApp contact:', newContact.id)
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking existing user:', checkError)
+      return NextResponse.json(
+        { success: false, error: 'Database error', details: checkError.message },
+        { status: 500 }
+      )
     }
 
-    // Check if CRM profile already exists
-    const { data: existingProfile, error: profileCheckError } = await supabase
-      .from('crm_profiles')
-      .select('*')
-      .eq('whatsapp_contact_id', whatsappContact.id)
-      .single()
+    // Create Assistant using Agent BB v2 API
+    let assistantId = null
+    let assistantCreated = false
+    let threadId = null
+    let introMessageSent = false
+    let runId = null
+    
+    try {
+      const assistantConfig = {
+        configurable: {
+          user_id: phoneForStorage,
+          country_code: countryCode,
+          language_code: preferredLanguage,
+          dietary_restrictions: selectedDietary?.length > 0 ? selectedDietary.join(', ') : 'none',
+          budget_level: 'medium',
+          household_size: 1,
+          store_preference: selectedStores?.length > 0 
+            ? (typeof selectedStores[0] === 'object' && selectedStores[0].name 
+               ? selectedStores[0].name 
+               : typeof selectedStores[0] === 'string' ? selectedStores[0] : 'Albert Heijn')
+            : 'Albert Heijn',
+          store_websites: selectedStores?.length > 0 
+            ? (typeof selectedStores[0] === 'object' && selectedStores[0].url 
+               ? selectedStores.map((store: any) => store.url).join(', ')
+               : selectedStores.map((store: string) => {
+                   const storeMap: Record<string, string> = {
+                     'Albert Heijn': 'ah.nl',
+                     'Jumbo': 'jumbo.com',
+                     'Lidl': 'lidl.nl',
+                     'Dirk': 'dirk.nl',
+                     'Aldi': 'aldi.nl'
+                   }
+                   return storeMap[store] || store.toLowerCase() + '.nl'
+                 }).join(', '))
+            : 'ah.nl'
+        }
+      }
 
-    if (existingProfile) {
-      // Update existing profile with new onboarding data
-      const { data: updatedProfile, error: updateError } = await supabase
-        .from('crm_profiles')
-        .update({
-          full_name: name,
-          email: email,
-          preferred_name: name.split(' ')[0],
-          country: country,
-          city: city,
-          selected_stores: selectedStores,
-          dietary_preferences: selectedDietary,
-          food_allergies: selectedAllergies,
-          grocery_items: selectedItems,
-          integrations: selectedIntegrations,
-          preferred_language: preferredLanguage,
-          lifecycle_stage: 'onboarding',
-          updated_at: new Date().toISOString()
+      const assistantResponse = await fetch('https://agnet-bb-v2-cc009669aec9511e9dd20dc4263f4b67.us.langgraph.app/assistants', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': process.env.LANGSMITH_API_KEY!
+        },
+        body: JSON.stringify({
+          graph_id: 'supervisor_agent',
+          config: assistantConfig,
+          metadata: {
+            user_phone: phoneForStorage,
+            user_name: name,
+            country: country,
+            language: preferredLanguage
+          },
+          if_exists: 'do_nothing',
+          name: `BargainB Assistant for ${name}`,
+          description: `Personal grocery assistant for ${name} in ${city}, ${country}`
         })
-        .eq('id', existingProfile.id)
+      })
+
+      if (assistantResponse.ok) {
+        const assistantData = await assistantResponse.json()
+        assistantId = assistantData.assistant_id
+        assistantCreated = true
+        console.log('✅ Created Agent BB v2 Assistant:', assistantId)
+
+        // Create a thread for the conversation
+        const threadResponse = await fetch('https://agnet-bb-v2-cc009669aec9511e9dd20dc4263f4b67.us.langgraph.app/threads', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': process.env.LANGSMITH_API_KEY!
+          },
+          body: JSON.stringify({
+            metadata: {
+              user_phone: phoneForStorage,
+              user_name: name,
+              assistant_id: assistantId
+            }
+          })
+        })
+
+        if (threadResponse.ok) {
+          const threadData = await threadResponse.json()
+          threadId = threadData.thread_id
+          console.log('✅ Created thread:', threadId)
+
+          // Send intro message to AI (but don't wait for response)
+          const introMessage = preferredLanguage === 'nl' 
+            ? `Hoi ${name.split(' ')[0]}! Ik ben je persoonlijke BargainB grocery assistant. Ik help je met het vinden van de beste deals, het plannen van maaltijden en het besparen van geld bij het boodschappen doen in ${country}. Wat kan ik voor je doen?`
+            : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
+
+          const runResponse = await fetch(`https://agnet-bb-v2-cc009669aec9511e9dd20dc4263f4b67.us.langgraph.app/threads/${threadId}/runs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Api-Key': process.env.LANGSMITH_API_KEY!
+            },
+            body: JSON.stringify({
+              assistant_id: assistantId,
+              input: {
+                messages: [{
+                  role: 'user',
+                  content: introMessage
+                }]
+              }
+            })
+          })
+
+          if (runResponse.ok) {
+            const runData = await runResponse.json()
+            runId = runData.run_id
+            console.log('✅ Sent intro message, run ID:', runId)
+            introMessageSent = true
+
+            // Save the intro message immediately (without waiting for AI response)
+            // AI response will be processed asynchronously by a separate background job
+          }
+        }
+      } else {
+        const errorText = await assistantResponse.text()
+        console.error('❌ Failed to create assistant:', assistantResponse.status, errorText)
+        // Continue without assistant - don't fail the user creation
+      }
+    } catch (assistantError) {
+      console.error('❌ Error creating assistant:', assistantError)
+      // Continue without assistant - don't fail the user creation
+    }
+
+    // Prepare user data for the unified table
+    const userData = {
+      email: email,
+      phone_number: phoneForStorage,
+          full_name: name,
+      preferred_name: name.split(' ')[0], // Use first name as preferred name
+          lifecycle_stage: 'onboarding',
+      onboarding_completed: true,
+      onboarding_completed_at: new Date().toISOString(),
+      assistant_created: assistantCreated,
+      assistant_id: assistantId,
+      ai_introduction_sent: introMessageSent,
+      
+      // WhatsApp Metadata
+      whatsapp_jid: whatsappJid,
+      push_name: name.split(' ')[0],
+      display_name: name,
+      is_business_account: false,
+      
+      // AI Personalization Config
+      country_code: countryCode, // Use proper 2-letter ISO code
+      language_code: preferredLanguage,
+      dietary_restrictions: selectedDietary?.length > 0 ? selectedDietary.join(', ') : null,
+      budget_level: 'medium', // Default
+      household_size: 1, // Default
+      store_preference: selectedStores?.length > 0 
+        ? (typeof selectedStores[0] === 'object' && selectedStores[0].name 
+           ? selectedStores[0].name 
+           : typeof selectedStores[0] === 'string' ? selectedStores[0] : 'Albert Heijn')
+        : 'Albert Heijn',
+      preferred_stores: selectedStores?.length > 0 ? selectedStores : null,
+      store_websites: selectedStores?.length > 0 
+        ? (typeof selectedStores[0] === 'object' && selectedStores[0].url 
+           ? selectedStores.map((store: any) => store.url).join(', ')
+           : selectedStores.map((store: string) => {
+               const storeMap: Record<string, string> = {
+                 'Albert Heijn': 'ah.nl',
+                 'Jumbo': 'jumbo.com',
+                 'Lidl': 'lidl.nl',
+                 'Dirk': 'dirk.nl',
+                 'Aldi': 'aldi.nl'
+               }
+               return storeMap[store] || store.toLowerCase() + '.nl'
+             }).join(', '))
+        : 'ah.nl'
+    }
+
+    let userProfile
+
+    if (existingUser) {
+      // Update existing user
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('user_profiles')
+        .update(userData)
+        .eq('id', existingUser.id)
         .select('*')
         .single()
 
       if (updateError) {
-        console.error('Error updating CRM profile:', updateError)
+        console.error('Error updating user profile:', updateError)
         return NextResponse.json(
           { 
             success: false, 
@@ -125,234 +281,78 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log('Updated existing CRM profile:', updatedProfile.id)
-      
-      // Create or update AI configuration with Agent BB v2 assistant
-      try {
-        const { data: aiConfigResult, error: aiConfigError } = await supabase
-          .rpc('create_user_ai_config', {
-            p_user_id: phoneDisplay,
-            p_country: country,
-            p_language: preferredLanguage,
-            p_dietary_preferences: selectedDietary || [],
-            p_food_allergies: selectedAllergies || [],
-            p_selected_stores: selectedStores || []
-          })
-
-        if (aiConfigError) {
-          console.error('Error creating AI config:', aiConfigError)
+      userProfile = updatedUser
+      console.log('Updated existing user profile:', updatedUser.id)
         } else {
-          console.log('Created/updated AI config:', aiConfigResult)
-          
-          // Create Agent BB v2 Assistant
-          try {
-            // Filter out null values from selectedStores
-            const validStores = (selectedStores || []).filter((store: any) => store !== null && store !== undefined);
-            
-            const userConfig = {
-              user_id: phoneDisplay,
-              country_code: country.toUpperCase(),
-              language_code: preferredLanguage,
-              dietary_restrictions: selectedDietary?.length > 0 ? selectedDietary.join(', ') : 'none',
-              budget_level: 'medium', // Default from onboarding
-              household_size: 1, // Default from onboarding
-              store_preference: validStores?.length > 0 
-                ? (typeof validStores[0] === 'object' && validStores[0].name 
-                   ? validStores[0].name 
-                   : typeof validStores[0] === 'string' ? validStores[0] : 'Albert Heijn')
-                : 'Albert Heijn',
-              store_websites: validStores?.length > 0 
-                ? (typeof validStores[0] === 'object' && validStores[0].url 
-                   ? validStores.map((store: any) => store.url).join(', ')
-                   : validStores.map((store: string) => {
-                       const storeMap: Record<string, string> = {
-                         'Albert Heijn': 'ah.nl',
-                         'Jumbo': 'jumbo.com',
-                         'Lidl': 'lidl.nl',
-                         'Dirk': 'dirk.nl',
-                         'Aldi': 'aldi.nl'
-                       }
-                       return storeMap[store] || store.toLowerCase() + '.nl'
-                     }).join(', '))
-                : 'ah.nl, jumbo.com, lidl.nl'
-            }
-
-            const assistant = await agentBBService.createUserAssistant(userConfig)
-            console.log('✅ Created Agent BB v2 Assistant:', assistant.assistant_id)
-
-            // Store assistant details in conversation
-            await agentBBService.storeAssistantInConversation(phoneDisplay, assistant)
-            console.log('✅ Stored assistant details in database')
-
-            // Update CRM profile with onboarding completion and assistant tracking
-            await supabase
-              .from('crm_profiles')
-              .update({
-                onboarding_completed: true,
-                assistant_created: true,
-                onboarding_completed_at: new Date().toISOString(),
-                assistant_id: assistant.assistant_id,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', updatedProfile.id)
-            
-            console.log('✅ Updated CRM profile with onboarding completion tracking')
-
-          } catch (assistantError) {
-            console.error('❌ Error creating Agent BB v2 assistant:', assistantError)
-            // Continue without failing the whole request
-          }
-        }
-      } catch (aiError) {
-        console.error('AI config creation failed:', aiError)
-        // Continue without failing the request
-      }
-      
-      return NextResponse.json({
-        success: true,
-        data: {
-          whatsapp_contact: whatsappContact,
-          crm_profile: updatedProfile,
-          message: 'User profile updated successfully'
-        }
-      })
-    }
-
-    // Create new CRM profile (only reached if no existing profile found)
-    const { data: crmProfile, error: crmError } = await supabase
-      .from('crm_profiles')
-      .insert({
-        whatsapp_contact_id: whatsappContact.id,
-        full_name: name,
-        email: email,
-        preferred_name: name.split(' ')[0], // Use first name as preferred name
-        country: country,
-        city: city,
-        selected_stores: selectedStores,
-        dietary_preferences: selectedDietary,
-        food_allergies: selectedAllergies,
-        grocery_items: selectedItems,
-        integrations: selectedIntegrations,
-        preferred_language: preferredLanguage,
-        lifecycle_stage: 'onboarding',
-        engagement_score: 0,
-        total_conversations: 0,
-        total_messages: 0
-      })
+      // Create new user
+      const { data: newUser, error: createError } = await supabase
+        .from('user_profiles')
+        .insert(userData)
       .select('*')
       .single()
 
-    if (crmError) {
-      console.error('Error creating CRM profile:', crmError)
-      
-      // Only cleanup WhatsApp contact if we created it in this request (not existing)
-      if (!existingContact) {
-        console.log('Cleaning up newly created WhatsApp contact due to CRM profile creation failure')
-        await supabase
-          .from('whatsapp_contacts')
-          .delete()
-          .eq('id', whatsappContact.id)
-      }
-
+      if (createError) {
+        console.error('Error creating user profile:', createError)
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Failed to create CRM profile',
-          details: crmError.message 
+            error: 'Failed to create user profile',
+            details: createError.message 
         },
         { status: 500 }
       )
     }
 
-    console.log('Created new CRM profile:', crmProfile.id)
+      userProfile = newUser
+      console.log('Created new user profile:', newUser.id)
+    }
 
-    // Create AI configuration for the new user with Agent BB v2 assistant
-    try {
-      const { data: aiConfigResult, error: aiConfigError } = await supabase
-        .rpc('create_user_ai_config', {
-          p_user_id: phoneDisplay,
-          p_country: country,
-          p_language: preferredLanguage,
-          p_dietary_preferences: selectedDietary || [],
-          p_food_allergies: selectedAllergies || [],
-          p_selected_stores: selectedStores || []
-        })
+    // Save the intro message immediately (AI response will be processed separately)
+    if (introMessageSent && userProfile && assistantId && threadId && runId) {
+      try {
+        const introMessage = preferredLanguage === 'nl' 
+          ? `Hoi ${name.split(' ')[0]}! Ik ben je persoonlijke BargainB grocery assistant. Ik help je met het vinden van de beste deals, het plannen van maaltijden en het besparen van geld bij het boodschappen doen in ${country}. Wat kan ik voor je doen?`
+          : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
 
-      if (aiConfigError) {
-        console.error('Error creating AI config:', aiConfigError)
-      } else {
-        console.log('Created AI config:', aiConfigResult)
-        
-        // Create Agent BB v2 Assistant
-        try {
-          // Filter out null values from selectedStores
-          const validStores = (selectedStores || []).filter((store: any) => store !== null && store !== undefined);
-          
-          const userConfig = {
-            user_id: phoneDisplay,
-            country_code: country.toUpperCase(),
-            language_code: preferredLanguage,
-            dietary_restrictions: selectedDietary?.length > 0 ? selectedDietary.join(', ') : 'none',
-            budget_level: 'medium', // Default from onboarding
-            household_size: 1, // Default from onboarding
-            store_preference: validStores?.length > 0 
-              ? (typeof validStores[0] === 'object' && validStores[0].name 
-                 ? validStores[0].name 
-                 : typeof validStores[0] === 'string' ? validStores[0] : 'Albert Heijn')
-              : 'Albert Heijn',
-            store_websites: validStores?.length > 0 
-              ? (typeof validStores[0] === 'object' && validStores[0].url 
-                 ? validStores.map((store: any) => store.url).join(', ')
-                 : validStores.map((store: string) => {
-                     const storeMap: Record<string, string> = {
-                       'Albert Heijn': 'ah.nl',
-                       'Jumbo': 'jumbo.com',
-                       'Lidl': 'lidl.nl',
-                       'Dirk': 'dirk.nl',
-                       'Aldi': 'aldi.nl'
-                     }
-                     return storeMap[store] || store.toLowerCase() + '.nl'
-                   }).join(', '))
-              : 'ah.nl, jumbo.com, lidl.nl'
-          }
+        const { error: messageError } = await supabase
+          .from('ai_messages')
+          .insert({
+            user_profile_id: userProfile.id,
+            assistant_id: assistantId,
+            thread_id: threadId,
+            message_type: 'intro',
+            content: introMessage,
+            run_id: runId,
+            status: 'sent'
+          })
 
-                    const assistant = await agentBBService.createUserAssistant(userConfig)
-          console.log('✅ Created Agent BB v2 Assistant:', assistant.assistant_id)
-
-          // Store assistant details in conversation
-          await agentBBService.storeAssistantInConversation(phoneDisplay, assistant)
-          console.log('✅ Stored assistant details in database')
-
-          // Update CRM profile with onboarding completion and assistant tracking
-          await supabase
-            .from('crm_profiles')
-            .update({
-              onboarding_completed: true,
-              assistant_created: true,
-              onboarding_completed_at: new Date().toISOString(),
-              assistant_id: assistant.assistant_id,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', crmProfile.id)
-          
-          console.log('✅ Updated CRM profile with onboarding completion tracking')
-
-        } catch (assistantError) {
-          console.error('❌ Error creating Agent BB v2 assistant:', assistantError)
-          // Continue without failing the whole request
+        if (messageError) {
+          console.error('Error saving intro message:', messageError)
+        } else {
+          console.log('✅ Saved intro message to database')
         }
+
+        // Start background process to check for AI response (non-blocking)
+        // This will poll for the AI response and save it when ready
+        processAIResponseAsync(userProfile.id, assistantId, threadId, runId)
+          .catch(error => console.error('Background AI response processing failed:', error))
+
+      } catch (msgError) {
+        console.error('Error processing intro message:', msgError)
       }
-    } catch (aiError) {
-      console.error('AI config creation failed:', aiError)
-      // Continue without failing the request
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        whatsapp_contact: whatsappContact,
-        crm_profile: crmProfile,
-        message: 'User profile created successfully'
+        user_profile: userProfile,
+        assistant_created: assistantCreated,
+        assistant_id: assistantId,
+        thread_id: threadId,
+        ai_introduction_sent: introMessageSent,
+        country_code: countryCode, // Include this for debugging
+        message: existingUser ? 'User profile updated successfully' : 'User profile created successfully',
+        note: introMessageSent ? 'AI introduction sent - response will be processed asynchronously' : 'No AI introduction sent'
       }
     })
 
@@ -367,4 +367,89 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+// Background function to poll for AI response (runs asynchronously)
+async function processAIResponseAsync(
+  userProfileId: string, 
+  assistantId: string, 
+  threadId: string, 
+  runId: string
+): Promise<void> {
+  const maxAttempts = 20 // Maximum number of polling attempts
+  const pollInterval = 3000 // 3 seconds between polls
+  let attempts = 0
+
+  console.log('🔄 Starting background AI response polling for run:', runId)
+
+  while (attempts < maxAttempts) {
+    try {
+      attempts++
+      console.log(`📊 Polling attempt ${attempts}/${maxAttempts} for AI response...`)
+
+      // Check thread state for AI response
+      const stateResponse = await fetch(`https://agnet-bb-v2-cc009669aec9511e9dd20dc4263f4b67.us.langgraph.app/threads/${threadId}/state`, {
+        method: 'GET',
+        headers: {
+          'X-Api-Key': process.env.LANGSMITH_API_KEY!
+        }
+      })
+
+      if (stateResponse.ok) {
+        const stateData = await stateResponse.json()
+        const messages = stateData.values?.messages || []
+        
+        // Find the AI response (last message that's not from human)
+        const aiMessage = messages.find((msg: any) => msg.type === 'ai')
+        
+        if (aiMessage?.content) {
+          console.log('✅ Found AI response! Saving to database...')
+          
+          // Save AI response to database
+          const supabase = await createClient()
+          const { error: saveError } = await supabase
+            .from('ai_messages')
+            .insert({
+              user_profile_id: userProfileId,
+              assistant_id: assistantId,
+              thread_id: threadId,
+              message_type: 'assistant',
+              content: aiMessage.content,
+              run_id: runId,
+              agent_response_metadata: stateData,
+              status: 'delivered'
+            })
+
+          if (saveError) {
+            console.error('❌ Error saving AI response:', saveError)
+          } else {
+            console.log('✅ Successfully saved AI response to database')
+          }
+          
+          // Response found and saved, exit the polling loop
+          return
+        }
+      } else {
+        console.error(`❌ Failed to get thread state (attempt ${attempts}):`, stateResponse.status)
+      }
+
+      // Wait before next poll (unless this was the last attempt)
+      if (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+      }
+
+    } catch (error) {
+      console.error(`❌ Error during polling attempt ${attempts}:`, error)
+      
+      // Wait before retrying (unless this was the last attempt)
+      if (attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval))
+      }
+    }
+  }
+
+  console.log(`⏰ AI response polling timed out after ${maxAttempts} attempts (${maxAttempts * pollInterval / 1000} seconds)`)
+  
+  // Optionally, you could mark the message as failed or create a notification
+  // that the AI response took too long to process
 } 

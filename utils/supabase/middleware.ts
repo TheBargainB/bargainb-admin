@@ -53,6 +53,8 @@ export async function updateSession(request: NextRequest) {
     '/api/analyze-image',
     '/api/copilotkit',
     '/api/onboarding',
+    // Internal system APIs (no auth required)
+    '/api/internal',
     // Unified Chat APIs
     '/api/admin/chat',
     // Unified Contact APIs
