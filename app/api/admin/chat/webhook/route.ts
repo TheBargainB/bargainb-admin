@@ -88,8 +88,7 @@ async function storeUserConversation(
   whatsappMessageId: string,
   content: string,
   direction: 'inbound' | 'outbound',
-  messageType: string = 'text',
-  rawData: any = {}
+  messageType: string = 'text'
 ) {
   try {
     const { data: conversation, error } = await supabaseAdmin
@@ -99,8 +98,7 @@ async function storeUserConversation(
         whatsapp_message_id: whatsappMessageId,
         content: content,
         message_type: direction === 'inbound' ? 'user_message' : 'ai_response',
-        whatsapp_status: direction === 'inbound' ? 'received' : 'sent',
-        raw_message_data: rawData
+        whatsapp_status: direction === 'inbound' ? 'received' : 'sent'
       })
       .select()
       .single()
@@ -291,8 +289,7 @@ export async function POST(request: NextRequest) {
           messageId, 
           content, 
           'inbound',
-          mediaInfo?.type || 'text',
-          { messageTimestamp, pushName, mediaInfo }
+          mediaInfo?.type || 'text'
         )
 
         // Store in ai_messages for AI processing (this will trigger our AI pipeline)
