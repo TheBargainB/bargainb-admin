@@ -205,7 +205,10 @@ export async function getContactByPhone(phoneNumber: string): Promise<Contact | 
           lifecycle_stage,
           engagement_score,
           total_conversations,
-          total_messages
+          total_messages,
+          onboarding_completed,
+          ai_introduction_sent,
+          assistant_id
         )
       `)
       .or(`phone_number.in.(${phoneVariations.join(',')}),whatsapp_jid.eq.${cleanPhone.replace('+', '')}@s.whatsapp.net`)
@@ -245,7 +248,10 @@ export async function getContactByPhone(phoneNumber: string): Promise<Contact | 
         lifecycle_stage: data.crm_profiles.lifecycle_stage || undefined,
         engagement_score: data.crm_profiles.engagement_score || undefined,
         total_conversations: data.crm_profiles.total_conversations || undefined,
-        total_messages: data.crm_profiles.total_messages || undefined
+        total_messages: data.crm_profiles.total_messages || undefined,
+        onboarding_completed: data.crm_profiles.onboarding_completed || false,
+        ai_introduction_sent: data.crm_profiles.ai_introduction_sent || false,
+        assistant_id: data.crm_profiles.assistant_id || undefined
       } : undefined
     }
 
