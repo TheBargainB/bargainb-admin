@@ -413,9 +413,14 @@ async function processIncomingMessage(message: any) {
       content,
       message_type: messageType,
       direction: 'inbound',
-      status: 'delivered',
+      whatsapp_status: 'delivered',
+      topic: 'general',
+      extension: 'whatsapp',
+      from_me: false,
       sender_name: pushName || phoneNumber,
-      created_at: new Date(messageTimestamp * 1000).toISOString()
+      created_at: new Date(messageTimestamp * 1000).toISOString(),
+      inserted_at: new Date(messageTimestamp * 1000).toISOString(),
+      updated_at: new Date(messageTimestamp * 1000).toISOString()
     }
 
     if (mediaUrl) {
@@ -561,11 +566,16 @@ export async function sendMessage(
         content: message,
         message_type: options.messageType || 'text',
         direction: 'outbound',
-        status: 'sent',
+        whatsapp_status: 'sent',
+        topic: 'general',
+        extension: 'whatsapp',
+        from_me: true,
         sender_name: 'Admin',
         media_url: options.mediaUrl || null,
         media_type: options.messageType === 'text' ? null : options.messageType,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        inserted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
 
       const { error: dbError } = await supabase
@@ -1079,7 +1089,12 @@ export class WhatsAppAIService {
           direction: 'outbound',
           from_me: true,
           whatsapp_status: 'pending',
+          topic: 'ai_response',
+          extension: 'whatsapp',
           whatsapp_message_id: null, // Use null instead of empty string to avoid constraint violation
+          created_at: new Date().toISOString(),
+          inserted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
           raw_message_data: {
             ai_generated: true,
             from_ai: true,
