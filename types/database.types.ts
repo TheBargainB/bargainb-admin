@@ -2056,6 +2056,26 @@ export type Database = {
   }
 }
 
+export interface CRMProfile {
+  id: string
+  created_at: string
+  whatsapp_contact_id: string
+  full_name: string
+  email: string
+  preferred_name: string
+  // Location info
+  country: string | null
+  city: string | null
+  // Preferences and selections
+  selected_stores: string[] | null
+  dietary_preferences: string[] | null
+  food_allergies: string[] | null
+  grocery_items: string[] | null
+  integrations: string[] | null
+  // Language preference
+  preferred_language: string | null
+}
+
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]

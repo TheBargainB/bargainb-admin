@@ -210,8 +210,8 @@ export const createUserAssistant = async (
     // Call LangGraph Create Assistant API
     const assistant = await langGraphClient.createAssistant({
       graph_id: AGENT_BB_CONFIG.GRAPH_ID,
-      config: assistantConfig,
-      metadata: metadata,
+        config: assistantConfig,
+        metadata: metadata,
       name: assistantName
     })
     

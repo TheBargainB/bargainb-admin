@@ -39,17 +39,17 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       console.error('❌ WASENDER_API_KEY not found in environment variables')
       return NextResponse.json({
-        success: false,
-        stats: {
-          total_contacts_processed: 0,
-          new_contacts_added: 0,
-          existing_contacts_updated: 0,
-          contacts_deactivated: 0,
-          contacts_reactivated: 0,
+      success: false,
+      stats: {
+        total_contacts_processed: 0,
+        new_contacts_added: 0,
+        existing_contacts_updated: 0,
+        contacts_deactivated: 0,
+        contacts_reactivated: 0,
           errors: 1
-        },
+      },
         sync_duration_ms: Date.now() - startTime,
-        last_sync_at: new Date().toISOString(),
+      last_sync_at: new Date().toISOString(),
         errors: [{
           error_message: 'WASender API key not configured',
           error_type: 'api'
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const contactsArray = result.data.filter((contact: any) => contact.id)
     console.log('💾 Processing contacts with profile pictures...')
-    
+
     // Process contacts in smaller batches to fetch profile pictures
     const batchSize = 5 // Small batches to avoid rate limits
     let totalStored = 0
@@ -158,9 +158,9 @@ export async function POST(request: NextRequest) {
             }
           } catch (error) {
             console.warn(`⚠️ Error fetching profile picture for ${phoneNumber}:`, error)
-          }
-        }
-        
+      }
+    }
+
         // Upsert contact in database
         const contactData = {
           phone_number: phoneNumber,
@@ -196,11 +196,11 @@ export async function POST(request: NextRequest) {
           } else {
             // Create new contact
             const { error } = await supabaseAdmin
-              .from('whatsapp_contacts')
+        .from('whatsapp_contacts')
               .insert({
                 ...contactData,
                 created_at: new Date().toISOString()
-              })
+        })
 
             if (error) {
               console.error(`❌ Error creating contact ${phoneNumber}:`, error)

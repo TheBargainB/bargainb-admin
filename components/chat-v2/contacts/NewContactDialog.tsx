@@ -189,15 +189,15 @@ export const NewContactDialog = memo<NewContactDialogProps>(({
             </Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                              <Input
-                  id="phone_number"
+              <Input
+                id="phone_number"
                   placeholder="Phone number"
-                  value={form.phone_number}
-                  onChange={(e) => handlePhoneNumberChange(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="pl-10"
-                  disabled={is_submitting}
-                />
+                value={form.phone_number}
+                onChange={(e) => handlePhoneNumberChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                className="pl-10"
+                disabled={is_submitting}
+              />
             </div>
             {errors.phone_number && (
               <p className="text-sm text-red-600">{errors.phone_number}</p>

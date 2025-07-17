@@ -484,26 +484,26 @@ export async function deleteContact(contactId: string): Promise<void> {
       
       // Step 5: Delete messages (references conversations)
       console.log('🗑️ Deleting messages...')
-      const { error: messagesError } = await supabase
-        .from('messages')
-        .delete()
+    const { error: messagesError } = await supabase
+      .from('messages')
+      .delete()
         .in('conversation_id', conversationIds)
-      
-      if (messagesError) {
-        console.error('❌ Error deleting messages:', messagesError)
-        // Continue with deletion, don't throw here
-      }
-      
+    
+    if (messagesError) {
+      console.error('❌ Error deleting messages:', messagesError)
+      // Continue with deletion, don't throw here
+    }
+    
       // Step 6: Delete conversations themselves
       console.log('🗑️ Deleting conversations...')
-      const { error: conversationsError } = await supabase
-        .from('conversations')
-        .delete()
+    const { error: conversationsError } = await supabase
+      .from('conversations')
+      .delete()
         .eq('whatsapp_contact_id', contactId)
-      
-      if (conversationsError) {
-        console.error('❌ Error deleting conversations:', conversationsError)
-        // Continue with deletion, don't throw here
+    
+    if (conversationsError) {
+      console.error('❌ Error deleting conversations:', conversationsError)
+      // Continue with deletion, don't throw here
       }
     }
     

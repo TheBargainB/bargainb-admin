@@ -45,10 +45,14 @@ export async function updateSession(request: NextRequest) {
     '/login',
     '/auth',
     '/privacy',
+    '/onboarding',
     '/terms',
     '/api/early-access',
     '/api/waitlist',
     '/api/whatsapp',
+    '/api/analyze-image',
+    '/api/copilotkit',
+    '/api/onboarding',
     // Unified Chat APIs
     '/api/admin/chat',
     // Unified Contact APIs

@@ -149,10 +149,23 @@ export interface Contact {
 }
 
 export interface CrmProfile {
-  id: string
-  full_name?: string
-  preferred_name?: string
-  email?: string
+  id: string;
+  created_at: string;
+  whatsapp_contact_id: string;
+  full_name: string;
+  email: string;
+  preferred_name: string;
+  // Location info
+  country: string | null;
+  city: string | null;
+  // Preferences and selections
+  selected_stores: string[] | null;
+  dietary_preferences: string[] | null;
+  food_allergies: string[] | null;
+  grocery_items: string[] | null;
+  integrations: string[] | null;
+  // Language preference
+  preferred_language: string | null;
   notes?: string
   tags?: string[]
   lifecycle_stage?: string

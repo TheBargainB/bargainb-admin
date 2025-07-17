@@ -42,8 +42,8 @@ export const API_ENDPOINTS = {
 
 // Agent BB API Configuration
 export const AGENT_BB_CONFIG = {
-  BASE_URL: 'https://agent-bb-cad80ee101cc572f9a46a59272c39cf5.us.langgraph.app',
-  GRAPH_ID: 'chatbot_agent',
+  BASE_URL: 'https://agnet-bb-v2-cc009669aec9511e9dd20dc4263f4b67.us.langgraph.app',
+  GRAPH_ID: 'supervisor_agent',
   API_KEY_ENV: 'LANGSMITH_API_KEY',
   DEFAULT_RECURSION_LIMIT: 25,
   DEFAULT_TIMEOUT: 30000

@@ -74,10 +74,10 @@ export async function POST(request: NextRequest) {
     try {
       // First try to find existing contact
       const { data: existingContact, error: contactError } = await supabaseAdmin
-        .from('whatsapp_contacts')
-        .select('id, phone_number, display_name, push_name')
-        .eq('phone_number', phoneWithoutPlus)
-        .single()
+      .from('whatsapp_contacts')
+      .select('id, phone_number, display_name, push_name')
+      .eq('phone_number', phoneWithoutPlus)
+      .single()
 
       if (contactError && contactError.code === 'PGRST116') {
         // Contact doesn't exist, create it

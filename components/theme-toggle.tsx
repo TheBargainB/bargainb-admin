@@ -35,7 +35,7 @@ export function ThemeToggle() {
     return (
         <div
             onClick={toggleTheme}
-            className='flex items-center w-20 h-10 bg-[#F4FBF4] dark:bg-[#9A89FF] dark:bg-opacity-30 rounded-full p-1 cursor-pointer relative shadow-[-7.1px_-7.1px_14.2px_0px_rgba(233,_234,_240,_0.70)] dark:shadow-[0px_3.22px_3.22px_0px_rgba(0,_0,_0,_0.25),_8.05px_8.05px_16.1px_0px_#24272C]'
+            className='flex items-center w-20 h-10 bg-[#F4FBF4] dark:bg-[#9A89FF] dark:bg-opacity-30 rounded-full p-1 cursor-pointer relative shadow-[-7.1px_-7.1px_14.2px_0px_rgba(233,_234,_240,_0.70)] dark:shadow-[0px_3.22px_3.22px_0px_rgba(0,_0,_0,_0.25),_8.05px_8.05px_16.1px_0px_#24272C] pointer-events-auto z-[60]'
             title={`Switch to ${
                 currentTheme === 'dark' ? 'light' : 'dark'
             } mode`}
@@ -43,7 +43,7 @@ export function ThemeToggle() {
             <div
                 className={`absolute transition-all duration-300 ${
                     currentTheme === 'dark' ? 'translate-x-11' : 'translate-x-0'
-                } bg-[#123013] dark:bg-[#EBEBEB] w-7 h-7 rounded-full flex items-center justify-center shadow-md`}
+                } bg-[#123013] dark:bg-[#EBEBEB] w-7 h-7 rounded-full flex items-center justify-center shadow-md pointer-events-auto`}
             >
                 {currentTheme === 'dark' ? (
                     <>
