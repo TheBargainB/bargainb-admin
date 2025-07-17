@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
         .from('conversations')
         .insert({
           whatsapp_contact_id: contact.id,
+          whatsapp_conversation_id: `${contact.phone_number}@s.whatsapp.net`,
           assistant_id: crmProfile.assistant_id,
           ai_enabled: true,
           status: 'active',
