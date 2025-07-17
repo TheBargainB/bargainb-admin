@@ -151,168 +151,7 @@ async function storeAIMessage(
   }
 }
 
-// BRIDGE FUNCTIONS: Store in old chat system for existing AI processing
 
-// Find or create WhatsApp contact in old system
-async function findOrCreateWhatsAppContact(phoneNumber: string, pushName?: string) {
-  try {
-    // First try to find existing contact
-    let { data: contact, error } = await supabaseAdmin
-      .from('whatsapp_contacts')
-      .select('*')
-      .eq('phone_number', phoneNumber.replace(/^\+/, ''))
-      .single()
-
-    if (error && error.code === 'PGRST116') {
-      // Contact doesn't exist, create it
-      const { data: newContact, error: createError } = await supabaseAdmin
-        .from('whatsapp_contacts')
-        .insert({
-          phone_number: phoneNumber.replace(/^\+/, ''),
-          whatsapp_jid: `${phoneNumber.replace(/^\+/, '')}@s.whatsapp.net`,
-          display_name: pushName || phoneNumber,
-          push_name: pushName,
-          is_active: true,
-          last_seen_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error('❌ Error creating WhatsApp contact:', createError)
-        throw createError
-      }
-
-      contact = newContact
-      console.log('✅ Created WhatsApp contact:', contact.id)
-    } else if (error) {
-      console.error('❌ Error finding WhatsApp contact:', error)
-      throw error
-    } else {
-      // Update last seen
-      await supabaseAdmin
-        .from('whatsapp_contacts')
-        .update({ 
-          last_seen_at: new Date().toISOString(),
-          push_name: pushName || contact!.push_name 
-        })
-        .eq('id', contact!.id)
-      
-      console.log('✅ Found existing WhatsApp contact:', contact!.id)
-    }
-
-    return contact!
-  } catch (error) {
-    console.error('❌ Error in findOrCreateWhatsAppContact:', error)
-    throw error
-  }
-}
-
-// Find or create conversation in old system
-async function findOrCreateConversation(contactId: string, pushName?: string) {
-  try {
-    // First try to find existing conversation
-    let { data: conversation, error } = await supabaseAdmin
-      .from('conversations')
-      .select('*')
-      .eq('whatsapp_contact_id', contactId)
-      .single()
-
-    if (error && error.code === 'PGRST116') {
-      // Conversation doesn't exist, create it
-      const { data: newConversation, error: createError } = await supabaseAdmin
-        .from('conversations')
-        .insert({
-          whatsapp_contact_id: contactId,
-          title: pushName ? `Chat with ${pushName}` : 'WhatsApp Chat',
-          description: 'WhatsApp conversation',
-          ai_enabled: true, // Enable AI by default
-          total_messages: 0,
-          unread_count: 0,
-          last_message_at: new Date().toISOString()
-        })
-        .select()
-        .single()
-
-      if (createError) {
-        console.error('❌ Error creating conversation:', createError)
-        throw createError
-      }
-
-      conversation = newConversation
-      console.log('✅ Created conversation:', conversation!.id)
-    } else if (error) {
-      console.error('❌ Error finding conversation:', error)
-      throw error
-    } else {
-      console.log('✅ Found existing conversation:', conversation!.id)
-    }
-
-    return conversation!
-  } catch (error) {
-    console.error('❌ Error in findOrCreateConversation:', error)
-    throw error
-  }
-}
-
-// Store message in old system for AI processing
-async function storeInOldChatSystem(
-  phoneNumber: string,
-  content: string,
-  messageId: string,
-  pushName?: string,
-  messageTimestamp?: number
-) {
-  try {
-    console.log('🌉 Bridging to old chat system...')
-
-    // 1. Find or create WhatsApp contact
-    const contact = await findOrCreateWhatsAppContact(phoneNumber, pushName)
-    
-    // 2. Find or create conversation
-    const conversation = await findOrCreateConversation(contact.id, pushName)
-    
-    // 3. Store message in old messages table
-    const { data: message, error: messageError } = await supabaseAdmin
-      .from('messages')
-      .insert({
-        conversation_id: conversation.id,
-        whatsapp_message_id: messageId,
-        content,
-        message_type: 'text',
-        direction: 'inbound',
-        whatsapp_status: 'delivered',
-        from_me: false,
-        sender_type: 'user',
-        created_at: messageTimestamp 
-          ? new Date(messageTimestamp * 1000).toISOString() 
-          : new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (messageError) {
-      console.error('❌ Error storing message in old system:', messageError)
-      throw messageError
-    }
-
-    // 4. Update conversation stats
-    await supabaseAdmin
-      .from('conversations')
-      .update({
-        total_messages: (conversation!.total_messages || 0) + 1,
-        unread_count: (conversation!.unread_count || 0) + 1,
-        last_message_at: new Date().toISOString()
-      })
-      .eq('id', conversation!.id)
-
-    console.log('✅ Stored in old chat system - conversation:', conversation!.id)
-    return { contact: contact!, conversation: conversation!, message }
-  } catch (error) {
-    console.error('❌ Error storing in old chat system:', error)
-    throw error
-  }
-}
 
 // Send onboarding invitation via WhatsApp
 async function sendOnboardingInvitation(phoneNumber: string) {
@@ -374,70 +213,38 @@ Ready to save money on groceries? 🛒💰`
   }
 }
 
-// Process message with AI and get response
-async function processWithAI(user: any, content: string): Promise<string | null> {
+// Process message with AI via internal endpoint
+async function processWithAI(user: any, content: string): Promise<{ success: boolean, response?: string }> {
   try {
-    console.log('🧠 Calling AI service for user:', user.id)
+    console.log('🧠 Calling internal AI processing for user:', user.id)
     
-    // Simple AI call - you can enhance this with your AI service
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/ai/test`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/internal/process-ai-responses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: content,
         user_id: user.id,
-        user_profile: {
-          full_name: user.full_name,
-          phone_number: user.phone_number,
-          country_code: user.country_code,
-          language_code: user.language_code || 'en'
-        }
+        content: content,
+        phone_number: user.phone_number
       })
     })
 
     if (response.ok) {
       const data = await response.json()
-      return data.response || data.message || 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
+      return { 
+        success: data.success, 
+        response: data.ai_response 
+      }
     } else {
-      console.error('❌ AI service error:', response.status)
-      return 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
+      console.error('❌ AI processing error:', response.status)
+      return { success: false }
     }
   } catch (error) {
-    console.error('❌ Error calling AI service:', error)
-    return 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
+    console.error('❌ Error calling AI processing:', error)
+    return { success: false }
   }
 }
 
-// Send WhatsApp message via WASender API
-async function sendWhatsAppMessage(phoneNumber: string, message: string): Promise<boolean> {
-  try {
-    console.log('📤 Sending WhatsApp message to:', phoneNumber)
-    
-    const response = await fetch('https://www.wasenderapi.com/api/send-message', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.WASENDER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: `+${phoneNumber.replace(/^\+/, '')}`,
-        text: message
-      })
-    })
 
-    if (response.ok) {
-      const result = await response.json()
-      console.log('✅ WhatsApp message sent successfully:', result.data?.msgId)
-      return true
-    } else {
-      console.error('❌ Failed to send WhatsApp message:', response.status)
-      return false
-    }
-  } catch (error) {
-    console.error('❌ Error sending WhatsApp message:', error)
-    return false
-  }
-}
 
 // Main webhook handler
 export async function POST(request: NextRequest) {
@@ -523,29 +330,15 @@ export async function POST(request: NextRequest) {
         // Store in ai_messages for AI processing
         await storeAIMessage(user.id, content, 'user')
 
-        // DIRECT AI PROCESSING: Get AI response and send via WhatsApp
+        // DIRECT AI PROCESSING: Process via internal endpoint (handles everything)
         console.log('🤖 Processing message with AI...')
         try {
-          const aiResponse = await processWithAI(user, content)
+          const aiResult = await processWithAI(user, content)
           
-          if (aiResponse) {
-            console.log('✅ AI generated response, sending via WhatsApp...')
-            
-            // Send AI response via WhatsApp
-            await sendWhatsAppMessage(phoneNumber, aiResponse)
-            
-            // Store AI response in both tables
-            await storeUserConversation(
-              user.id,
-              `ai_response_${Date.now()}`, // Generate unique ID for AI response
-              aiResponse,
-              'outbound',
-              'text'
-            )
-            
-            await storeAIMessage(user.id, aiResponse, 'assistant')
-            
-            console.log('✅ Complete bidirectional flow completed')
+          if (aiResult.success) {
+            console.log('✅ AI processing completed successfully via internal endpoint')
+          } else {
+            console.log('❌ AI processing failed via internal endpoint')
           }
         } catch (aiError) {
           console.error('❌ AI processing error:', aiError)
