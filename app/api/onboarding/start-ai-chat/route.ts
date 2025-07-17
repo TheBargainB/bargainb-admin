@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
         content: userIntroMessage,
         message_type: 'text',
         from_me: true, // User message that prompts AI
-        direction: 'outgoing',
+        direction: 'outbound',
         whatsapp_status: 'sent',
         sender_type: 'user'
       })
