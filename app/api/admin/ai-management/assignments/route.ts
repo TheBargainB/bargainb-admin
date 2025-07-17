@@ -172,6 +172,71 @@ export async function POST(request: NextRequest) {
       console.log('🔄 Force updating existing assignment from:', conversation.assistant_id, 'to:', assistant_id)
     }
 
+    // 🆕 ENSURE CRM PROFILE EXISTS
+    console.log('🔍 Checking for CRM profile for contact:', contact.id)
+    
+    let { data: crmProfile, error: crmError } = await supabaseAdmin
+      .from('crm_profiles')
+      .select('id, assistant_id, onboarding_completed, ai_introduction_sent')
+      .eq('whatsapp_contact_id', contact.id)
+      .single()
+
+    if (crmError && crmError.code === 'PGRST116') {
+      // CRM profile doesn't exist, create it
+      console.log('📝 Creating new CRM profile for contact:', contact.id)
+      
+      const { data: newCrmProfile, error: createCrmError } = await supabaseAdmin
+        .from('crm_profiles')
+        .insert({
+          whatsapp_contact_id: contact.id,
+          full_name: contact.display_name || contact.push_name || `Contact ${contact.phone_number}`,
+          preferred_name: contact.display_name || contact.push_name,
+          lifecycle_stage: 'prospect',
+          onboarding_completed: false,
+          ai_introduction_sent: false,
+          assistant_id: assistant_id, // Set the assistant_id directly
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id, assistant_id, onboarding_completed, ai_introduction_sent')
+        .single()
+
+      if (createCrmError || !newCrmProfile) {
+        console.error('❌ Failed to create CRM profile for contact:', contact.id, 'Error:', createCrmError)
+        return NextResponse.json({ 
+          error: `Failed to create CRM profile for contact: ${contact.id}` 
+        }, { status: 500 })
+      }
+
+      crmProfile = newCrmProfile
+      console.log('✅ Created new CRM profile:', crmProfile.id, 'with assistant:', assistant_id)
+    } else if (crmError) {
+      console.error('❌ Error looking up CRM profile:', crmError)
+      return NextResponse.json({ 
+        error: `Error accessing CRM profile: ${crmError.message}` 
+      }, { status: 500 })
+    } else if (crmProfile) {
+      // CRM profile exists, update it with the assistant_id
+      console.log('✅ Found existing CRM profile:', crmProfile.id)
+      
+      const { error: updateCrmError } = await supabaseAdmin
+        .from('crm_profiles')
+        .update({
+          assistant_id: assistant_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', crmProfile.id)
+
+      if (updateCrmError) {
+        console.error('❌ Error updating CRM profile:', updateCrmError)
+        return NextResponse.json({ 
+          error: `Failed to update CRM profile: ${updateCrmError.message}` 
+        }, { status: 500 })
+      }
+
+      console.log('✅ Updated CRM profile:', crmProfile.id, 'with assistant:', assistant_id)
+    }
+
     // 🆕 FETCH ASSISTANT CONFIGURATION FROM BB AGENT API
     console.log('🤖 Fetching assistant configuration from BB Agent...')
     let assistantConfig = {}
@@ -237,10 +302,12 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Assistant assigned successfully',
       conversation_id: conversation.id,
+      crm_profile_id: crmProfile?.id,
       contact_name: contact.display_name || contact.push_name || phone_number,
       assistant_id,
       assistant_name: assistantName,
-      config_stored: Object.keys(assistantConfig).length > 0
+      config_stored: Object.keys(assistantConfig).length > 0,
+      crm_profile_created: crmError && crmError.code === 'PGRST116'
     })
 
   } catch (error) {
