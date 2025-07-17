@@ -98,7 +98,7 @@ async function storeUserConversation(
         whatsapp_message_id: whatsappMessageId,
         content: content,
         message_type: direction === 'inbound' ? 'user_message' : 'ai_response',
-        whatsapp_status: direction === 'inbound' ? 'received' : 'sent'
+        whatsapp_status: direction === 'inbound' ? 'delivered' : 'sent'
       })
       .select()
       .single()
