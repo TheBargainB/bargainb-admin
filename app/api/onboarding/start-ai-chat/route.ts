@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { getContactByPhone } from '@/actions/chat-v2/contacts.actions'
 
+// GET handler for debugging - shows endpoint is working
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    message: 'start-ai-chat endpoint is working',
+    method: 'GET',
+    note: 'Use POST method with phone number in body to start AI chat',
+    timestamp: new Date().toISOString()
+  })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { phone: rawPhone } = await request.json()
