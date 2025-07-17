@@ -1173,6 +1173,7 @@ export class WhatsAppAIService {
 
       // Send via WASender API with retry logic
       let apiResponse: Response | undefined;
+      let apiData: any = undefined; // Store successful response data
       let lastError: Error | undefined;
       const maxRetries = 3;
       
@@ -1194,15 +1195,16 @@ export class WhatsAppAIService {
           
           if (apiResponse.ok) {
             // Parse response data to validate WASender success
-            const apiData = await apiResponse.json();
-            console.log('📥 WASender API response:', apiData);
+            const responseData = await apiResponse.json();
+            console.log('📥 WASender API response:', responseData);
             
             // Validate WASender response structure (same as working send-message route)
-            if (!apiData.success || !apiData.data?.msgId) {
-              lastError = new Error(`WASender API returned failure: ${JSON.stringify(apiData)}`);
-              console.warn(`⚠️ Attempt ${attempt} failed - WASender returned success=false:`, apiData);
+            if (!responseData.success || !responseData.data?.msgId) {
+              lastError = new Error(`WASender API returned failure: ${JSON.stringify(responseData)}`);
+              console.warn(`⚠️ Attempt ${attempt} failed - WASender returned success=false:`, responseData);
             } else {
-              console.log(`✅ WASender API call successful on attempt ${attempt} - Message ID: ${apiData.data.msgId}`);
+              console.log(`✅ WASender API call successful on attempt ${attempt} - Message ID: ${responseData.data.msgId}`);
+              apiData = responseData; // Store successful response data
               break; // Success, exit retry loop
             }
           } else {
@@ -1240,11 +1242,10 @@ export class WhatsAppAIService {
         }
       }
 
-      // At this point, apiResponse is guaranteed to be defined and successful
-      if (!apiResponse) {
-        throw new Error('No response received from WhatsApp API');
+      // At this point, we should have successful apiData from the retry loop
+      if (!apiData) {
+        throw new Error('No successful response received from WhatsApp API');
       }
-      const apiData = await apiResponse.json();
       console.log('✅ AI response sent successfully via WhatsApp. Message ID:', apiData.data?.msgId);
 
       // Update the message with the actual WhatsApp message ID
