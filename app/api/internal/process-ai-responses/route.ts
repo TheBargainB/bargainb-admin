@@ -2,18 +2,63 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AGENT_BB_CONFIG } from '@/lib/constants'
 
-// Process AI message and generate response
-async function processWithAI(user: any, content: string): Promise<string | null> {
+// Get or create thread for user's assistant
+async function getOrCreateThread(assistantId: string, userId: string): Promise<string> {
   try {
-    console.log('🧠 Processing AI message for user:', user.id)
+    console.log('🧵 Getting/creating thread for assistant:', assistantId, 'user:', userId)
     
-    const response = await fetch(`${AGENT_BB_CONFIG.BASE_URL}/threads/${user.thread_id || 'default'}/runs/wait`, {
+    const response = await fetch(`${AGENT_BB_CONFIG.BASE_URL}/threads`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': process.env[AGENT_BB_CONFIG.API_KEY_ENV] || ''
       },
       body: JSON.stringify({
+        metadata: { 
+          user_id: userId,
+          assistant_id: assistantId,
+          source: 'whatsapp_new_system'
+        }
+      })
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      const threadId = data.thread_id
+      console.log('✅ Thread created/retrieved:', threadId)
+      return threadId
+    } else {
+      console.error('❌ Error creating thread:', response.status)
+      throw new Error(`Failed to create thread: ${response.status}`)
+    }
+  } catch (error) {
+    console.error('❌ Error in getOrCreateThread:', error)
+    throw error
+  }
+}
+
+// Process AI message and generate response
+async function processWithAI(user: any, content: string): Promise<string | null> {
+  try {
+    console.log('🧠 Processing AI message for user:', user.id)
+    console.log('🤖 Using assistant:', user.assistant_id)
+    
+    if (!user.assistant_id) {
+      console.error('❌ No assistant_id found for user')
+      return 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
+    }
+
+    // Get or create thread for this assistant
+    const threadId = await getOrCreateThread(user.assistant_id, user.id)
+    
+    const response = await fetch(`${AGENT_BB_CONFIG.BASE_URL}/threads/${threadId}/runs/wait`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': process.env[AGENT_BB_CONFIG.API_KEY_ENV] || ''
+      },
+      body: JSON.stringify({
+        assistant_id: user.assistant_id,
         input: {
           messages: [{ role: 'user', content }]
         },
@@ -25,7 +70,10 @@ async function processWithAI(user: any, content: string): Promise<string | null>
               full_name: user.full_name,
               phone_number: user.phone_number,
               country_code: user.country_code,
-              language_code: user.language_code || 'en'
+              language_code: user.language_code || 'en',
+              dietary_restrictions: user.dietary_restrictions,
+              budget_level: user.budget_level,
+              store_preference: user.store_preference
             }
           }
         }
@@ -34,6 +82,7 @@ async function processWithAI(user: any, content: string): Promise<string | null>
 
     if (response.ok) {
       const data = await response.json()
+      console.log('✅ AI response received:', data)
       
       // Handle different AI response formats
       let aiResponse = null
@@ -48,9 +97,16 @@ async function processWithAI(user: any, content: string): Promise<string | null>
         aiResponse = data.response
       }
       
-      return aiResponse || 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
+      if (!aiResponse) {
+        console.warn('⚠️ No valid AI response found in data:', data)
+        return 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
+      }
+      
+      console.log('✅ AI response extracted:', aiResponse.substring(0, 100) + '...')
+      return aiResponse
     } else {
-      console.error('❌ AI service error:', response.status)
+      const errorText = await response.text()
+      console.error('❌ AI service error:', response.status, errorText)
       return 'Hi! Thanks for your message. How can I help you with grocery shopping today?'
     }
   } catch (error) {
@@ -97,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🔄 Processing AI request for user:', user_id)
 
-    // Get user profile
+    // Get user profile with assistant info
     const { data: user, error: userError } = await supabaseAdmin
       .from('user_profiles')
       .select('*')
@@ -111,6 +167,8 @@ export async function POST(request: NextRequest) {
         error: 'User not found' 
       }, { status: 404 })
     }
+
+    console.log('👤 Found user:', user.full_name, 'Assistant:', user.assistant_id)
 
     // Store incoming user message
     await supabaseAdmin
@@ -127,9 +185,10 @@ export async function POST(request: NextRequest) {
       .from('ai_messages')
       .insert({
         user_profile_id: user.id,
+        assistant_id: user.assistant_id,
         content: content,
         message_type: 'user',
-        status: 'pending'
+        status: 'processing'
       })
 
     // Generate AI response
@@ -158,6 +217,7 @@ export async function POST(request: NextRequest) {
         .from('user_conversations')
         .insert({
           user_profile_id: user.id,
+          assistant_id: user.assistant_id,
           whatsapp_message_id: sendResult.messageId || `ai_${Date.now()}`,
           content: aiResponse,
           message_type: 'ai_response',
@@ -169,6 +229,7 @@ export async function POST(request: NextRequest) {
         .from('ai_messages')
         .insert({
           user_profile_id: user.id,
+          assistant_id: user.assistant_id,
           content: aiResponse,
           message_type: 'assistant',
           status: 'completed'
