@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { getContactByPhone } from '@/actions/chat-v2/contacts.actions'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,40 +13,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Clean phone number (remove + sign for database lookup)
-    const phoneForStorage = rawPhone.replace(/^\+/, '')
+    console.log('🔍 Looking up contact for phone:', rawPhone)
     
-    const supabase = await createClient()
+    // Use robust contact lookup function that handles multiple phone number variations
+    const contact = await getContactByPhone(rawPhone)
 
-    // Get the WhatsApp contact and CRM profile
-    const { data: contact, error: contactError } = await supabase
-      .from('whatsapp_contacts')
-      .select(`
-        id,
-        phone_number,
-        display_name,
-        crm_profiles (
-          id,
-          assistant_id,
-          onboarding_completed,
-          ai_introduction_sent,
-          full_name,
-          preferred_name,
-          preferred_language
-        )
-      `)
-      .eq('phone_number', phoneForStorage)
-      .single()
-
-    if (contactError || !contact) {
-      console.error('Contact not found:', contactError)
+    if (!contact) {
+      console.error('❌ Contact not found for phone:', rawPhone)
       return NextResponse.json(
-        { success: false, error: 'Contact not found' },
+        { success: false, error: 'CRM profile not found' },
         { status: 404 }
       )
     }
 
-    const crmProfile = contact.crm_profiles?.[0]
+    console.log('✅ Contact found:', contact.id, contact.display_name)
+
+    const supabase = await createClient()
+    const crmProfile = contact.crm_profile
     if (!crmProfile) {
       return NextResponse.json(
         { success: false, error: 'CRM profile not found' },
