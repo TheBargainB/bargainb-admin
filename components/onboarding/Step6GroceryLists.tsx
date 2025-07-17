@@ -311,13 +311,13 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             <img src="/bb-icon.svg" alt="BargainB" className="w-6 h-6 mx-auto mb-2" />
           </div>
           <CardTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-            {t.onboarding.step6.title}
-          </CardTitle>
+          {t.onboarding.step6.title}
+        </CardTitle>
           <div className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
-            {t.onboarding.step6.description}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4 px-4 pb-4">
+          {t.onboarding.step6.description}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4 px-4 pb-4">
           {/* Two Main Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Premade Lists Card */}
@@ -456,28 +456,28 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
         <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-              {t.onboarding.step6.quickStartLists}
+            {t.onboarding.step6.quickStartLists}
             </DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh]">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-              {preMadeLists.map((list) => {
+            {preMadeLists.map((list) => {
                 const isSelected = selectedPreMadeLists.includes(list.id);
-                return (
-                  <button
-                    key={list.id}
-                    onClick={() => handlePreMadeListSelect(list.id)}
+              return (
+                <button
+                  key={list.id}
+                  onClick={() => handlePreMadeListSelect(list.id)}
                     className={`relative p-4 rounded-lg border-2 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-1 focus:ring-[#00B207] text-left touch-manipulation backdrop-blur-sm ${
-                      isSelected
+                    isSelected
                         ? 'border-[#00B207] bg-green-50/80 dark:bg-green-950/40 shadow-md'
                         : 'border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50'
-                    }`}
-                  >
-                    {isSelected && (
+                  }`}
+                >
+                  {isSelected && (
                       <div className="absolute top-2 right-2 w-4 h-4 bg-[#00B207] rounded-full flex items-center justify-center">
-                        <Check className="w-2.5 h-2.5 text-white" />
-                      </div>
-                    )}
+                      <Check className="w-2.5 h-2.5 text-white" />
+                    </div>
+                  )}
                     <div className="space-y-2">
                       <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                         {t.onboarding.step6.lists[list.nameKey]}
@@ -501,13 +501,13 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                               +{list.items.length - 4} {t.onboarding.step6.more}
                             </span>
                           )}
-                        </div>
-                      </div>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
@@ -517,68 +517,68 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
         <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-              {t.onboarding.step6.smartAnalysis}
+            {t.onboarding.step6.smartAnalysis}
             </DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[70vh] p-4">
             <div className="space-y-4">
               {/* Image Categories */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {imageCategories.map((category) => {
-                  const Icon = category.icon;
-                  return (
+            {imageCategories.map((category) => {
+              const Icon = category.icon;
+              return (
                     <div key={category.id} className="space-y-3 p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
-                      <div className="text-center">
+                  <div className="text-center">
                         <Icon className="w-8 h-8 mx-auto text-[#00B207] mb-2" />
                         <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                           {t.onboarding.step6.categories[category.nameKey]}
-                        </div>
-                        <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
-                          {t.onboarding.step6[category.descriptionKey]}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleFileSelect(category.id)}
-                          disabled={isAnalyzing}
-                          className="text-xs h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
-                          style={{ fontFamily: 'var(--font-inter)' }}
-                        >
-                          <Upload className="w-3 h-3 mr-1" />
-                          {t.onboarding.step6.upload}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCameraSelect(category.id)}
-                          disabled={isAnalyzing}
-                          className="text-xs h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
-                          style={{ fontFamily: 'var(--font-inter)' }}
-                        >
-                          <Camera className="w-3 h-3 mr-1" />
-                          {t.onboarding.step6.camera}
-                        </Button>
-                      </div>
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Analysis Loading */}
-              {isAnalyzing && (
-                <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                    <span className="text-sm text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-inter)' }}>
-                      {t.onboarding.step6.analyzing}
-                    </span>
+                        <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+                      {t.onboarding.step6[category.descriptionKey]}
+                    </div>
+                  </div>
+                      <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleFileSelect(category.id)}
+                      disabled={isAnalyzing}
+                          className="text-xs h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
+                          style={{ fontFamily: 'var(--font-inter)' }}
+                    >
+                      <Upload className="w-3 h-3 mr-1" />
+                      {t.onboarding.step6.upload}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleCameraSelect(category.id)}
+                      disabled={isAnalyzing}
+                          className="text-xs h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
+                          style={{ fontFamily: 'var(--font-inter)' }}
+                    >
+                      <Camera className="w-3 h-3 mr-1" />
+                      {t.onboarding.step6.camera}
+                    </Button>
                   </div>
                 </div>
-              )}
+              );
+            })}
+        </div>
 
-              {/* Analysis Results */}
+        {/* Analysis Loading */}
+        {isAnalyzing && (
+                <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
+            <div className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                    <span className="text-sm text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-inter)' }}>
+                {t.onboarding.step6.analyzing}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Analysis Results */}
               {analysisResults.map((analysis) => (
                 <div key={analysis.id} className="bg-green-50/80 dark:bg-green-950/40 rounded-lg p-4 border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm">
                   <div className="flex items-start gap-4">
@@ -601,8 +601,8 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                           <Sparkles className="w-5 h-5 text-purple-600" />
                           <span className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                             {t.onboarding.step6.aiSuggestions} ({analysis.items.length})
-                          </span>
-                        </div>
+              </span>
+            </div>
                         <Button
                           size="sm"
                           variant="outline"
@@ -615,26 +615,26 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {analysis.items.map((item, index) => (
-                          <div
-                            key={index}
+                <div
+                  key={index}
                             className="flex items-center gap-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded px-3 py-1 border border-white/30 dark:border-gray-600/30"
-                          >
+                >
                             <span className="text-sm" style={{ fontFamily: 'var(--font-inter)' }}>{item}</span>
-                            <button
+                  <button
                               onClick={() => removeItemFromAnalysis(analysis.id, item)}
                               className="text-red-500 hover:text-red-700 p-1 touch-manipulation"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
+                  </div>
+            </div>
+                ))}
+              </div>
+            </ScrollArea>
         </DialogContent>
       </Dialog>
 

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { normalizePhoneNumber } from '@/lib/api-utils'
-import { 
-  detectBBMention, 
-  processIncomingMessageWithFullPipeline 
-} from '@/actions/chat-v2/messages.actions'
 
 // Verify webhook signature
 function verifySignature(signature: string | null, webhookSecret: string | undefined): boolean {
@@ -426,72 +422,37 @@ export async function POST(request: NextRequest) {
       
       console.log('✅ Message stored in CRM system:', direction, messageText)
       
-      // Check for @bb mention in incoming messages using enhanced detection
+      // ALL incoming messages go to AI (no mention detection needed)
       if (!fromMe && messageText) {
-        console.log('🔍 Checking for @bb mention in incoming message...');
+        console.log('🤖 Processing incoming message for AI...');
         
-        // Use enhanced @bb detection instead of simple regex
-        const bbDetection = detectBBMention(messageText);
-        
-        if (bbDetection.is_bb_mention) {
-          console.log('🤖 @bb mention detected with enhanced detection:', {
-            patterns: bbDetection.mention_patterns,
-            userQuery: bbDetection.user_query
+        try {
+          const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              chatId: conversation.id,
+              message: messageText,
+              userId: contact.id
+            })
           });
-          
-          try {
-            // Use the full pipeline for @bb processing (detection + assistant assignment)
-            const pipelineResult = await processIncomingMessageWithFullPipeline(storedMessage as any);
-            
-            if (pipelineResult.bb_mention_detected) {
-              console.log('✅ @bb mention pipeline completed:', {
-                assistant_assigned: pipelineResult.assistant_assigned,
-                ready_for_ai: pipelineResult.ready_for_ai_processing
-              });
-              
-              // Only call AI API if pipeline is ready
-              if (pipelineResult.ready_for_ai_processing) {
-                const aiResponse = await fetch(`${request.nextUrl.origin}/api/whatsapp/ai`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    chatId: conversation.id,
-                    message: messageText,
-                    userId: contact.id
-                  })
-                });
 
-                if (aiResponse.ok) {
-                  const aiResult = await aiResponse.json();
-                  console.log('✅ AI processing successful:', aiResult.success);
-                } else {
-                  console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText);
-                }
-              } else {
-                console.warn('⚠️ Pipeline not ready for AI processing:', pipelineResult.error);
-              }
-            } else {
-              console.log('📝 No @bb mention detected by pipeline');
-            }
-          } catch (error) {
-            console.error('❌ Error in @bb mention pipeline:', error);
+          if (aiResponse.ok) {
+            const aiResult = await aiResponse.json();
+            console.log('✅ AI processing successful:', aiResult.success);
+          } else {
+            console.error('❌ AI processing failed:', aiResponse.status, aiResponse.statusText);
           }
-        } else {
-          console.log('📝 No @bb mention detected with enhanced detection');
+        } catch (error) {
+          console.error('❌ Error in AI processing:', error);
         }
       } else {
-        // Debug logging for @bb detection
-        console.log('🔍 @bb detection debug:');
-        console.log('  - fromMe:', fromMe);
-        console.log('  - messageText:', JSON.stringify(messageText));
-        console.log('  - messageText length:', messageText?.length);
-        
         if (fromMe) {
-          console.log('⚠️ Skipping @bb processing: message is from us');
+          console.log('⚠️ Skipping AI processing: message is from us');
         } else if (!messageText) {
-          console.log('⚠️ Skipping @bb processing: no message text');
+          console.log('⚠️ Skipping AI processing: no message text');
         }
       }
 

@@ -166,6 +166,12 @@ export interface CrmProfile {
   integrations: string[] | null;
   // Language preference
   preferred_language: string | null;
+  // Onboarding tracking
+  onboarding_completed?: boolean | null;
+  assistant_created?: boolean | null;
+  onboarding_completed_at?: string | null;
+  assistant_id?: string | null;
+  ai_introduction_sent?: boolean | null;
   notes?: string
   tags?: string[]
   lifecycle_stage?: string
@@ -178,12 +184,7 @@ export interface CrmProfile {
 // BB MENTION DETECTION TYPES
 // =============================================================================
 
-export interface BBMentionDetection {
-  is_bb_mention: boolean
-  user_query: string
-  original_content: string
-  mention_patterns: string[]
-}
+
 
 // =============================================================================
 // NOTIFICATION TYPES - For the notification bell system
@@ -331,5 +332,4 @@ export interface ProcessedWebhookMessage {
     url: string
     local_path?: string
   }[]
-  bb_mention_data?: BBMentionDetection
 } 

@@ -485,9 +485,9 @@ Welcome to *${businessName}*! ${settings.business_description || 'We\'re here to
 • Create shopping lists
 • Get product recommendations
 
-Just mention *@bb* followed by your question and I'll assist you right away!
+Just send me any message and I'll assist you right away!
 
-Example: "@bb compare milk prices"
+Example: "compare milk prices"
 
 ${await this.getBusinessSignature()}`
   }

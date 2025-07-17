@@ -762,8 +762,7 @@ export class WhatsAppAIService {
       }
 
       // 3. SPEED OPTIMIZATION: Get or create thread + user profile in parallel
-      const cleanMessage = message.replace(/@bb\s*/i, '').trim();
-      console.log('📝 Cleaned message:', cleanMessage);
+      console.log('📝 Processing message:', message);
       
       const [threadId, userProfile] = await Promise.all([
         this.getOrCreateThreadFast(chatId, userId, assistantId ?? undefined, chatData.ai_thread_id ?? undefined),
@@ -779,7 +778,7 @@ export class WhatsAppAIService {
       let aiResponse;
       
       try {
-        aiResponse = await this.callAIAgentFast(threadId, cleanMessage, userId, userProfile, chatData.ai_config, assistantId ?? undefined, chatData.assistant_config ?? undefined);
+        aiResponse = await this.callAIAgentFast(threadId, message, userId, userProfile, chatData.ai_config, assistantId ?? undefined, chatData.assistant_config ?? undefined);
         console.log('✅ AI response generated:', aiResponse?.substring(0, 100) + '...');
       } catch (error) {
         console.error('❌ AI agent call failed:', error);
@@ -799,7 +798,7 @@ export class WhatsAppAIService {
         
         // Even if saving fails, we can still return the AI response
         // Log the interaction in background without failing the whole process
-        this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
+        this.logAIInteraction(chatId, userId, message, aiResponse, threadId, processingTime)
           .catch(logError => console.warn('⚠️ Background log also failed:', logError));
           
         return { 
@@ -810,7 +809,7 @@ export class WhatsAppAIService {
       }
       
       // 6. Log interaction (can be background)
-      this.logAIInteraction(chatId, userId, cleanMessage, aiResponse, threadId, processingTime)
+      this.logAIInteraction(chatId, userId, message, aiResponse, threadId, processingTime)
         .catch(error => console.warn('⚠️ Background log failed:', error));
 
       return { success: true, aiResponse };
@@ -1086,7 +1085,7 @@ export class WhatsAppAIService {
             from_ai: true,
             thread_id: threadId,
             generated_at: new Date().toISOString(),
-            ai_response_for: 'whatsapp_mention'
+            ai_response_for: 'whatsapp_message'
           }
         })
         .select()

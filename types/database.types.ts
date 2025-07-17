@@ -523,6 +523,9 @@ export type Database = {
       }
       crm_profiles: {
         Row: {
+          ai_introduction_sent: boolean | null
+          assistant_created: boolean | null
+          assistant_id: string | null
           avg_response_time_hours: number | null
           budget_range: unknown | null
           communication_style: string | null
@@ -539,6 +542,8 @@ export type Database = {
           lifecycle_stage: string | null
           notes: string | null
           notification_preferences: Json | null
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
           preferred_name: string | null
           preferred_stores: string[] | null
           price_sensitivity: string | null
@@ -553,6 +558,9 @@ export type Database = {
           whatsapp_contact_id: string | null
         }
         Insert: {
+          ai_introduction_sent?: boolean | null
+          assistant_created?: boolean | null
+          assistant_id?: string | null
           avg_response_time_hours?: number | null
           budget_range?: unknown | null
           communication_style?: string | null
@@ -569,6 +577,8 @@ export type Database = {
           lifecycle_stage?: string | null
           notes?: string | null
           notification_preferences?: Json | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           preferred_name?: string | null
           preferred_stores?: string[] | null
           price_sensitivity?: string | null
@@ -583,6 +593,9 @@ export type Database = {
           whatsapp_contact_id?: string | null
         }
         Update: {
+          ai_introduction_sent?: boolean | null
+          assistant_created?: boolean | null
+          assistant_id?: string | null
           avg_response_time_hours?: number | null
           budget_range?: unknown | null
           communication_style?: string | null
@@ -599,6 +612,8 @@ export type Database = {
           lifecycle_stage?: string | null
           notes?: string | null
           notification_preferences?: Json | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           preferred_name?: string | null
           preferred_stores?: string[] | null
           price_sensitivity?: string | null
@@ -2074,6 +2089,12 @@ export interface CRMProfile {
   integrations: string[] | null
   // Language preference
   preferred_language: string | null
+  // Onboarding tracking
+  onboarding_completed: boolean | null
+  assistant_created: boolean | null
+  onboarding_completed_at: string | null
+  assistant_id: string | null
+  ai_introduction_sent: boolean | null
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">

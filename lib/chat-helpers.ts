@@ -199,23 +199,9 @@ export class ChatHelpers {
     }
   }
 
-  /**
-   * Check if message contains @bb mention
-   */
-  static containsBBMention(content: string): boolean {
-    if (!content) return false
-    return /@bb/i.test(content)
-  }
 
-  /**
-   * Extract @bb query from message
-   */
-  static extractBBQuery(content: string): string {
-    if (!content) return ''
-    
-    const match = content.match(/@bb\s+(.+)/i)
-    return match ? match[1].trim() : ''
-  }
+
+
 
   /**
    * Truncate message content for preview

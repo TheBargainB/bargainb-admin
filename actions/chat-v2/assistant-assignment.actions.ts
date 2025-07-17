@@ -1,7 +1,6 @@
 import { createClient } from '@/utils/supabase/client'
 import type { 
-  Conversation,
-  BBMentionDetection 
+  Conversation
 } from '@/types/chat-v2.types'
 import { 
   createUserAssignment,
@@ -116,12 +115,11 @@ export async function getDefaultAssistant(): Promise<string | null> {
 // =============================================================================
 
 /**
- * Assign an AI assistant to a conversation after @bb mention
+ * Assign an AI assistant to a conversation for direct communication
  */
 export async function assignAssistantToConversation(
   conversationId: string,
-  phoneNumber: string,
-  bbDetection?: BBMentionDetection
+  phoneNumber: string
 ): Promise<AssistantAssignmentResult> {
   try {
     console.log('🤖 Starting assistant assignment for conversation:', conversationId)
@@ -164,12 +162,10 @@ export async function assignAssistantToConversation(
         enable_sound: false
       },
       custom_config: {
-        trigger_source: '@bb_mention',
-        mention_patterns: bbDetection?.mention_patterns || ['@bb'],
-        user_query: bbDetection?.user_query || '',
+        trigger_source: 'direct_communication',
         assigned_at: new Date().toISOString()
       },
-      notes: `Auto-assigned after @bb mention: "${bbDetection?.original_content || 'N/A'}"`
+      notes: `Auto-assigned for direct AI communication`
     }
 
     console.log('🔄 Creating assistant assignment...', assignmentData)
@@ -237,18 +233,16 @@ export async function assignAssistantToConversation(
 
 /**
  * Ensure a conversation has an assistant assigned (assign if not)
- * This is the main function to call when processing @bb mentions
+ * This is the main function to call when ensuring assistant assignment
  */
 export async function ensureConversationHasAssistant(
   conversationId: string,
-  phoneNumber: string,
-  bbDetection?: BBMentionDetection
+  phoneNumber: string
 ): Promise<string | null> {
   try {
     const result = await assignAssistantToConversation(
       conversationId, 
-      phoneNumber, 
-      bbDetection
+      phoneNumber
     )
 
     if (result.success) {
@@ -308,70 +302,4 @@ export async function getConversationPhoneNumber(
 // PROCESS BB MENTION WITH ASSIGNMENT
 // =============================================================================
 
-/**
- * Complete @bb mention processing: detect mention + assign assistant
- * This is the main entry point for handling @bb mentions
- */
-export async function processBBMentionWithAssignment(
-  conversationId: string,
-  bbDetection: BBMentionDetection
-): Promise<{
-  assistant_assigned: boolean;
-  assistant_id?: string;
-  ready_for_ai_processing: boolean;
-  error?: string;
-}> {
-  try {
-    if (!bbDetection.is_bb_mention) {
-      return {
-        assistant_assigned: false,
-        ready_for_ai_processing: false,
-        error: 'No @bb mention detected'
-      }
-    }
-
-    console.log('🤖 Processing @bb mention for conversation:', conversationId)
-    console.log('👤 User query:', bbDetection.user_query)
-
-    // Get phone number for assignment
-    const phoneNumber = await getConversationPhoneNumber(conversationId)
-    
-    if (!phoneNumber) {
-      return {
-        assistant_assigned: false,
-        ready_for_ai_processing: false,
-        error: 'Could not get phone number for conversation'
-      }
-    }
-
-    // Ensure assistant is assigned
-    const assistantId = await ensureConversationHasAssistant(
-      conversationId,
-      phoneNumber,
-      bbDetection
-    )
-
-    if (!assistantId) {
-      return {
-        assistant_assigned: false,
-        ready_for_ai_processing: false,
-        error: 'Failed to assign assistant'
-      }
-    }
-
-    console.log('✅ @bb mention processed successfully. Ready for AI processing.')
-    return {
-      assistant_assigned: true,
-      assistant_id: assistantId,
-      ready_for_ai_processing: true
-    }
-
-  } catch (error) {
-    console.error('❌ Error in processBBMentionWithAssignment:', error)
-    return {
-      assistant_assigned: false,
-      ready_for_ai_processing: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }
-  }
-} 
+ 

@@ -184,6 +184,20 @@ export async function POST(request: NextRequest) {
             await agentBBService.storeAssistantInConversation(phoneDisplay, assistant)
             console.log('✅ Stored assistant details in database')
 
+            // Update CRM profile with onboarding completion and assistant tracking
+            await supabase
+              .from('crm_profiles')
+              .update({
+                onboarding_completed: true,
+                assistant_created: true,
+                onboarding_completed_at: new Date().toISOString(),
+                assistant_id: assistant.assistant_id,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', updatedProfile.id)
+            
+            console.log('✅ Updated CRM profile with onboarding completion tracking')
+
           } catch (assistantError) {
             console.error('❌ Error creating Agent BB v2 assistant:', assistantError)
             // Continue without failing the whole request
@@ -308,6 +322,20 @@ export async function POST(request: NextRequest) {
           // Store assistant details in conversation
           await agentBBService.storeAssistantInConversation(phoneDisplay, assistant)
           console.log('✅ Stored assistant details in database')
+
+          // Update CRM profile with onboarding completion and assistant tracking
+          await supabase
+            .from('crm_profiles')
+            .update({
+              onboarding_completed: true,
+              assistant_created: true,
+              onboarding_completed_at: new Date().toISOString(),
+              assistant_id: assistant.assistant_id,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', crmProfile.id)
+          
+          console.log('✅ Updated CRM profile with onboarding completion tracking')
 
         } catch (assistantError) {
           console.error('❌ Error creating Agent BB v2 assistant:', assistantError)

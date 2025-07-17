@@ -10,6 +10,7 @@ export type Step8CompletionProps = {
   onComplete: () => void;
   userData: {
     name: string;
+    phone: string;
     selectedStores: string[];
     selectedIntegrations: string[];
   };
@@ -23,9 +24,33 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
       // First complete the onboarding setup
       await onComplete();
       
-      // TODO: Call the start-ai-chat endpoint when implemented
-      // For now, just show completion
-      console.log('Onboarding completed and AI Chat will be started');
+      // Get user's phone number from localStorage (set during onboarding)
+      const userDataString = localStorage.getItem('userData');
+      const storedUserData = userDataString ? JSON.parse(userDataString) : null;
+      const phoneNumber = storedUserData?.phone;
+      
+      if (phoneNumber && userData.selectedIntegrations.includes('whatsapp')) {
+        // Call the start-ai-chat endpoint to initiate AI conversation
+        const response = await fetch('/api/onboarding/start-ai-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: phoneNumber
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ AI Chat started successfully:', result.data);
+        } else {
+          console.error('❌ Failed to start AI chat:', result.error);
+        }
+      }
+      
+      console.log('Onboarding completed and AI Chat initiated');
     } catch (error) {
       console.error('Error completing setup:', error);
     }
