@@ -106,8 +106,13 @@ export async function POST(request: NextRequest) {
         content: userIntroMessage,
         message_type: 'text',
         from_me: true, // User message that prompts AI
-        timestamp: new Date().toISOString(),
-        status: 'sent'
+        direction: 'outgoing',
+        whatsapp_status: 'sent',
+        topic: 'introduction',
+        extension: 'system',
+        created_at: new Date().toISOString(),
+        inserted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .select('*')
       .single()
