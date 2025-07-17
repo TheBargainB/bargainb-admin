@@ -19,38 +19,11 @@ export type Step8CompletionProps = {
 const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
   const { loading, t, onComplete, userData } = props;
 
-  const handleCompleteAndStartChat = async () => {
+  const handleCompleteSetup = async () => {
     try {
-      // First complete the onboarding setup
+      // Complete the onboarding setup
       await onComplete();
-      
-      // Get user's phone number from localStorage (set during onboarding)
-      const userDataString = localStorage.getItem('userData');
-      const storedUserData = userDataString ? JSON.parse(userDataString) : null;
-      const phoneNumber = storedUserData?.phone;
-      
-      if (phoneNumber && userData.selectedIntegrations.includes('whatsapp')) {
-        // Call the start-ai-chat endpoint to initiate AI conversation
-        const response = await fetch('/api/onboarding/start-ai-chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            phone: phoneNumber
-          })
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          console.log('✅ AI Chat started successfully:', result.data);
-        } else {
-          console.error('❌ Failed to start AI chat:', result.error);
-        }
-      }
-      
-      console.log('Onboarding completed and AI Chat initiated');
+      console.log('Onboarding completed successfully');
     } catch (error) {
       console.error('Error completing setup:', error);
     }
@@ -170,7 +143,7 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
         {/* Complete Setup & Start Chat Button */}
         <div className="pt-4">
           <Button
-            onClick={handleCompleteAndStartChat}
+            onClick={handleCompleteSetup}
             disabled={loading}
             className="w-full h-14 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold text-lg rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg"
             style={{ fontFamily: 'var(--font-paytone)' }}
@@ -182,17 +155,10 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
               </>
             ) : (
               <>
-                {userData.selectedIntegrations.includes('whatsapp') ? (
-                  <>
-                    <MessageCircle className="w-5 h-5" />
-                    Complete Setup & Start Chat
-                  </>
-                ) : (
-                  <>
-                    {t.onboarding.step8.getStarted}
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
+                              <>
+                {t.onboarding.step8.getStarted}
+                <ArrowRight className="w-5 h-5" />
+              </>
               </>
             )}
           </Button>

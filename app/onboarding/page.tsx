@@ -402,6 +402,7 @@ export default function OnboardingPage() {
             onComplete={handleComplete}
             userData={{
               name,
+              phone,
               selectedStores: selectedStores.map(store => store.name),
               selectedIntegrations
             }}
