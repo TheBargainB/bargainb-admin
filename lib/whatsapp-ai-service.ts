@@ -1193,8 +1193,18 @@ export class WhatsAppAIService {
           });
           
           if (apiResponse.ok) {
-            console.log(`✅ WASender API call successful on attempt ${attempt}`);
-            break; // Success, exit retry loop
+            // Parse response data to validate WASender success
+            const apiData = await apiResponse.json();
+            console.log('📥 WASender API response:', apiData);
+            
+            // Validate WASender response structure (same as working send-message route)
+            if (!apiData.success || !apiData.data?.msgId) {
+              lastError = new Error(`WASender API returned failure: ${JSON.stringify(apiData)}`);
+              console.warn(`⚠️ Attempt ${attempt} failed - WASender returned success=false:`, apiData);
+            } else {
+              console.log(`✅ WASender API call successful on attempt ${attempt} - Message ID: ${apiData.data.msgId}`);
+              break; // Success, exit retry loop
+            }
           } else {
             const errorData = await apiResponse.json().catch(() => ({ message: apiResponse?.statusText || 'Unknown error' }));
             lastError = new Error(`WASender API failed (${apiResponse.status}): ${errorData.message || apiResponse.statusText}`);
