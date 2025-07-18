@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
           : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
 
         // Use the working endpoint for intro message processing
-        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/internal/process-ai-responses`, {
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/internal/process-ai-responses`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
