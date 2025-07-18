@@ -1,13 +1,10 @@
-import React, { useState } from "react"
+import React from "react"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { CheckCircle, MessageCircle, ArrowRight, Sparkles } from "lucide-react"
+import { CheckCircle, MessageCircle } from "lucide-react"
 import Image from "next/image"
 
 export type Step8CompletionProps = {
-  loading: boolean;
   t: any;
-  onComplete: () => void;
   userData: {
     name: string;
     phone: string;
@@ -17,17 +14,9 @@ export type Step8CompletionProps = {
 };
 
 const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
-  const { loading, t, onComplete, userData } = props;
+  const { t, userData } = props;
 
-  const handleCompleteSetup = async () => {
-    try {
-      // Complete the onboarding setup
-      await onComplete();
-      console.log('Onboarding completed successfully');
-    } catch (error) {
-      console.error('Error completing setup:', error);
-    }
-  };
+
 
   return (
     <Card className="w-full max-w-4xl mx-auto shadow-2xl rounded-xl border-0 bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
@@ -140,28 +129,14 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
           </div>
         </div>
 
-        {/* Complete Setup & Start Chat Button */}
+        {/* Setup Complete - No Action Required */}
         <div className="pt-4">
-          <Button
-            onClick={handleCompleteSetup}
-            disabled={loading}
-            className="w-full h-14 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold text-lg rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg"
-            style={{ fontFamily: 'var(--font-paytone)' }}
-          >
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Setting up your account...
-              </>
-            ) : (
-              <>
-                              <>
-                {t.onboarding.step8.getStarted}
-                <ArrowRight className="w-5 h-5" />
-              </>
-              </>
-            )}
-          </Button>
+          <div className="w-full h-14 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-lg rounded-xl flex items-center justify-center gap-2 shadow-lg">
+            <CheckCircle className="w-5 h-5" />
+            <span style={{ fontFamily: 'var(--font-paytone)' }}>
+              {t.onboarding.step8.setupComplete}
+            </span>
+          </div>
         </div>
 
         {/* Help Text */}
