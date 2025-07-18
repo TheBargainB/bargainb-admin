@@ -209,21 +209,48 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
+    // First create conversation record with null whatsapp_message_id
+    // This ensures the record exists BEFORE sending, so webhook can always find it
+    const { data: conversationRecord, error: convError } = await supabaseAdmin
+      .from('user_conversations')
+      .insert({
+        user_profile_id: user.id,
+        assistant_id: user.assistant_id,
+        whatsapp_message_id: null, // ✅ Start with null for webhook matching
+        content: aiResponse,
+        message_type: 'ai_response',
+        whatsapp_status: 'pending',
+        sent_at: new Date().toISOString()
+      })
+      .select()
+      .single()
+
+    if (convError) {
+      console.error('❌ Error creating conversation record:', convError)
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to create conversation record'
+      }, { status: 500 })
+    }
+
+    console.log('✅ Created conversation record for webhook matching:', conversationRecord?.id)
+    
+    // Now send the WhatsApp message
     const sendResult = await sendWhatsAppMessage(user.phone_number, aiResponse)
     
     if (sendResult.success) {
-      // Store AI response in both tables
-      await supabaseAdmin
-        .from('user_conversations')
-        .insert({
-          user_profile_id: user.id,
-          assistant_id: user.assistant_id,
-          whatsapp_message_id: sendResult.messageId || `ai_${Date.now()}`,
-          content: aiResponse,
-          message_type: 'ai_response',
-          whatsapp_status: 'sent',
-          sent_at: new Date().toISOString()
-        })
+      // If we got a WhatsApp message ID immediately, update the record
+      if (sendResult.messageId) {
+        await supabaseAdmin
+          .from('user_conversations')
+          .update({ 
+            whatsapp_message_id: sendResult.messageId,
+            whatsapp_status: 'sent'
+          })
+          .eq('id', conversationRecord.id)
+        
+        console.log('✅ Updated conversation record with WhatsApp ID:', sendResult.messageId)
+      }
 
       await supabaseAdmin
         .from('ai_messages')
@@ -243,6 +270,12 @@ export async function POST(request: NextRequest) {
         whatsapp_message_id: sendResult.messageId
       })
     } else {
+      // Update conversation record to show failed status
+      await supabaseAdmin
+        .from('user_conversations')
+        .update({ whatsapp_status: 'failed' })
+        .eq('id', conversationRecord.id)
+        
       return NextResponse.json({
         success: false,
         error: 'Failed to send WhatsApp message'
