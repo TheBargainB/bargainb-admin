@@ -14,15 +14,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createClient()
 
-    // Check if phone number exists in whatsapp_contacts
+    // Check if phone number or email exists in user_profiles (new system)
     let phoneExists = false
     let emailExists = false
 
     if (phone) {
+      // Clean phone number to match database format
+      const cleanPhone = phone.replace(/^\+/, '')
+      
       const { data: phoneData, error: phoneError } = await supabase
-        .from('whatsapp_contacts')
+        .from('user_profiles')
         .select('id')
-        .eq('phone_number', phone)
+        .eq('phone_number', cleanPhone)
         .single()
 
       if (phoneError && phoneError.code !== 'PGRST116') {
@@ -36,10 +39,9 @@ export async function POST(request: NextRequest) {
       phoneExists = !!phoneData
     }
 
-    // Check if email exists in crm_profiles
     if (email) {
       const { data: emailData, error: emailError } = await supabase
-        .from('crm_profiles')
+        .from('user_profiles')
         .select('id')
         .eq('email', email.toLowerCase())
         .single()
