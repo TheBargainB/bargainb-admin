@@ -354,6 +354,7 @@ export default function OnboardingPage() {
           onBack={handleBack}
           isOpen={isGroceryStoresModalOpen}
           onClose={handleCloseGroceryStoresModal}
+          country={country}
         />
 
         {/* Step 3: Dietary & Allergies */}

@@ -282,9 +282,39 @@ export async function POST(request: NextRequest) {
     // Send intro message via the proper endpoint after user creation
     if (introMessageSent && userProfile && assistantId) {
       try {
-        const introMessage = preferredLanguage === 'nl' 
-          ? `Hoi ${name.split(' ')[0]}! Ik ben je persoonlijke BargainB grocery assistant. Ik help je met het vinden van de beste deals, het plannen van maaltijden en het besparen van geld bij het boodschappen doen in ${country}. Wat kan ik voor je doen?`
-          : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
+        // Create a dynamic prompt for the AI to generate a personalized intro
+        const userInfo = {
+          name: name.split(' ')[0], // First name
+          fullName: name,
+          country: country,
+          city: city,
+          language: preferredLanguage === 'nl' ? 'Dutch' : 'English',
+          stores: selectedStores?.join(', ') || 'local stores',
+          dietary: selectedDietary?.length ? selectedDietary.join(', ') : 'no specific dietary restrictions',
+          allergies: selectedAllergies?.length ? selectedAllergies.join(', ') : 'no known allergies'
+        }
+
+        // Dynamic AI prompt instead of hard-coded message
+        const aiPrompt = `This is a new user who just completed onboarding and signed up for BargainB. Please introduce yourself as their personal BargainB grocery shopping assistant in ${userInfo.language}.
+
+User Profile:
+- Name: ${userInfo.fullName}
+- Location: ${userInfo.city}, ${userInfo.country}
+- Preferred Language: ${userInfo.language}
+- Selected Stores: ${userInfo.stores}
+- Dietary Preferences: ${userInfo.dietary}
+- Allergies: ${userInfo.allergies}
+
+Instructions:
+1. Welcome them warmly by their first name (${userInfo.name})
+2. Introduce yourself as their BargainB grocery assistant
+3. Briefly mention what you can help with (finding deals, comparing prices, meal planning, grocery shopping in ${userInfo.country})
+4. Reference their specific stores (${userInfo.stores}) and dietary preferences if relevant
+5. Ask how you can help them today
+6. Keep it conversational, friendly, and personalized
+7. Respond in ${userInfo.language}
+
+Generate a natural, welcoming introduction message now.`
 
         // Use the working endpoint for intro message processing (BLOCKING CALL)
         const introResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/internal/process-ai-responses`, {
@@ -294,14 +324,14 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             user_id: userProfile.id,
-            content: introMessage,
+            content: aiPrompt,
             phone_number: userProfile.phone_number
           })
         })
 
         if (introResponse.ok) {
           const introData = await introResponse.json()
-          console.log('✅ Intro message sent successfully - WhatsApp ID:', introData.whatsapp_message_id)
+          console.log('✅ Personalized intro message sent successfully - WhatsApp ID:', introData.whatsapp_message_id)
         } else {
           console.error('❌ Failed to send intro message via endpoint:', introResponse.status)
         }

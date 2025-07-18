@@ -4,7 +4,9 @@ import { CheckCircle, MessageCircle } from "lucide-react"
 import Image from "next/image"
 
 export type Step8CompletionProps = {
+  loading?: boolean;
   t: any;
+  onComplete?: () => void;
   userData: {
     name: string;
     phone: string;
@@ -14,7 +16,7 @@ export type Step8CompletionProps = {
 };
 
 const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
-  const { t, userData } = props;
+  const { loading, t, onComplete, userData } = props;
 
 
 

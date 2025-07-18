@@ -21,54 +21,9 @@ export type Step3CountryCityProps = {
 };
 
 const countries = [
-  // Europe
+  // Primary supported countries
   { code: "NL", name: "Netherlands" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "ES", name: "Spain" },
-  { code: "IT", name: "Italy" },
-  { code: "BE", name: "Belgium" },
-  { code: "CH", name: "Switzerland" },
-  { code: "AT", name: "Austria" },
-  { code: "PL", name: "Poland" },
-  { code: "CZ", name: "Czech Republic" },
-  { code: "PT", name: "Portugal" },
-  { code: "GR", name: "Greece" },
-  { code: "IE", name: "Ireland" },
-  { code: "DK", name: "Denmark" },
-  { code: "SE", name: "Sweden" },
-  { code: "NO", name: "Norway" },
-  { code: "FI", name: "Finland" },
-  { code: "LU", name: "Luxembourg" },
-  { code: "HU", name: "Hungary" },
-  { code: "SK", name: "Slovakia" },
-  { code: "SI", name: "Slovenia" },
-  { code: "HR", name: "Croatia" },
-  { code: "BG", name: "Bulgaria" },
-  { code: "RO", name: "Romania" },
-  { code: "EE", name: "Estonia" },
-  { code: "LV", name: "Latvia" },
-  { code: "LT", name: "Lithuania" },
-  { code: "CY", name: "Cyprus" },
-  { code: "MT", name: "Malta" },
-  
-  // North America
   { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-  { code: "MX", name: "Mexico" },
-  
-  // Middle East
-  { code: "AE", name: "United Arab Emirates" },
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "QA", name: "Qatar" },
-  { code: "KW", name: "Kuwait" },
-  { code: "IL", name: "Israel" },
-  { code: "TR", name: "Turkey" },
-  { code: "JO", name: "Jordan" },
-  { code: "LB", name: "Lebanon" },
-  { code: "OM", name: "Oman" },
-  { code: "BH", name: "Bahrain" },
 ];
 
 const Step3CountryCity: React.FC<Step3CountryCityProps> = (props) => {

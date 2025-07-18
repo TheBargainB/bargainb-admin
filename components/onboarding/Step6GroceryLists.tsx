@@ -323,21 +323,21 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             {/* Premade Lists Card */}
             <button
               onClick={() => setIsPreMadeModalOpen(true)}
-              className="group relative p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation"
+              className="group relative p-6 sm:p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation min-h-[140px] sm:min-h-[120px]"
             >
               <div className="flex flex-col items-center text-center space-y-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#00B207] to-[#84D187] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   <List className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                  <h3 className="text-base sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                     {t.onboarding.step6.quickStartLists}
                   </h3>
-                  <p className="text-sm text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+                  <p className="text-sm sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
                     {t.onboarding.step6.quickStartDescription}
                   </p>
                   {selectedPreMadeLists.length > 0 && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1" style={{ fontFamily: 'var(--font-inter)' }}>
+                    <p className="text-xs sm:text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
                       {selectedPreMadeLists.length} {t.onboarding.step6.listsSelected}
                     </p>
                   )}
@@ -348,22 +348,22 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             {/* AI Analysis Card */}
             <button
               onClick={() => setIsAIModalOpen(true)}
-              className="group relative p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation"
+              className="group relative p-6 sm:p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation min-h-[140px] sm:min-h-[120px]"
             >
               <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00B207] to-[#84D187] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Image className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                  <h3 className="text-base sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                     {t.onboarding.step6.smartAnalysis}
                   </h3>
-                  <p className="text-sm text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+                  <p className="text-sm sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
                     {t.onboarding.step6.smartAnalysisDescription}
                   </p>
                   {analysisResults.length > 0 && (
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-1" style={{ fontFamily: 'var(--font-inter)' }}>
-                      {analysisResults.length} {t.onboarding.step6.imagesAnalyzed}
+                    <p className="text-xs sm:text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                      {analysisResults.reduce((total, result) => total + result.items.length, 0)} {t.onboarding.step6.itemsAnalyzed}
                     </p>
                   )}
                 </div>
@@ -413,17 +413,18 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Button
               type="button"
               variant="outline"
               onClick={onBack}
-              className="w-full sm:flex-1 h-11 sm:h-12 text-sm sm:text-base transition-all duration-200 hover:scale-[1.02] touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
+              className="w-full sm:flex-1 bg-white/50 dark:bg-gray-800/50 border-white/50 dark:border-gray-600/50 text-[#1F1F1F] dark:text-[#F5F5F5] h-11 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md touch-manipulation backdrop-blur-sm"
               style={{ fontFamily: 'var(--font-inter)' }}
               aria-label="Go back"
             >
               {t.onboarding.common.back}
             </Button>
+
             <Button
               onClick={handleNext}
               disabled={loading || selectedItems.length === 0}
@@ -444,7 +445,7 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
           {/* Help Text */}
           <div className="text-center">
-            <p className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+            <p className="text-xs sm:text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
               {t.onboarding.step6.helpText}
             </p>
           </div>
@@ -453,77 +454,77 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
       {/* Premade Lists Modal */}
       <Dialog open={isPreMadeModalOpen} onOpenChange={setIsPreMadeModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-            {t.onboarding.step6.quickStartLists}
+        <DialogContent className="max-w-4xl w-[96vw] max-h-[94vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <DialogTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+              {t.onboarding.step6.quickStartLists}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh]">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-            {preMadeLists.map((list) => {
+          <ScrollArea className="max-h-[70vh] px-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-4">
+              {preMadeLists.map((list) => {
                 const isSelected = selectedPreMadeLists.includes(list.id);
-              return (
-                <button
-                  key={list.id}
-                  onClick={() => handlePreMadeListSelect(list.id)}
-                    className={`relative p-4 rounded-lg border-2 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-1 focus:ring-[#00B207] text-left touch-manipulation backdrop-blur-sm ${
-                    isSelected
+                return (
+                  <button
+                    key={list.id}
+                    onClick={() => handlePreMadeListSelect(list.id)}
+                    className={`relative p-4 sm:p-4 rounded-lg border-2 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-1 focus:ring-[#00B207] text-left touch-manipulation backdrop-blur-sm min-h-[140px] sm:min-h-[120px] ${
+                      isSelected
                         ? 'border-[#00B207] bg-green-50/80 dark:bg-green-950/40 shadow-md'
                         : 'border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50'
-                  }`}
-                >
-                  {isSelected && (
-                      <div className="absolute top-2 right-2 w-4 h-4 bg-[#00B207] rounded-full flex items-center justify-center">
-                      <Check className="w-2.5 h-2.5 text-white" />
-                    </div>
-                  )}
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="absolute top-3 right-3 w-5 h-5 bg-[#00B207] rounded-full flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                    <div className="space-y-2 sm:space-y-2">
+                      <div className="text-sm sm:text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                         {t.onboarding.step6.lists[list.nameKey]}
                       </div>
-                      <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className="text-xs sm:text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
                         {t.onboarding.step6.lists[list.descriptionKey]}
                       </div>
-                      <div className="text-xs text-blue-600 dark:text-blue-400" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className="text-xs sm:text-xs text-blue-600 dark:text-blue-400 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
                         {list.items.length} {t.onboarding.step6.items}
                       </div>
-                      <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] space-y-1" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className="text-xs sm:text-xs text-[#7A7A7A] dark:text-[#B7EACB] space-y-1" style={{ fontFamily: 'var(--font-inter)' }}>
                         <div className="font-medium">{t.onboarding.step6.includes}:</div>
                         <div className="flex flex-wrap gap-1">
                           {list.items.slice(0, 4).map((item: string, idx: number) => (
-                            <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">
+                            <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-[#1F1F1F] dark:text-[#F5F5F5]">
                               {item}
                             </span>
                           ))}
                           {list.items.length > 4 && (
-                            <span className="text-xs text-blue-600 dark:text-blue-400">
+                            <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                               +{list.items.length - 4} {t.onboarding.step6.more}
                             </span>
                           )}
+                        </div>
+                      </div>
                     </div>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  </button>
+                );
+              })}
+            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
       {/* AI Analysis Modal */}
       <Dialog open={isAIModalOpen} onOpenChange={setIsAIModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-            {t.onboarding.step6.smartAnalysis}
+        <DialogContent className="max-w-4xl w-[96vw] max-h-[94vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-2xl">
+          <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <DialogTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+              {t.onboarding.step6.smartAnalysis}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] p-4">
-            <div className="space-y-4">
+          <ScrollArea className="max-h-[70vh] px-2">
+            <div className="p-4 space-y-4">
               {/* Image Categories */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {imageCategories.map((category) => {
               const Icon = category.icon;
               return (
