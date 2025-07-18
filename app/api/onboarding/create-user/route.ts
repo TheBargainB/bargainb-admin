@@ -286,8 +286,8 @@ export async function POST(request: NextRequest) {
           ? `Hoi ${name.split(' ')[0]}! Ik ben je persoonlijke BargainB grocery assistant. Ik help je met het vinden van de beste deals, het plannen van maaltijden en het besparen van geld bij het boodschappen doen in ${country}. Wat kan ik voor je doen?`
           : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
 
-        // Use the working endpoint for intro message processing
-        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/internal/process-ai-responses`, {
+        // Use the working endpoint for intro message processing (BLOCKING CALL)
+        const introResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/internal/process-ai-responses`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -297,15 +297,14 @@ export async function POST(request: NextRequest) {
             content: introMessage,
             phone_number: userProfile.phone_number
           })
-        }).then(response => {
-          if (response.ok) {
-            console.log('✅ Intro message sent via proper endpoint - AI will respond and send to WhatsApp')
-          } else {
-            console.error('❌ Failed to send intro message via endpoint:', response.status)
-          }
-        }).catch(error => {
-          console.error('❌ Error sending intro message:', error)
         })
+
+        if (introResponse.ok) {
+          const introData = await introResponse.json()
+          console.log('✅ Intro message sent successfully - WhatsApp ID:', introData.whatsapp_message_id)
+        } else {
+          console.error('❌ Failed to send intro message via endpoint:', introResponse.status)
+        }
 
       } catch (error) {
         console.error('❌ Error triggering intro message:', error)
