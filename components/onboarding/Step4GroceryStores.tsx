@@ -199,14 +199,14 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 bg-white/95 dark:bg-[#232B23]/95 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 rounded-2xl shadow-2xl overflow-hidden fixed inset-4 sm:inset-auto">
+      <DialogContent className="max-w-6xl w-full mx-1 sm:mx-4 max-h-[85vh] sm:max-h-[calc(100vh-4rem)] p-0 bg-white/95 dark:bg-[#232B23]/95 backdrop-blur-xl border border-white/30 dark:border-gray-700/30 rounded-lg sm:rounded-2xl shadow-2xl overflow-hidden">
         <DialogHeader className="p-3 sm:p-6 pb-2 sm:pb-4 border-b border-gray-200/30 dark:border-gray-700/30 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-br from-[#00B207] to-[#84D187] rounded-full flex items-center justify-center shadow-lg">
               <ShoppingCart className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-base sm:text-2xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight">
+              <DialogTitle className="text-sm sm:text-2xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight">
                 {t.onboarding.step4.title}
               </DialogTitle>
               <p className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] mt-0.5 sm:mt-1 leading-relaxed">
@@ -216,18 +216,18 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
           </div>
         </DialogHeader>
 
-        {/* Scrollable Content Area - Fixed height and proper overflow */}
-        <div className="flex flex-col flex-1 min-h-0 max-h-[calc(90vh-120px)] sm:max-h-[calc(90vh-140px)]">
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 space-y-3 sm:space-y-6 overscroll-contain">
-            {/* Store Gallery Grid - Improved mobile layout */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+        {/* Scrollable Content Area - Fixed height for mobile */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 space-y-3 sm:space-y-6 overscroll-contain min-h-0 max-h-[45vh] sm:max-h-none">
+            {/* Store Gallery Grid - Mobile optimized to show 4 items (2x2) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
               {groceryStores.filter(store => store.country === country).map((store) => {
                 const isSelected = selectedStores.some(s => s.id === store.id);
                 return (
                   <button
                     key={store.id}
                     onClick={() => handleStoreToggle(store.id)}
-                    className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#00B207] min-h-[100px] sm:min-h-[120px] touch-manipulation backdrop-blur-sm ${
+                    className={`relative p-2 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#00B207] h-[80px] sm:min-h-[120px] touch-manipulation backdrop-blur-sm ${
                       isSelected
                         ? 'border-[#00B207] bg-green-50/80 dark:bg-green-950/40 shadow-lg'
                         : 'border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50'
@@ -241,14 +241,14 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
                   >
                     {/* Selection Indicator */}
                     {isSelected && (
-                      <div className="absolute top-2 right-2 w-5 h-5 sm:w-6 sm:h-6 bg-[#00B207] rounded-full flex items-center justify-center">
-                        <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                      <div className="absolute top-1 right-1 sm:top-2 sm:right-2 w-4 h-4 sm:w-6 sm:h-6 bg-[#00B207] rounded-full flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-white" />
                       </div>
                     )}
                     
                     {/* Store Logo */}
-                    <div className="flex flex-col items-center space-y-2 h-full justify-center">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">
+                    <div className="flex flex-col items-center space-y-1 h-full justify-center">
+                      <div className="w-8 h-8 sm:w-16 sm:h-16 flex items-center justify-center">
                         <Image
                           src={store.logo}
                           alt={`${store.name} logo`}
@@ -258,7 +258,7 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
                           style={{ pointerEvents: 'none' }}
                         />
                       </div>
-                      <span className="text-xs sm:text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] text-center leading-tight">
+                      <span className="text-xs sm:text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] text-center leading-tight px-1">
                         {store.name}
                       </span>
                     </div>
@@ -267,16 +267,16 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
               })}
             </div>
 
-            {/* Selection Summary */}
+            {/* Selection Summary - Compact for mobile */}
             {selectedStores.length > 0 && (
-              <div className="bg-green-50/80 dark:bg-green-950/40 rounded-xl p-3 sm:p-4 border border-[#00B207]/20 backdrop-blur-sm">
-                <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                  <Check className="w-4 h-4 sm:w-5 sm:h-5 text-[#00B207]" />
-                  <span className="text-sm sm:text-base font-medium text-[#1F1F1F] dark:text-[#F5F5F5]">
+              <div className="bg-green-50/80 dark:bg-green-950/40 rounded-lg p-2 sm:p-4 border border-[#00B207]/20 backdrop-blur-sm">
+                <div className="flex items-center gap-2 mb-1 sm:mb-3">
+                  <Check className="w-3 h-3 sm:w-5 sm:h-5 text-[#00B207]" />
+                  <span className="text-xs sm:text-base font-medium text-[#1F1F1F] dark:text-[#F5F5F5]">
                     {t.onboarding.step4.selectedStores} ({selectedStores.length})
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {selectedStores.map((store) => {
                     return (
                       <span
@@ -292,8 +292,8 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
             )}
           </div>
 
-          {/* Fixed Bottom Section */}
-          <div className="border-t border-gray-200/30 dark:border-gray-700/30 p-3 sm:p-6 space-y-2 sm:space-y-4 bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-sm flex-shrink-0">
+          {/* Fixed Bottom Section - Always visible */}
+          <div className="border-t border-gray-200/30 dark:border-gray-700/30 p-3 sm:p-6 space-y-2 sm:space-y-4 bg-white/95 dark:bg-[#232B23]/95 backdrop-blur-sm flex-shrink-0">
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <Button
@@ -324,7 +324,7 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
               </Button>
             </div>
 
-            {/* Help Text */}
+            {/* Help Text - Compact on mobile */}
             <div className="text-center">
               <p className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed">
                 {t.onboarding.step4.helpText}

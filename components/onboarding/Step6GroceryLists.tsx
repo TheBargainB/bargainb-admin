@@ -305,39 +305,40 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
   return (
     <>
-      <Card className="w-full max-w-sm sm:max-w-4xl mx-auto mt-4 shadow-2xl rounded-2xl border-0 bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
-        <CardHeader className="pb-3 px-4 sm:px-6">
+      <Card className="w-full max-w-sm sm:max-w-4xl mx-auto mt-2 sm:mt-4 shadow-2xl rounded-xl sm:rounded-2xl border-0 bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30">
+        <CardHeader className="pb-3 px-3 sm:px-6">
           <div className="text-center mb-1">
             <img src="/bb-icon.svg" alt="BargainB" className="w-6 h-6 mx-auto mb-2" />
           </div>
           <CardTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-          {t.onboarding.step6.title}
-        </CardTitle>
+            {t.onboarding.step6.title}
+          </CardTitle>
           <div className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
-          {t.onboarding.step6.description}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 px-4 pb-4">
+            {t.onboarding.step6.description}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4 px-3 sm:px-4 pb-4">
           {/* Two Main Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Premade Lists Card */}
             <button
               onClick={() => setIsPreMadeModalOpen(true)}
-              className="group relative p-6 sm:p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation min-h-[140px] sm:min-h-[120px]"
+              className="group relative p-4 sm:p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation min-h-[120px] sm:min-h-[140px]"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#00B207] to-[#84D187] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <List className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#00B207] to-[#84D187] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <List className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                  <h3 className="text-sm sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                     {t.onboarding.step6.quickStartLists}
                   </h3>
-                  <p className="text-sm sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+                  <p className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
                     {t.onboarding.step6.quickStartDescription}
                   </p>
                   {selectedPreMadeLists.length > 0 && (
-                    <p className="text-xs sm:text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
                       {selectedPreMadeLists.length} {t.onboarding.step6.listsSelected}
                     </p>
                   )}
@@ -348,21 +349,22 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             {/* AI Analysis Card */}
             <button
               onClick={() => setIsAIModalOpen(true)}
-              className="group relative p-6 sm:p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation min-h-[140px] sm:min-h-[120px]"
+              className="group relative p-4 sm:p-6 rounded-xl border-2 border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#00B207] text-left backdrop-blur-sm touch-manipulation min-h-[120px] sm:min-h-[140px]"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                  <h3 className="text-sm sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                     {t.onboarding.step6.smartAnalysis}
                   </h3>
-                  <p className="text-sm sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+                  <p className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
                     {t.onboarding.step6.smartAnalysisDescription}
                   </p>
                   {analysisResults.length > 0 && (
-                    <p className="text-xs sm:text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
                       {analysisResults.reduce((total, result) => total + result.items.length, 0)} {t.onboarding.step6.itemsAnalyzed}
                     </p>
                   )}
@@ -390,6 +392,7 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                         variant="secondary"
                         className={`${getSourceColor(source)} text-white hover:opacity-80 text-xs px-2 py-0.5 cursor-pointer touch-manipulation flex items-center gap-1`}
                         onClick={() => handleItemToggle(item)}
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
                       >
                         {getSourceIcon(source)}
                         {item}
@@ -418,8 +421,8 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
               type="button"
               variant="outline"
               onClick={onBack}
-              className="w-full sm:flex-1 bg-white/50 dark:bg-gray-800/50 border-white/50 dark:border-gray-600/50 text-[#1F1F1F] dark:text-[#F5F5F5] h-11 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md touch-manipulation backdrop-blur-sm"
-              style={{ fontFamily: 'var(--font-inter)' }}
+              className="w-full sm:flex-1 bg-white/50 dark:bg-gray-800/50 border-white/50 dark:border-gray-600/50 text-[#1F1F1F] dark:text-[#F5F5F5] h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md touch-manipulation backdrop-blur-sm"
+              style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
               aria-label="Go back"
             >
               {t.onboarding.common.back}
@@ -428,8 +431,8 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             <Button
               onClick={handleNext}
               disabled={loading || selectedItems.length === 0}
-              className="w-full sm:flex-1 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-11 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-1 touch-manipulation shadow-lg"
-              style={{ fontFamily: 'var(--font-inter)' }}
+              className="w-full sm:flex-1 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-1 touch-manipulation shadow-lg"
+              style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
               aria-label="Continue"
             >
               {loading ? (
@@ -445,7 +448,7 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
           {/* Help Text */}
           <div className="text-center">
-            <p className="text-xs sm:text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+            <p className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
               {t.onboarding.step6.helpText}
             </p>
           </div>
@@ -454,52 +457,57 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
       {/* Premade Lists Modal */}
       <Dialog open={isPreMadeModalOpen} onOpenChange={setIsPreMadeModalOpen}>
-        <DialogContent className="max-w-4xl w-[96vw] max-h-[94vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-2xl">
-          <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+        <DialogContent className="max-w-5xl w-full mx-2 sm:mx-4 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-xl sm:rounded-2xl overflow-hidden">
+          <DialogHeader className="p-3 sm:p-6 pb-2 sm:pb-4 flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
               {t.onboarding.step6.quickStartLists}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] px-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 min-h-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {preMadeLists.map((list) => {
                 const isSelected = selectedPreMadeLists.includes(list.id);
                 return (
                   <button
                     key={list.id}
                     onClick={() => handlePreMadeListSelect(list.id)}
-                    className={`relative p-4 sm:p-4 rounded-lg border-2 transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-1 focus:ring-[#00B207] text-left touch-manipulation backdrop-blur-sm min-h-[140px] sm:min-h-[120px] ${
+                    className={`relative p-3 sm:p-4 rounded-lg border-2 transition-all duration-200 active:scale-95 focus:outline-none focus:ring-1 focus:ring-[#00B207] text-left touch-manipulation backdrop-blur-sm min-h-[120px] sm:min-h-[140px] ${
                       isSelected
                         ? 'border-[#00B207] bg-green-50/80 dark:bg-green-950/40 shadow-md'
                         : 'border-gray-200/50 dark:border-gray-700/50 bg-white/60 dark:bg-gray-800/60 hover:border-[#00B207]/50'
                     }`}
+                    style={{ 
+                      WebkitTapHighlightColor: 'transparent',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none'
+                    }}
                   >
                     {isSelected && (
-                      <div className="absolute top-3 right-3 w-5 h-5 bg-[#00B207] rounded-full flex items-center justify-center">
+                      <div className="absolute top-2 right-2 w-5 h-5 bg-[#00B207] rounded-full flex items-center justify-center">
                         <Check className="w-3 h-3 text-white" />
                       </div>
                     )}
-                    <div className="space-y-2 sm:space-y-2">
-                      <div className="text-sm sm:text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                    <div className="space-y-2">
+                      <div className="text-sm sm:text-base font-medium text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight" style={{ fontFamily: 'var(--font-paytone-one)' }}>
                         {t.onboarding.step6.lists[list.nameKey]}
                       </div>
-                      <div className="text-xs sm:text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
                         {t.onboarding.step6.lists[list.descriptionKey]}
                       </div>
-                      <div className="text-xs sm:text-xs text-blue-600 dark:text-blue-400 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
                         {list.items.length} {t.onboarding.step6.items}
                       </div>
-                      <div className="text-xs sm:text-xs text-[#7A7A7A] dark:text-[#B7EACB] space-y-1" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] space-y-1" style={{ fontFamily: 'var(--font-inter)' }}>
                         <div className="font-medium">{t.onboarding.step6.includes}:</div>
                         <div className="flex flex-wrap gap-1">
-                          {list.items.slice(0, 4).map((item: string, idx: number) => (
+                          {list.items.slice(0, 3).map((item: string, idx: number) => (
                             <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-[#1F1F1F] dark:text-[#F5F5F5]">
                               {item}
                             </span>
                           ))}
-                          {list.items.length > 4 && (
+                          {list.items.length > 3 && (
                             <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                              +{list.items.length - 4} {t.onboarding.step6.more}
+                              +{list.items.length - 3} {t.onboarding.step6.more}
                             </span>
                           )}
                         </div>
@@ -509,133 +517,135 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* AI Analysis Modal */}
       <Dialog open={isAIModalOpen} onOpenChange={setIsAIModalOpen}>
-        <DialogContent className="max-w-4xl w-[96vw] max-h-[94vh] bg-white/80 dark:bg-[#232B23]/80 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-2xl">
-          <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+        <DialogContent className="max-w-5xl w-full mx-2 sm:mx-4 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-xl sm:rounded-2xl overflow-hidden">
+          <DialogHeader className="p-3 sm:p-6 pb-2 sm:pb-4 flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
               {t.onboarding.step6.smartAnalysis}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh] px-2">
-            <div className="p-4 space-y-4">
-              {/* Image Categories */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            {imageCategories.map((category) => {
-              const Icon = category.icon;
-              return (
-                    <div key={category.id} className="space-y-3 p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
-                  <div className="text-center">
-                        <Icon className="w-8 h-8 mx-auto text-[#00B207] mb-2" />
-                        <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-                          {t.onboarding.step6.categories[category.nameKey]}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 space-y-4 min-h-0">
+            {/* Image Categories */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              {imageCategories.map((category) => {
+                const Icon = category.icon;
+                return (
+                  <div key={category.id} className="space-y-3 p-3 sm:p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                    <div className="text-center">
+                      <Icon className="w-6 h-6 sm:w-8 sm:h-8 mx-auto text-[#00B207] mb-2" />
+                      <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                        {t.onboarding.step6.categories[category.nameKey]}
+                      </div>
+                      <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+                        {t.onboarding.step6[category.descriptionKey]}
+                      </div>
                     </div>
-                        <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
-                      {t.onboarding.step6[category.descriptionKey]}
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleFileSelect(category.id)}
+                        disabled={isAnalyzing}
+                        className="text-xs h-8 sm:h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
+                        style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <Upload className="w-3 h-3 mr-1" />
+                        {t.onboarding.step6.upload}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleCameraSelect(category.id)}
+                        disabled={isAnalyzing}
+                        className="text-xs h-8 sm:h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
+                        style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <Camera className="w-3 h-3 mr-1" />
+                        {t.onboarding.step6.camera}
+                      </Button>
                     </div>
                   </div>
-                      <div className="flex flex-col gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleFileSelect(category.id)}
-                      disabled={isAnalyzing}
-                          className="text-xs h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
-                          style={{ fontFamily: 'var(--font-inter)' }}
-                    >
-                      <Upload className="w-3 h-3 mr-1" />
-                      {t.onboarding.step6.upload}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleCameraSelect(category.id)}
-                      disabled={isAnalyzing}
-                          className="text-xs h-9 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
-                          style={{ fontFamily: 'var(--font-inter)' }}
-                    >
-                      <Camera className="w-3 h-3 mr-1" />
-                      {t.onboarding.step6.camera}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-
-        {/* Analysis Loading */}
-        {isAnalyzing && (
-                <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-                    <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                    <span className="text-sm text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-inter)' }}>
-                {t.onboarding.step6.analyzing}
-              </span>
+                );
+              })}
             </div>
-          </div>
-        )}
 
-        {/* Analysis Results */}
-              {analysisResults.map((analysis) => (
-                <div key={analysis.id} className="bg-green-50/80 dark:bg-green-950/40 rounded-lg p-4 border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm">
-                  <div className="flex items-start gap-4">
-                    {/* Image Preview */}
-                    <div className="flex-shrink-0">
+            {/* Analysis Loading */}
+            {isAnalyzing && (
+              <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-lg p-4 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                  <span className="text-sm text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-inter)' }}>
+                    {t.onboarding.step6.analyzing}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Analysis Results */}
+            {analysisResults.map((analysis) => (
+              <div key={analysis.id} className="bg-green-50/80 dark:bg-green-950/40 rounded-lg p-3 sm:p-4 border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm">
+                <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                  {/* Image Preview */}
+                  <div className="flex-shrink-0 w-full sm:w-auto flex sm:block justify-center">
+                    <div>
                       <img 
                         src={analysis.imageUrl} 
                         alt={`${analysis.category} analysis`}
-                        className="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                       />
                       <div className="text-xs text-center mt-1 text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
                         {t.onboarding.step6.categories[analysis.category] || analysis.category}
                       </div>
                     </div>
-                    
-                    {/* Analysis Content */}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-5 h-5 text-purple-600" />
-                          <span className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
-                            {t.onboarding.step6.aiSuggestions} ({analysis.items.length})
-              </span>
-            </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => removeAnalysisResult(analysis.id)}
-                          className="text-xs h-8 px-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          {t.onboarding.step6.remove}
-                        </Button>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {analysis.items.map((item, index) => (
-                <div
-                  key={index}
-                            className="flex items-center gap-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded px-3 py-1 border border-white/30 dark:border-gray-600/30"
-                >
-                            <span className="text-sm" style={{ fontFamily: 'var(--font-inter)' }}>{item}</span>
-                  <button
-                              onClick={() => removeItemFromAnalysis(analysis.id, item)}
-                              className="text-red-500 hover:text-red-700 p-1 touch-manipulation"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
                   </div>
-            </div>
-                ))}
+                  
+                  {/* Analysis Content */}
+                  <div className="flex-1 w-full">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+                        <span className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                          {t.onboarding.step6.aiSuggestions} ({analysis.items.length})
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => removeAnalysisResult(analysis.id)}
+                        className="text-xs h-7 sm:h-8 px-2 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 touch-manipulation"
+                        style={{ WebkitTapHighlightColor: 'transparent' }}
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        {t.onboarding.step6.remove}
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      {analysis.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded px-2 sm:px-3 py-1 border border-white/30 dark:border-gray-600/30"
+                        >
+                          <span className="text-xs sm:text-sm" style={{ fontFamily: 'var(--font-inter)' }}>{item}</span>
+                          <button
+                            onClick={() => removeItemFromAnalysis(analysis.id, item)}
+                            className="text-red-500 hover:text-red-700 p-1 touch-manipulation"
+                            style={{ WebkitTapHighlightColor: 'transparent' }}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
-            </ScrollArea>
+            ))}
+          </div>
         </DialogContent>
       </Dialog>
 
