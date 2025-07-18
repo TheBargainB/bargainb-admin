@@ -7,6 +7,48 @@ async function getOrCreateThread(assistantId: string, userId: string): Promise<s
   try {
     console.log('🧵 Getting/creating thread for assistant:', assistantId, 'user:', userId)
     
+    // First, check if user already has a thread_id in their recent conversations
+    const { data: recentConversation, error: conversationError } = await supabaseAdmin
+      .from('user_conversations')
+      .select('thread_id')
+      .eq('user_profile_id', userId)
+      .eq('assistant_id', assistantId)
+      .not('thread_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (conversationError && conversationError.code !== 'PGRST116') {
+      console.error('❌ Error fetching recent conversation:', conversationError)
+      // Don't throw here, continue to create new thread
+    }
+
+    // If user already has a thread_id, verify it's still valid
+    if (recentConversation?.thread_id) {
+      console.log('🔍 Found existing thread ID:', recentConversation.thread_id)
+      
+      // Verify the thread still exists by trying to use it
+      try {
+        const verifyResponse = await fetch(`${AGENT_BB_CONFIG.BASE_URL}/threads/${recentConversation.thread_id}`, {
+          method: 'GET',
+          headers: {
+            'X-Api-Key': process.env[AGENT_BB_CONFIG.API_KEY_ENV] || ''
+          }
+        })
+        
+        if (verifyResponse.ok) {
+          console.log('✅ Existing thread is valid, reusing:', recentConversation.thread_id)
+          return recentConversation.thread_id
+        } else {
+          console.warn('⚠️ Existing thread invalid, creating new one')
+        }
+      } catch (error) {
+        console.warn('⚠️ Error verifying existing thread, creating new one:', error)
+      }
+    }
+
+    // Create new thread if none exists or existing one is invalid
+    console.log('🆕 Creating new thread for user:', userId)
     const response = await fetch(`${AGENT_BB_CONFIG.BASE_URL}/threads`, {
       method: 'POST',
       headers: {
@@ -25,7 +67,12 @@ async function getOrCreateThread(assistantId: string, userId: string): Promise<s
     if (response.ok) {
       const data = await response.json()
       const threadId = data.thread_id
-      console.log('✅ Thread created/retrieved:', threadId)
+      console.log('✅ New thread created:', threadId)
+      
+      // Note: thread_id will be stored in user_conversations table 
+      // when the conversation record is created later in the process
+      console.log('✅ Thread will be stored in conversation record')
+      
       return threadId
     } else {
       console.error('❌ Error creating thread:', response.status)
@@ -170,11 +217,19 @@ export async function POST(request: NextRequest) {
 
     console.log('👤 Found user:', user.full_name, 'Assistant:', user.assistant_id)
 
+    // Get thread_id early for both user and AI messages
+    let threadId = null
+    if (user.assistant_id) {
+      threadId = await getOrCreateThread(user.assistant_id, user.id)
+    }
+
     // Store incoming user message
     await supabaseAdmin
       .from('user_conversations')
       .insert({
         user_profile_id: user.id,
+        assistant_id: user.assistant_id,
+        thread_id: threadId, // ✅ Store thread_id for user message too
         whatsapp_message_id: `user_${Date.now()}`,
         content: content,
         message_type: 'user_message',
@@ -216,6 +271,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_profile_id: user.id,
         assistant_id: user.assistant_id,
+        thread_id: threadId, // ✅ Store the thread_id for future reuse (null if no assistant)
         whatsapp_message_id: null, // ✅ Start with null for webhook matching
         content: aiResponse,
         message_type: 'ai_response',
