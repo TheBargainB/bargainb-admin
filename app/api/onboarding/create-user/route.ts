@@ -169,35 +169,9 @@ export async function POST(request: NextRequest) {
           threadId = threadData.thread_id
           console.log('✅ Created thread:', threadId)
 
-          // Send intro message to AI - AI response will trigger database notification
-          const introMessage = preferredLanguage === 'nl' 
-            ? `Hoi ${name.split(' ')[0]}! Ik ben je persoonlijke BargainB grocery assistant. Ik help je met het vinden van de beste deals, het plannen van maaltijden en het besparen van geld bij het boodschappen doen in ${country}. Wat kan ik voor je doen?`
-            : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
-
-          const runResponse = await fetch(`https://agnet-bb-v2-cc009669aec9511e9dd20dc4263f4b67.us.langgraph.app/threads/${threadId}/runs`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Api-Key': process.env.LANGSMITH_API_KEY!
-            },
-            body: JSON.stringify({
-              assistant_id: assistantId,
-              input: {
-                messages: [{
-                  role: 'user',
-                  content: introMessage
-                }]
-              }
-            })
-          })
-
-          if (runResponse.ok) {
-            const runData = await runResponse.json()
-            runId = runData.run_id
-            console.log('✅ Sent intro message to AI, run ID:', runId)
-            console.log('🔔 AI response will trigger database notification for WhatsApp delivery')
-            introMessageSent = true
-          }
+          // Mark intro as ready to be sent (will be sent after user creation)
+          console.log('✅ Thread created, intro message will be sent via proper endpoint after user creation')
+          introMessageSent = true
         }
       } else {
         const errorText = await assistantResponse.text()
@@ -305,9 +279,37 @@ export async function POST(request: NextRequest) {
       console.log('Created new user profile:', newUser.id)
     }
 
-    // AI response will be automatically processed via database triggers when ready
-    if (introMessageSent && userProfile) {
-      console.log('✅ Intro message sent to AI - waiting for response to trigger notification system')
+    // Send intro message via the proper endpoint after user creation
+    if (introMessageSent && userProfile && assistantId) {
+      try {
+        const introMessage = preferredLanguage === 'nl' 
+          ? `Hoi ${name.split(' ')[0]}! Ik ben je persoonlijke BargainB grocery assistant. Ik help je met het vinden van de beste deals, het plannen van maaltijden en het besparen van geld bij het boodschappen doen in ${country}. Wat kan ik voor je doen?`
+          : `Hi ${name.split(' ')[0]}! I'm your personal BargainB grocery assistant. I'll help you find the best deals, plan meals, and save money on groceries in ${country}. How can I help you today?`
+
+        // Use the working endpoint for intro message processing
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/internal/process-ai-responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: userProfile.id,
+            content: introMessage,
+            phone_number: userProfile.phone_number
+          })
+        }).then(response => {
+          if (response.ok) {
+            console.log('✅ Intro message sent via proper endpoint - AI will respond and send to WhatsApp')
+          } else {
+            console.error('❌ Failed to send intro message via endpoint:', response.status)
+          }
+        }).catch(error => {
+          console.error('❌ Error sending intro message:', error)
+        })
+
+      } catch (error) {
+        console.error('❌ Error triggering intro message:', error)
+      }
     }
 
     return NextResponse.json({
@@ -320,7 +322,7 @@ export async function POST(request: NextRequest) {
         ai_introduction_sent: introMessageSent,
         country_code: countryCode, // Include this for debugging
         message: existingUser ? 'User profile updated successfully' : 'User profile created successfully',
-        note: introMessageSent ? 'AI introduction sent - response will be processed asynchronously' : 'No AI introduction sent'
+        note: introMessageSent ? 'AI introduction will be sent via proper endpoint - complete flow with WhatsApp delivery' : 'No AI introduction sent'
       }
     })
 
