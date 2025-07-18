@@ -359,12 +359,12 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: true, skipped: 'unknown_user' })
         }
 
-        // Find matching user_conversation record and update with WhatsApp message ID
+        // Find the most recent AI response without a WhatsApp message ID
+        // We don't match content because WhatsApp may modify formatting/encoding
         const { data: existingConversation, error } = await supabaseAdmin
           .from('user_conversations')
           .select('*')
           .eq('user_profile_id', user.id)
-          .eq('content', content)
           .eq('message_type', 'ai_response')
           .is('whatsapp_message_id', null)
           .order('created_at', { ascending: false })
@@ -383,7 +383,7 @@ export async function POST(request: NextRequest) {
             .eq('id', existingConversation.id)
 
           console.log('✅ Updated outbound message with WhatsApp ID:', messageId)
-          } else {
+        } else {
           console.log('⚠️ Could not find matching conversation record for outbound message')
         }
 
