@@ -162,56 +162,56 @@ export const groceryStores: GroceryStore[] = [
     id: "edeka",
     name: "Edeka",
     url: "edeka.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Edeka_Logo.svg/512px-Edeka_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/c/cf/Edeka_Logo_Aktuell.svg",
     country: "DE"
   },
   {
     id: "rewe",
     name: "REWE",
     url: "rewe.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Logo_REWE.svg/512px-Logo_REWE.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Logo_REWE.svg",
     country: "DE"
   },
   {
     id: "aldi-nord",
     name: "Aldi Nord",
     url: "aldi-nord.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Aldi_Nord_Logo.svg/512px-Aldi_Nord_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Logo_Aldi_Nord.svg",
     country: "DE"
   },
   {
     id: "aldi-sued",
     name: "Aldi Süd",
     url: "aldi-sued.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Aldi_Sued_Logo.svg/512px-Aldi_Sued_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/e/e5/Aldi_S%C3%BCd_2017_logo.svg",
     country: "DE"
   },
   {
     id: "lidl-de",
     name: "Lidl",
     url: "lidl.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Lidl-Logo.svg/512px-Lidl-Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/9/91/Lidl-Logo.svg",
     country: "DE"
   },
   {
     id: "kaufland",
     name: "Kaufland",
     url: "kaufland.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Kaufland_Logo.svg/512px-Kaufland_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/4/44/Kaufland_201x_logo.svg",
     country: "DE"
   },
   {
     id: "netto-marken-discount",
     name: "Netto Marken-Discount",
     url: "netto-online.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Netto_Marken-Discount_2018_logo.svg/512px-Netto_Marken-Discount_2018_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/f1/Netto_Marken-Discount_2018_logo.svg",
     country: "DE"
   },
   {
     id: "spar-de",
     name: "Spar",
     url: "spar.de",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Spar_logo.svg/512px-Spar_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7c/Spar-logo.svg",
     country: "DE"
   },
   // Belgium Stores
@@ -226,49 +226,49 @@ export const groceryStores: GroceryStore[] = [
     id: "delhaize",
     name: "Delhaize",
     url: "delhaize.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Delhaize_logo.svg/512px-Delhaize_logo.svg.png",
+    logo: "https://cdn.freebiesupply.com/logos/large/2x/delhaize-1-logo-png-transparent.png",
     country: "BE"
   },
   {
     id: "carrefour-market",
     name: "Carrefour Market",
     url: "carrefour.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Carrefour_Market_logo.svg/512px-Carrefour_Market_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "BE"
   },
   {
     id: "lidl-be",
     name: "Lidl",
     url: "lidl.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Lidl-Logo.svg/512px-Lidl-Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/9/91/Lidl-Logo.svg",
     country: "BE"
   },
   {
     id: "aldi-be",
     name: "Aldi",
     url: "aldi.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Aldi_Logo.svg/512px-Aldi_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/6/64/AldiWorldwideLogo.svg",
     country: "BE"
   },
   {
     id: "spar-be",
     name: "Spar",
     url: "spar.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Spar_logo.svg/512px-Spar_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7c/Spar-logo.svg",
     country: "BE"
   },
   {
     id: "okay",
     name: "OKay",
     url: "okay.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/OKay_logo.svg/512px-OKay_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/1/17/OKay_logo.png",
     country: "BE"
   },
   {
     id: "bio-planet",
     name: "Bio‑Planet",
     url: "bioplanet.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Bio-Planet_logo.svg/512px-Bio-Planet_logo.svg.png",
+    logo: "https://findvectorlogo.com/wp-content/uploads/2019/06/bio-planet-vector-logo.png",
     country: "BE"
   },
   // France Stores
@@ -276,56 +276,56 @@ export const groceryStores: GroceryStore[] = [
     id: "e-leclerc",
     name: "E.Leclerc",
     url: "e.leclerc",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/E.Leclerc_logo.svg/512px-E.Leclerc_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/1/14/E.Leclerc_logo.svg",
     country: "FR"
   },
   {
     id: "carrefour",
     name: "Carrefour",
     url: "carrefour.fr",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Carrefour_Logo.svg/512px-Carrefour_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "FR"
   },
   {
     id: "intermarche",
     name: "Intermarché",
     url: "intermarche.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Intermarch%C3%A9_logo.svg/512px-Intermarch%C3%A9_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/9/96/Intermarch%C3%A9_logo_2009_classic.svg",
     country: "FR"
   },
   {
     id: "cooperative-u",
     name: "Coopérative U",
     url: "magasins-u.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Super_U_logo.svg/512px-Super_U_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/2/2a/Super_U_logo_2009.svg",
     country: "FR"
   },
   {
     id: "auchan",
     name: "Auchan",
     url: "auchan.fr",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a1/Auchan_Logo.svg/512px-Auchan_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/c/cd/Logo_Auchan_%282015%29.svg",
     country: "FR"
   },
   {
     id: "monoprix",
     name: "Monoprix",
     url: "monoprix.fr",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Monoprix_logo.svg/512px-Monoprix_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/0/0a/Monoprix_logo.svg",
     country: "FR"
   },
   {
     id: "franprix",
     name: "Franprix",
     url: "franprix.fr",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Franprix_logo.svg/512px-Franprix_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/a/a8/Logo_Franprix_-_2015.svg",
     country: "FR"
   },
   {
     id: "netto-fr",
     name: "Netto",
     url: "netto.fr",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/46/Netto_Logo.svg/512px-Netto_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/f1/Netto_Marken-Discount_2018_logo.svg",
     country: "FR"
   },
   // Canada Stores
@@ -333,35 +333,35 @@ export const groceryStores: GroceryStore[] = [
     id: "loblaws",
     name: "Loblaws",
     url: "loblaws.ca",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/9/90/Loblaws_logo.svg",
+    logo: "https://upload.wikimedia.org/wikipedia/en/e/e2/Loblaws.svg",
     country: "CA"
   },
   {
     id: "real-canadian-superstore",
     name: "Real Canadian Superstore",
     url: "realcanadiansuperstore.ca",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Real_Canadian_Superstore_logo.svg/512px-Real_Canadian_Superstore_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/en/b/bb/Real_Canadian_Superstore_logo.svg",
     country: "CA"
   },
   {
     id: "no-frills",
     name: "No Frills",
     url: "nofrills.ca",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/No_Frills_logo.svg/512px-No_Frills_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/en/2/23/No_Frills_logo.svg",
     country: "CA"
   },
   {
     id: "sobeys",
     name: "Sobeys",
     url: "sobeys.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Sobeys_logo.svg/512px-Sobeys_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/4/4f/Sobeys_logo.svg",
     country: "CA"
   },
   {
     id: "metro",
     name: "Metro",
     url: "metro.ca",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Metro_Inc_logo.svg/512px-Metro_Inc_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/f6/Metro_Inc._logo.svg",
     country: "CA"
   },
   {
@@ -382,21 +382,21 @@ export const groceryStores: GroceryStore[] = [
     id: "freshco",
     name: "FreshCo",
     url: "freshco.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/FreshCo_logo.svg/512px-FreshCo_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/FreshCo_logo.svg",
     country: "CA"
   },
   {
     id: "maxi",
     name: "Maxi",
     url: "maxi.ca",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Maxi_logo.svg/512px-Maxi_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/2/29/Maxi_%28Canadian_supermarket%29_logo.svg",
     country: "CA"
   },
   {
     id: "independent-grocer",
     name: "Your Independent Grocer",
     url: "yourindependentgrocer.ca",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Your_Independent_Grocer_Logo.svg/512px-Your_Independent_Grocer_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/1/19/Independent_Supermarket_Logo20060426.svg",
     country: "CA"
   },
   // United Kingdom Stores
@@ -404,148 +404,142 @@ export const groceryStores: GroceryStore[] = [
     id: "tesco",
     name: "Tesco",
     url: "tesco.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Tesco_Logo.svg/512px-Tesco_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/en/b/b0/Tesco_Logo.svg",
     country: "UK"
   },
   {
     id: "sainsburys",
     name: "Sainsbury's",
     url: "sainsburys.co.uk",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Sainsburys_Logo.svg/512px-Sainsburys_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/d/d7/Sainsbury%27s_Logo.svg",
     country: "UK"
   },
   {
     id: "asda",
     name: "Asda",
     url: "asda.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Asda_logo_2010.svg/512px-Asda_logo_2010.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/8/81/ASDA_logo.svg",
     country: "UK"
   },
   {
     id: "morrisons",
     name: "Morrisons",
     url: "morrisons.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Morrisons_logo.svg/512px-Morrisons_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/f4/Wm_Morrison_Supermarkets_logo.svg",
     country: "UK"
   },
   {
     id: "aldi-uk",
     name: "ALDI",
     url: "aldi.co.uk",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Aldi_Logo.svg/512px-Aldi_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/6/64/AldiWorldwideLogo.svg",
     country: "UK"
   },
   {
     id: "lidl-uk",
     name: "Lidl",
     url: "lidl.co.uk",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Lidl-Logo.svg/512px-Lidl-Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/9/91/Lidl-Logo.svg",
     country: "UK"
   },
   {
     id: "coop-food",
     name: "Co-op Food",
     url: "coop.co.uk",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Co-operative_clover_leaf_logo.svg/512px-Co-operative_clover_leaf_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/c/c5/The_Co-Operative_clover_leaf_logo.svg",
     country: "UK"
   },
   {
     id: "waitrose",
     name: "Waitrose",
     url: "waitrose.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Waitrose_%26_Partners_logo.svg/512px-Waitrose_%26_Partners_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/b/ba/Waitrose_%26_Partners_logo.svg",
     country: "UK"
   },
   {
     id: "londis",
     name: "Londis",
     url: "londis.co.uk",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Londis_logo.svg/512px-Londis_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/en/c/cc/LondisLogo.svg",
     country: "UK"
   },
-  {
-    id: "nisa",
-    name: "Nisa",
-    url: "nisa.co.uk",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Nisa_logo.svg/512px-Nisa_logo.svg.png",
-    country: "UK"
-  },
+  
   // Spain Stores
 {
     id: "mercadona",
     name: "Mercadona",
     url: "mercadona.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Mercadona_logo.svg/512px-Mercadona_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/5/58/Mercadona.svg",
     country: "ES"
   },
   {
     id: "carrefour-es",
     name: "Carrefour",
     url: "carrefour.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Carrefour_Logo.svg/512px-Carrefour_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "ES"
   },
   {
     id: "lidl-es",
     name: "Lidl",
     url: "lidl.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Lidl-Logo.svg/512px-Lidl-Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/9/91/Lidl-Logo.svg",
     country: "ES"
   },
   {
     id: "aldi-es",
     name: "Aldi",
     url: "aldi.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Aldi_Logo.svg/512px-Aldi_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/6/64/AldiWorldwideLogo.svg",
     country: "ES"
   },
   {
     id: "eroski",
     name: "Eroski",
     url: "eroski.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Eroski_logo.svg/512px-Eroski_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/1/13/Eroski_logo.svg",
     country: "ES"
   },
   {
     id: "dia",
     name: "DIA",
     url: "dia.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Día_Logo.svg/512px-Día_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/2/2b/Dia_Logo.svg",
     country: "ES"
   },
   {
     id: "alcampo",
     name: "Alcampo",
     url: "alcampo.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Alcampo_logo.svg/512px-Alcampo_logo.svg.png",
+    logo: "https://static.wikia.nocookie.net/logosfake/images/1/19/Alcampo2015.svg/",
     country: "ES"
   },
   {
     id: "consum",
     name: "Consum",
     url: "consum.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Consum_logo.svg/512px-Consum_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/79/Consum_Cooperativa2025.png",
     country: "ES"
   },
   {
     id: "bonpreu",
     name: "Bon Preu",
-    url: "bonpreu.cat",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Bon_Preu_logo.svg/512px-Bon_Preu_logo.svg.png",
+    url: "https://www.bonpreuesclat.cat",
+    logo: "https://cdn.brandfetch.io/idzWmvu6t1/w/400/h/400/theme/dark/icon.jpeg?c=1dxbfHSJFAPEGdCLU4o5B",
     country: "ES"
   },
   {
     id: "hipercor",
     name: "Hipercor",
     url: "hipercor.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/37/Hipercor_logo.svg/512px-Hipercor_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Hipercor_logo.svg",
     country: "ES"
   },
   {
     id: "spar-es",
     name: "SPAR",
     url: "spar.es",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Spar_logo.svg/512px-Spar_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7c/Spar-logo.svg",
     country: "ES"
   },
   {
@@ -561,70 +555,70 @@ export const groceryStores: GroceryStore[] = [
     id: "carrefour-eg",
     name: "Carrefour",
     url: "carrefour.eg",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Carrefour_Logo.svg/512px-Carrefour_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "EG"
   },
   {
     id: "spinneys-eg",
     name: "Spinneys",
     url: "spinneys.com.eg",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Spinneys_logo.svg/512px-Spinneys_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/74/New_spinneys_logo.jpg",
     country: "EG"
   },
   {
     id: "hyper-one",
     name: "Hyper One",
     url: "hyperone.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Hyper_One_logo.png/512px-Hyper_One_logo.png",
+    logo: "https://images.seeklogo.com/logo-png/35/1/hyper-one-logo-png_seeklogo-352639.png",
     country: "EG"
   },
   {
     id: "metro-eg",
     name: "Metro",
     url: "metro-markets.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Metro_markets_logo.svg/512px-Metro_markets_logo.svg.png",
+    logo: "https://images.seeklogo.com/logo-png/35/1/metro-supermarket-logo-png_seeklogo-350223.png",
     country: "EG"
   },
   {
     id: "kazyon",
     name: "Kazyon",
     url: "kazyon.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Kazyon_logo.svg/512px-Kazyon_logo.svg.png",
+    logo: "https://images.crunchbase.com/image/upload/c_pad,h_160,w_160,f_auto,b_white,q_auto:eco,dpr_2/uft1ofrcrwntjxpfiqpj",
     country: "EG"
   },
   {
     id: "fathalla-market",
     name: "Fathalla Market",
     url: "fathallamarkets.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Fathalla_Markets_logo.svg/512px-Fathalla_Markets_logo.svg.png",
+    logo: "https://static.ucraft.net/fs/ucraft/userFiles/theyard/images/a-18-0006-16607181556873.png?v=1660718155",
     country: "EG"
   },
   {
     id: "seoudi",
     name: "Seoudi",
     url: "seoudi.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Seoudi_logo.svg/512px-Seoudi_logo.svg.png",
+    logo: "https://cdn.getcata.com/cata/static/3819118/seoudimarket.png",
     country: "EG"
   },
   {
     id: "bim-eg",
     name: "BIM",
-    url: "bim.com.eg",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/BIM_logo.svg/512px-BIM_logo.svg.png",
+    url: "https://www.bim.eg/",
+    logo: "image.png",
     country: "EG"
   },
   {
     id: "ragab-sons",
     name: "Ragab Sons",
     url: "ragabsons.com.eg",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Ragab_Sons_logo.svg/512px-Ragab_Sons_logo.svg.png",
+    logo: "https://pinjoor.com/pinjoor/wp-content/uploads/2019/08/Ragab-Sons.jpg",
     country: "EG"
   },
   {
     id: "kheir-zaman",
     name: "Kheir Zaman",
     url: "kheir-zaman.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Kheir_Zaman_logo.svg/512px-Kheir_Zaman_logo.svg.png",
+    logo: "https://cdn.getcata.com/cata/static/3832131/kheir-zaman.png",
     country: "EG"
   },
   // Qatar Stores
@@ -632,148 +626,142 @@ export const groceryStores: GroceryStore[] = [
     id: "al-meera",
     name: "Al Meera",
     url: "almeera.com.qa",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Al+Meera",
+    logo: "https://companieslogo.com/img/orig/MERS.QA_BIG-07083976.png?t=1720244492",
     country: "QA"
   },
   {
     id: "carrefour-qa",
     name: "Carrefour",
     url: "carrefourqatar.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Carrefour_Logo.svg/512px-Carrefour_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "QA"
   },
   {
     id: "lulu-qa",
     name: "LuLu Hypermarket",
     url: "luluhypermarket.com/en-qa",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7f/LuLuGroupInternationalLogo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Lulu_Hypermarket_logo.png",
     country: "QA"
   },
   {
     id: "safari-hypermarket",
     name: "Safari Hypermarket",
     url: "safarihypermarket.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Safari",
+    logo: "https://mysafaricard.com/offers/img/Safari%20Hyper%20Market%20Logo.png",
     country: "QA"
   },
   {
     id: "rawabi-hypermarket",
     name: "Rawabi Hypermarket",
     url: "rawabihypermarket.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Rawabi",
+    logo: "https://www.alrawabigroup.com/uploads/brands/logo601033.jpeg",
     country: "QA"
   },
   {
     id: "paris-hypermarket",
     name: "Paris Hypermarket",
     url: "parishypermarket.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Paris",
+    logo: "https://limeio.in/panel/favicons/566image.png",
     country: "QA"
   },
   {
     id: "grand-hypermarket",
     name: "Grand Hypermarket",
     url: "online.grandhyper.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Grand",
+    logo: "https://cdn.clicflyer.com/appimages/retailers/retailer_1572_2023040612395295059.jpg",
     country: "QA"
   },
   {
     id: "food-express",
     name: "Food Express Supermarket",
     url: "foodexpress.supermarket",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Food+Express",
+    logo: "https://images.deliveryhero.io/image/talabat/restaurants/Logo638379747676468335.jpg?width=180",
     country: "QA"
   },
   {
     id: "family-food-centre",
     name: "Family Food Centre",
     url: "family.qa",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Family+Food",
+    logo: "https://family.qa/media/logo/stores/1/ffc_header.png",
     country: "QA"
   },
   {
     id: "souk-al-baladi",
     name: "Souq Al Baladi",
     url: "baladiholding.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Al+Baladi",
+    logo: "https://baladiholding.com/storage/companies/1677506079en.jpg",
     country: "QA"
   },
   {
     id: "new-indian-supermarket",
     name: "New Indian Supermarket",
     url: "newindiansm.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=New+Indian",
+    logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRfTcgXWLT2J6kooSC_By2bY1QLqUPJlYrMuw&s",
     country: "QA"
   },
-  {
-    id: "al-shair",
-    name: "Al Shair Supermarket",
-    url: "alshair.com.qa",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Al+Shair",
-    country: "QA"
-  },
+ 
   // Saudi Arabia Stores
   {
     id: "lulu-sa",
     name: "LuLu Hypermarket",
     url: "lulugroup.com/en-sa",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7f/LuLuGroupInternationalLogo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Lulu_Hypermarket_logo.png",
     country: "SA"
   },
   {
     id: "panda",
     name: "Panda Retail Company",
     url: "panda.com.sa",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Panda",
+    logo: "https://en.wikipedia.org/wiki/Panda_Retail_Company#/media/File:Panda_Retail_Company_Logo.svg",
     country: "SA"
   },
   {
     id: "al-othaim",
     name: "Al Othaim Markets",
     url: "othaimmarkets.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Al+Othaim",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/2/27/Abdullah_Al-Othaim_Markets_Logo.jpg",
     country: "SA"
   },
   {
     id: "tamimi",
     name: "Tamimi Markets",
     url: "tamimimarkets.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Tamimi",
+    logo: "https://www.tamimimarkets.com/__template/images/logo-01.png",
     country: "SA"
   },
   {
     id: "carrefour-sa",
     name: "Carrefour",
     url: "carrefourksa.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Carrefour_Logo.svg/512px-Carrefour_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "SA"
   },
   {
     id: "bindawood",
     name: "BinDawood Stores",
     url: "bindawood.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=BinDawood",
+    logo: "https://en.wikipedia.org/wiki/BinDawood_Stores#/media/File:BinDawood_logo.jpg",
     country: "SA"
   },
   {
     id: "danube",
     name: "Danube Company",
     url: "danube.sa",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Danube",
+    logo: "https://upload.wikimedia.org/wikipedia/en/6/66/Danube.png",
     country: "SA"
   },
   {
     id: "al-raya",
     name: "Al Raya Supermarket",
     url: "alraya.com.sa",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Al+Raya",
+    logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT0VJVqGvkffXwqChpNiKTLDn3Y1HQc1pC2CA&s",
     country: "SA"
   },
   {
     id: "farm",
     name: "Farm Superstores",
     url: "farmsuperstores.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Farm",
+    logo: "https://www.farm.com.sa/images/FrontEnd/New-Farm-Logo.png",
     country: "SA"
   },
   {
@@ -788,63 +776,63 @@ export const groceryStores: GroceryStore[] = [
     id: "carrefour-uae",
     name: "Carrefour",
     url: "carrefouruae.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Carrefour_Logo.svg/512px-Carrefour_Logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/fr/3/3b/Logo_Carrefour.svg",
     country: "AE"
   },
   {
     id: "lulu-hypermarket",
     name: "LuLu Hypermarket",
     url: "luluhypermarket.com/en-ae",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7f/LuLuGroupInternationalLogo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Lulu_Hypermarket_logo.png",
     country: "AE"
   },
   {
     id: "spinneys-uae",
     name: "Spinneys",
     url: "spinneys.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Spinneys",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/74/New_spinneys_logo.jpg",
     country: "AE"
   },
   {
     id: "union-coop",
     name: "Union Coop",
     url: "unioncoop.ae",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Union+Coop",
+    logo: "https://en.wikipedia.org/wiki/Union_Coop#/media/File:Union_Coop.svg",
     country: "AE"
   },
   {
     id: "choithrams",
     name: "Choithrams",
     url: "choithrams.com",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Choithrams",
+    logo: "https://choithramsgcc.com/public/uploads/contents/Choithrams-logo.jpg",
     country: "AE"
   },
   {
     id: "geant",
     name: "Géant",
     url: "geant.ae",
-    logo: "https://via.placeholder.com/512x512/00B207/FFFFFF?text=Geant",
+    logo: "https://www.saharacentre.com/storage/attachments/0/Geant_Hypermarket_logo_Standard_Version_683248_147624.jpg",
     country: "AE"
   },
   {
     id: "waitrose-uae",
     name: "Waitrose",
     url: "waitrose.com/ae",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/…/Waitrose_logo.svg",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/b/ba/Waitrose_%26_Partners_logo.svg",
     country: "AE"
   },
   {
     id: "nesto",
     name: "Nesto",
     url: "nestogroup.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/…/NESTO_LOGO.jpg",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/8/88/NESTO_LOGO.jpg",
     country: "AE"
   },
   {
     id: "viva",
     name: "Viva Supermarket",
     url: "vivauae.com",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/…/Viva_logo.svg",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/1/1f/Viva_Logo.svg",
     country: "AE"
   }
   
