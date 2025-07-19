@@ -177,7 +177,18 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string): Promis
     }
 
     // Clean and format phone number
-    const cleanPhone = phoneNumber.replace(/^\++/, '+').replace(/\s+/g, '')
+    let cleanPhone = phoneNumber.replace(/^\++/, '+').replace(/\s+/g, '')
+    
+    // If phone number doesn't start with +, add it
+    if (!cleanPhone.startsWith('+')) {
+      // If it starts with 0, replace with +31 (Dutch country code)
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = '+31' + cleanPhone.substring(1)
+      } else {
+        // Otherwise just add +
+        cleanPhone = '+' + cleanPhone
+      }
+    }
     
     // Prepare the payload for WASender API
     const payload = {
