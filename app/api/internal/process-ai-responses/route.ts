@@ -167,24 +167,49 @@ async function sendWhatsAppMessage(phoneNumber: string, message: string): Promis
   try {
     console.log('📤 Sending WhatsApp message to:', phoneNumber)
     
-    const response = await fetch('https://www.wasenderapi.com/api/send-message', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.WASENDER_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: `+${phoneNumber.replace(/^\+/, '')}`,
-        text: message
-      })
+    // Get WASender API credentials from environment
+    const wasenderApiKey = process.env.WASENDER_API_KEY
+    const wasenderApiUrl = process.env.WASENDER_API_URL || 'https://www.wasenderapi.com'
+
+    if (!wasenderApiKey) {
+      console.error('WASENDER_API_KEY not found in environment variables')
+      return { success: false }
+    }
+
+    // Clean and format phone number
+    const cleanPhone = phoneNumber.replace(/^\++/, '+').replace(/\s+/g, '')
+    
+    // Prepare the payload for WASender API
+    const payload = {
+      to: cleanPhone,
+      text: message
+    }
+
+    console.log('📤 Sending WhatsApp message via WASender API:', {
+      to: cleanPhone,
+      textPreview: message.substring(0, 50) + (message.length > 50 ? '...' : '')
     })
 
-    if (response.ok) {
-      const result = await response.json()
-      console.log('✅ WhatsApp message sent successfully:', result.data?.msgId)
-      return { success: true, messageId: result.data?.msgId?.toString() }
+    // Send message via WASender API
+    const wasenderResponse = await fetch(`${wasenderApiUrl}/api/send-message`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${wasenderApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+
+    const responseData = await wasenderResponse.json()
+
+    if (wasenderResponse.ok) {
+      console.log('✅ WASender API success:', responseData)
+      return { 
+        success: true, 
+        messageId: responseData.data?.msgId?.toString() 
+      }
     } else {
-      console.error('❌ Failed to send WhatsApp message:', response.status)
+      console.error('❌ WASender API error:', responseData)
       return { success: false }
     }
   } catch (error) {
