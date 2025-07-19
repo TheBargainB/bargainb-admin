@@ -712,7 +712,7 @@ export const groceryStores: GroceryStore[] = [
     id: "panda",
     name: "Panda Retail Company",
     url: "panda.com.sa",
-    logo: "https://en.wikipedia.org/wiki/Panda_Retail_Company#/media/File:Panda_Retail_Company_Logo.svg",
+    logo: "https://i0.wp.com/ksalogo.com/wp-content/uploads/2025/01/Panda-01.png?fit=1000%2C1000&ssl=1",
     country: "SA"
   },
   {
@@ -740,7 +740,7 @@ export const groceryStores: GroceryStore[] = [
     id: "bindawood",
     name: "BinDawood Stores",
     url: "bindawood.com",
-    logo: "https://en.wikipedia.org/wiki/BinDawood_Stores#/media/File:BinDawood_logo.jpg",
+    logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT72cvnAy-_OqDlRmMRUDZ9gDQR25MVgv5j6A&s",
     country: "SA"
   },
   {
@@ -768,7 +768,7 @@ export const groceryStores: GroceryStore[] = [
     id: "othaim-spar",
     name: "SPAR Saudi",
     url: "sparsak.com.sa",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Spar_logo.svg/512px-Spar_logo.svg.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/7/7c/Spar-logo.svg",
     country: "SA"
   },
   // UAE Stores
