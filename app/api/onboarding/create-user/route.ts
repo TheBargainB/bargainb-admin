@@ -45,6 +45,9 @@ export async function POST(request: NextRequest) {
       selectedItems = [],
       selectedIntegrations = [],
       preferredLanguage = 'nl',
+      selectedResponseStyle,
+      selectedCommunicationTone,
+      customPreferences,
       generatedPrompts = null
     } = await request.json()
 
@@ -65,6 +68,43 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    // Generate personalized prompts for all agents
+    let finalGeneratedPrompts = generatedPrompts
+    if (!finalGeneratedPrompts && selectedResponseStyle && selectedCommunicationTone && customPreferences) {
+      try {
+        const promptResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://www.thebargainb.com'}/api/onboarding/generate-prompt`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            selectedResponseStyle,
+            selectedCommunicationTone,
+            customPreferences,
+            userInfo: {
+              name,
+              country,
+              city,
+              language: preferredLanguage === 'nl' ? 'Dutch' : 'English',
+              stores: selectedStores.map((store: any) => typeof store === 'object' ? store.name : store).join(', '),
+              dietary: selectedDietary?.length ? selectedDietary.join(', ') : 'no specific dietary restrictions',
+              allergies: selectedAllergies?.length ? selectedAllergies.join(', ') : 'no known allergies'
+            }
+          })
+        })
+
+        const promptData = await promptResponse.json()
+        if (promptResponse.ok && promptData.success) {
+          finalGeneratedPrompts = promptData.data.prompts
+          console.log('✅ Generated personalized prompts for all agents')
+        } else {
+          console.warn('⚠️ Failed to generate prompts, continuing without them:', promptData.error)
+        }
+      } catch (promptError) {
+        console.warn('⚠️ Error generating prompts, continuing without them:', promptError)
+      }
     }
 
     const supabase = await createClient()
@@ -231,9 +271,9 @@ export async function POST(request: NextRequest) {
         : 'ah.nl',
       
       // Generated Personalized Prompts for AI Agents
-      supervisor_prompt: generatedPrompts?.supervisor || null,
-      promotion_agent_prompt: generatedPrompts?.promotionAgent || null,
-      grocery_search_agent_prompt: generatedPrompts?.grocerySearchAgent || null
+      supervisor_prompt: finalGeneratedPrompts?.supervisor || null,
+      promotion_agent_prompt: finalGeneratedPrompts?.promotionAgent || null,
+      grocery_search_agent_prompt: finalGeneratedPrompts?.grocerySearchAgent || null
     }
 
     let userProfile

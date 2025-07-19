@@ -216,42 +216,7 @@ export default function OnboardingPage() {
     try {
       setLoading(true)
 
-      // Generate personalized prompts for all agents
-      let generatedPrompts = null
-      try {
-        const promptResponse = await fetch('/api/onboarding/generate-prompt', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            selectedResponseStyle,
-            selectedCommunicationTone,
-            customPreferences,
-            userInfo: {
-              name,
-              country,
-              city,
-              language: currentLanguage === 'nl' ? 'Dutch' : 'English',
-              stores: selectedStores.map(store => store.name).join(', '),
-              dietary: selectedDietary?.length ? selectedDietary.join(', ') : 'no specific dietary restrictions',
-              allergies: selectedAllergies?.length ? selectedAllergies.join(', ') : 'no known allergies'
-            }
-          })
-        })
-
-        const promptData = await promptResponse.json()
-        if (promptResponse.ok && promptData.success) {
-          generatedPrompts = promptData.data.prompts
-          console.log('✅ Generated personalized prompts for all agents')
-        } else {
-          console.warn('⚠️ Failed to generate prompts, continuing without them:', promptData.error)
-        }
-      } catch (promptError) {
-        console.warn('⚠️ Error generating prompts, continuing without them:', promptError)
-      }
-
-      // Create user in database
+      // Create user in database (generate-prompt will be called internally)
       const response = await fetch('/api/onboarding/create-user', {
         method: 'POST',
         headers: {
@@ -271,8 +236,7 @@ export default function OnboardingPage() {
           customPreferences,
           selectedItems,
           selectedIntegrations,
-          preferredLanguage: currentLanguage,
-          generatedPrompts // Include the generated prompts
+          preferredLanguage: currentLanguage
         })
       })
 
@@ -291,8 +255,7 @@ export default function OnboardingPage() {
         city,
         selectedStores,
         selectedIntegrations,
-        language: currentLanguage,
-        generatedPrompts // Store prompts for potential future use
+        language: currentLanguage
       }))
 
       // Move to completion step
