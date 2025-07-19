@@ -219,7 +219,7 @@ export const groceryStores: GroceryStore[] = [
     id: "colruyt",
     name: "Colruyt",
     url: "colruyt.be",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/8/8b/Colruyt_logo.svg",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/c/cb/Colruyt_logo.svg",
     country: "BE"
   },
   {

@@ -43,7 +43,7 @@ const Step4GroceryStores: React.FC<Step4GroceryStoresProps> = (props) => {
 
   const handleBack = () => {
     onClose();
-    onBack();
+    // Don't call onBack() - just close the modal and stay on the current step
   };
 
   return (
