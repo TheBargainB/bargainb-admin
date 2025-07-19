@@ -30,12 +30,34 @@ const Step1UserInfo: React.FC<Step1UserInfoProps> = (props) => {
   const [checkingExisting, setCheckingExisting] = React.useState(false);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value);
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value);
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Only allow international format (starts with +)
+    if (value && !value.startsWith('+')) {
+      setErrors(prev => ({ ...prev, phone: "Please enter phone number in international format (e.g., +31612345678)" }));
+      return;
+    }
+    
+    // Clear phone error if format is correct
+    if (value.startsWith('+')) {
+      setErrors(prev => ({ ...prev, phone: undefined }));
+    }
+    
+    setPhone(value);
+  };
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value);
 
   const validatePhoneNumber = async (phoneNumber: string): Promise<boolean> => {
     try {
       setValidatingPhone(true);
+      
+      // Additional client-side validation for international format
+      if (!phoneNumber.startsWith('+')) {
+        setErrors(prev => ({ ...prev, phone: "Please enter phone number in international format (e.g., +31612345678)" }));
+        return false;
+      }
+      
       const response = await fetch('/api/onboarding/validate-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,6 +139,8 @@ const Step1UserInfo: React.FC<Step1UserInfoProps> = (props) => {
     
     if (!phone.trim()) {
       newErrors.phone = t.phoneRequired || "Phone number is required";
+    } else if (!phone.startsWith('+')) {
+      newErrors.phone = "Please enter phone number in international format (e.g., +31612345678)";
     }
     
     if (!email.trim()) {
@@ -223,7 +247,7 @@ const Step1UserInfo: React.FC<Step1UserInfoProps> = (props) => {
               type="tel"
               value={phone}
               onChange={handlePhoneChange}
-              placeholder={t.phonePlaceholders[0] || "Enter your phone number"}
+              placeholder="+31612345678"
               className={`h-11 sm:h-12 text-base transition-all duration-300 focus:scale-[1.02] bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-white/30 dark:border-gray-600/30 ${
                 currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
               } ${errors.phone ? 'border-red-500 ring-red-500/20' : 'focus:border-[#00B207] focus:ring-[#00B207]/20'}`}
@@ -248,7 +272,7 @@ const Step1UserInfo: React.FC<Step1UserInfoProps> = (props) => {
           <div className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${
             currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
           }`}>
-            {t.phoneHelper}
+            {t.phoneHelper || "Enter your phone number in international format (e.g., +31612345678)"}
           </div>
         </div>
 
