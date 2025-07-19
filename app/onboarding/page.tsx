@@ -141,6 +141,8 @@ export default function OnboardingPage() {
   useEffect(() => {
     const handleLanguageChange = (event: CustomEvent) => {
       setCurrentLanguage(event.detail.language)
+      // Clear errors when language changes to prevent stale error messages
+      setErrors({})
     }
     window.addEventListener('languageChange', handleLanguageChange as EventListener)
     return () => {

@@ -15,16 +15,16 @@ export async function POST(request: NextRequest) {
     const { email } = waitlistSchema.parse(body)
     const normalizedEmail = email.toLowerCase().trim()
 
-    // Check if email already exists in CRM
+    // Check if email already exists in user_profiles
     const { data: existingProfile } = await (supabaseAdmin as any)
-      .from('crm_profiles')
+      .from('user_profiles')
       .select('id, lifecycle_stage')
       .eq('email', normalizedEmail)
       .single()
 
     if (existingProfile) {
-      // Email already exists in CRM
-      if (existingProfile.lifecycle_stage === 'prospect') {
+      // Email already exists in user_profiles
+      if (existingProfile.lifecycle_stage === 'waitlist') {
         return NextResponse.json({
           success: true,
           message: 'You\'re already on our waitlist!',
@@ -39,103 +39,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create a placeholder WhatsApp contact for email-only signup
+    // Create a placeholder WhatsApp JID for email-only signup
     const placeholderJid = `waitlist_${Date.now()}_${Math.random().toString(36).substring(7)}@email.waitlist`
     
-    const { data: whatsappContact, error: whatsappError } = await (supabaseAdmin as any)
-      .from('whatsapp_contacts')
+    // Create user profile with integrated WhatsApp data
+    const { data: userProfile, error: profileError } = await (supabaseAdmin as any)
+      .from('user_profiles')
       .insert({
-        phone_number: `waitlist_${Date.now()}`, // Unique placeholder
-        whatsapp_jid: placeholderJid,
-        push_name: 'Waitlist User',
-        display_name: normalizedEmail,
-        whatsapp_status: 'waitlist',
-        is_active: true,
-        raw_contact_data: {
-          source: 'waitlist_signup',
-          signup_method: 'email_only',
-          original_email: normalizedEmail
-        }
-      })
-      .select()
-      .single()
-
-    if (whatsappError) {
-      console.error('Error creating WhatsApp contact for waitlist:', whatsappError)
-      return NextResponse.json(
-        { success: false, error: 'Failed to process waitlist signup' },
-        { status: 500 }
-      )
-    }
-
-    // Create CRM profile linked to the WhatsApp contact
-    const { data: crmProfile, error: crmError } = await (supabaseAdmin as any)
-      .from('crm_profiles')
-      .insert({
-        whatsapp_contact_id: whatsappContact.id,
         email: normalizedEmail,
         full_name: null, // Will be filled when they provide more info
         preferred_name: normalizedEmail.split('@')[0], // Use email prefix as preferred name
-        lifecycle_stage: 'prospect', // Waitlist users start as prospects
-        customer_since: new Date().toISOString(),
+        lifecycle_stage: 'waitlist', // Waitlist users have their own lifecycle stage
+        onboarding_completed: false,
+        assistant_created: false,
+        ai_introduction_sent: false,
+        whatsapp_jid: placeholderJid,
+        push_name: 'Waitlist User',
+        display_name: normalizedEmail,
+        whatsapp_raw_data: {
+          source: 'waitlist_signup',
+          signup_method: 'email_only',
+          original_email: normalizedEmail
+        },
+        country_code: 'NL',
+        language_code: 'nl',
+        dietary_restrictions: null,
+        budget_level: null,
+        household_size: 1,
+        store_preference: null,
         preferred_stores: [],
-        shopping_persona: null,
-        dietary_restrictions: [],
-        engagement_score: 10, // Low score for email-only signup
-        total_conversations: 0,
-        total_messages: 0,
-        tags: ['waitlist_signup', 'email_only'],
-        notes: 'Signed up for waitlist via website'
+        store_websites: null
       })
       .select()
       .single()
 
-    if (crmError) {
-      console.error('Error creating CRM profile for waitlist:', crmError)
-      // Clean up the WhatsApp contact if CRM profile creation fails
-      await (supabaseAdmin as any)
-        .from('whatsapp_contacts')
-        .delete()
-        .eq('id', whatsappContact.id)
-      
+    if (profileError) {
+      console.error('Error creating user profile for waitlist:', profileError)
       return NextResponse.json(
         { success: false, error: 'Failed to process waitlist signup' },
         { status: 500 }
       )
-    }
-
-    // Create a customer event to track the waitlist signup
-    try {
-      await (supabaseAdmin as any)
-        .from('customer_events')
-        .insert({
-          crm_profile_id: crmProfile.id,
-          event_type: 'waitlist_signup',
-          event_description: 'User signed up for the waitlist via website',
-          event_data: {
-            email: normalizedEmail,
-            signup_source: 'website_waitlist',
-            user_agent: request.headers.get('user-agent'),
-            ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
-          }
-        })
-    } catch (eventError) {
-      console.warn('Failed to create customer event:', eventError)
-      // Don't fail the request if event tracking fails
     }
 
     console.log('✅ New waitlist signup:', {
       email: normalizedEmail,
-      contactId: whatsappContact.id,
-      profileId: crmProfile.id
+      profileId: userProfile.id
     })
 
     return NextResponse.json({
       success: true,
       message: 'Successfully joined the waitlist!',
       data: {
-        profileId: crmProfile.id,
-        lifecycle_stage: crmProfile.lifecycle_stage
+        profileId: userProfile.id,
+        lifecycle_stage: userProfile.lifecycle_stage
       }
     })
 
@@ -164,10 +120,9 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const { count } = await (supabaseAdmin as any)
-      .from('crm_profiles')
+      .from('user_profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('lifecycle_stage', 'prospect')
-      .contains('tags', ['waitlist_signup'])
+      .eq('lifecycle_stage', 'waitlist')
 
     return NextResponse.json({
       success: true,

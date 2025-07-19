@@ -81,12 +81,11 @@ export default function EarlyAccessPage() {
 
   const t = getTranslation(currentLanguage)
 
-  // Dynamic validation schema that responds to language changes
+  // Modern validation schema that accepts international phone numbers
   const earlyAccessSchema = z.object({
     phoneNumber: z.string()
       .min(8, t.validation.phoneLength)
-      .max(8, t.validation.phoneLength)
-      .regex(/^6[0-9]{7}$/, t.validation.phoneFormat)
+      .regex(/^\+[1-9]\d{1,14}$/, 'Please enter a valid international phone number')
   })
 
   type EarlyAccessFormData = z.infer<typeof earlyAccessSchema>
@@ -128,19 +127,27 @@ export default function EarlyAccessPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phoneNumber: `+316${data.phoneNumber}`,
+          phoneNumber: data.phoneNumber,
         }),
       })
 
-      if (response.ok) {
-        toast.success(t.toast.success.title, {
-          description: t.toast.success.description
-        })
+      const result = await response.json()
+
+      if (result.success) {
+        if (result.alreadyExists) {
+          toast.success(t.toast.success.title, {
+            description: result.message
+          })
+        } else {
+          toast.success(t.toast.success.title, {
+            description: t.toast.success.description
+          })
+        }
         reset()
         setPhoneNumber('')
       } else {
         toast.error(t.toast.error.title, {
-          description: t.toast.error.description
+          description: result.error || t.toast.error.description
         })
       }
     } catch (error) {
@@ -157,7 +164,7 @@ export default function EarlyAccessPage() {
     return null
   }
 
-  // Dynamic benefits list based on language
+  // International benefits list
   const benefits = [
     t.hero.description,
     currentLanguage === 'nl' ? 'Werkt met supermarkten bij jou in de buurt' : 
@@ -257,22 +264,22 @@ export default function EarlyAccessPage() {
                 ))}
               </div>
 
-              {/* Beautiful Form using Aceternity UI */}
+              {/* Modern Form */}
               <div className="mt-14">
                 <div className="space-y-6">
                   
-                  {/* Beautiful Phone Input */}
+                  {/* Modern Phone Input */}
                   <BeautifulPhoneInput
                     value={phoneNumber}
                     onChange={(value) => {
                       setPhoneNumber(value)
                       setValue('phoneNumber', value)
-                      if (value.length === 8) {
+                      if (value.length >= 8) {
                         trigger('phoneNumber')
                       }
                     }}
                     onSubmit={() => {
-                      if (phoneNumber && /^6[0-9]{7}$/.test(phoneNumber)) {
+                      if (phoneNumber && phoneNumber.length >= 8) {
                         handleSubmit(handleEarlyAccessSubmit)()
                       }
                     }}
@@ -280,20 +287,11 @@ export default function EarlyAccessPage() {
                     language={currentLanguage}
                   />
                     
-                  <div className="text-xs text-muted-foreground text-right">
-                    {currentLanguage === 'nl' ? 'Beperkte beschikbaarheid! Slechts 100 plekken over.' : 
-                     currentLanguage === 'en' ? 'Limited availability! Only 100 spots left.' :
-                     currentLanguage === 'de' ? 'Begrenzte Verfügbarkeit! Nur noch 100 Plätze.' :
-                     currentLanguage === 'fr' ? 'Disponibilité limitée! Seulement 100 places restantes.' :
-                     currentLanguage === 'it' ? 'Disponibilità limitata! Solo 100 posti rimasti.' :
-                     '¡Disponibilidad limitada! Solo quedan 100 lugares.'}
-                  </div>
-                  
-                  {/* Beautiful Shimmer Button */}
+                  {/* Modern Shimmer Button */}
                   <ShimmerButton
                     onClick={() => handleSubmit(handleEarlyAccessSubmit)()}
-                    disabled={isSubmitting || !phoneNumber || phoneNumber.length !== 8}
-                    className="max-w-max py-4 text-lg rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50"
+                    disabled={isSubmitting || !phoneNumber || phoneNumber.length < 8}
+                    className="w-full py-4 text-lg rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold disabled:opacity-50"
                     shimmerColor="#ffffff40"
                     background="hsl(var(--primary))"
                   >

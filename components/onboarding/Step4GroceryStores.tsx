@@ -89,21 +89,21 @@ const groceryStores = [
     id: "walmart",
     name: "Walmart",
     url: "walmart.com",
-    logo: "https://logos-world.net/wp-content/uploads/2020/09/Walmart-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/c/ca/Walmart_logo.svg",
     country: "US"
   },
   {
     id: "target",
     name: "Target",
     url: "target.com",
-    logo: "https://logos-world.net/wp-content/uploads/2020/04/Target-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/9/9a/Target_logo.svg",
     country: "US"
   },
   {
     id: "kroger",
     name: "Kroger",
     url: "kroger.com",
-    logo: "https://logos-world.net/wp-content/uploads/2021/02/Kroger-Logo.png",
+    logo: "https://1000logos.net/wp-content/uploads/2017/08/Logo-Kroger.png",
     country: "US"
   },
   {
@@ -117,56 +117,56 @@ const groceryStores = [
     id: "whole-foods",
     name: "Whole Foods Market",
     url: "wholefoodsmarket.com",
-    logo: "https://logos-world.net/wp-content/uploads/2020/05/Whole-Foods-Market-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/a/a2/Whole_Foods_Market_201x_logo.svg",
     country: "US"
   },
   {
     id: "costco",
     name: "Costco",
     url: "costco.com",
-    logo: "https://logos-world.net/wp-content/uploads/2020/09/Costco-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/5/59/Costco_Wholesale_logo_2010-10-26.svg",
     country: "US"
   },
   {
     id: "sams-club",
     name: "Sam's Club",
     url: "samsclub.com",
-    logo: "https://logos-world.net/wp-content/uploads/2020/09/Sams-Club-Logo.png",
+    logo: "https://1000logos.net/wp-content/uploads/2021/09/Sams-Club-Logo.png",
     country: "US"
   },
   {
     id: "publix",
     name: "Publix",
     url: "publix.com",
-    logo: "https://logos-world.net/wp-content/uploads/2022/01/Publix-Logo.png",
+    logo: "https://1000logos.net/wp-content/uploads/2019/08/publix_logo.png",
     country: "US"
   },
   {
     id: "heb",
     name: "H-E-B",
     url: "heb.com",
-    logo: "https://logos-world.net/wp-content/uploads/2022/01/HEB-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/en/a/a1/H-E-B_logo.svg",
     country: "US"
   },
   {
     id: "wegmans",
     name: "Wegmans",
     url: "wegmans.com",
-    logo: "https://logos-world.net/wp-content/uploads/2022/01/Wegmans-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/d/de/WegmansLogo.svg",
     country: "US"
   },
   {
     id: "giant",
     name: "Giant Food",
     url: "giantfood.com",
-    logo: "https://logos-world.net/wp-content/uploads/2022/01/Giant-Food-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/1/19/Giant_Food_logo.svg",
     country: "US"
   },
   {
     id: "stop-shop",
     name: "Stop & Shop",
     url: "stopandshop.com",
-    logo: "https://logos-world.net/wp-content/uploads/2022/01/Stop-Shop-Logo.png",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/0/06/Stop_%26_Shop_Logo.svg",
     country: "US"
   }
 ];

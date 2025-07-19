@@ -457,7 +457,7 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
       {/* Premade Lists Modal */}
       <Dialog open={isPreMadeModalOpen} onOpenChange={setIsPreMadeModalOpen}>
-        <DialogContent className="max-w-5xl w-full mx-2 sm:mx-4 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-xl sm:rounded-2xl overflow-hidden">
+        <DialogContent className="max-w-5xl w-full mx-2 sm:mx-4 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col">
           <DialogHeader className="p-3 sm:p-6 pb-2 sm:pb-4 flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
               {t.onboarding.step6.quickStartLists}
@@ -518,12 +518,21 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
               })}
             </div>
           </div>
+          <div className="p-3 sm:p-6 pt-2 sm:pt-4 flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50">
+            <Button
+              onClick={() => setIsPreMadeModalOpen(false)}
+              className="w-full bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md touch-manipulation shadow-lg"
+              style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
+            >
+              {t.onboarding?.common?.close || "Close"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* AI Analysis Modal */}
       <Dialog open={isAIModalOpen} onOpenChange={setIsAIModalOpen}>
-        <DialogContent className="max-w-5xl w-full mx-2 sm:mx-4 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-xl sm:rounded-2xl overflow-hidden">
+        <DialogContent className="max-w-5xl w-full mx-2 sm:mx-4 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] bg-white/90 dark:bg-[#232B23]/90 backdrop-blur-md border border-white/20 dark:border-gray-700/30 rounded-xl sm:rounded-2xl overflow-hidden flex flex-col">
           <DialogHeader className="p-3 sm:p-6 pb-2 sm:pb-4 flex-shrink-0">
             <DialogTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
               {t.onboarding.step6.smartAnalysis}
@@ -645,6 +654,15 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="p-3 sm:p-6 pt-2 sm:pt-4 flex-shrink-0 border-t border-gray-200/50 dark:border-gray-700/50">
+            <Button
+              onClick={() => setIsAIModalOpen(false)}
+              className="w-full bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md touch-manipulation shadow-lg"
+              style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
+            >
+              {t.onboarding?.common?.close || "Close"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

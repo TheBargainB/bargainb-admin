@@ -138,7 +138,7 @@ const translations = {
     notifyMessage: "¡Te notificaremos en cuanto se lance BargainB!",
     peopleWaitlist: "personas en la lista de espera",
     successTitle: "🎉 ¡Bienvenido a BargainB!",
-    successDesc: "¡Ahora eres parte del equipo de lanzamiento exclusivo!",
+    successDesc: "¡Ahora eres parte del equipo de lancio exclusivo!",
     errorTitle: "¡Ups! Algo salió mal",
     errorDesc: "Inténtalo de nuevo o contacta al soporte si el problema persiste.",
     emailError: "Ingresa una dirección de correo válida."
@@ -192,7 +192,40 @@ export default function PublicHomePage() {
   const [currentLanguage, setCurrentLanguage] = useState<keyof typeof translations>("nl")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [timeLeft, setTimeLeft] = useState<CountdownTime>({ days: 42, hours: 18, minutes: 37, seconds: 23 })
+  const [mounted, setMounted] = useState(false)
+  
+  // Calculate time since 5pm yesterday
+  const getInitialTime = (): CountdownTime => {
+    const now = new Date()
+    const yesterday5pm = new Date()
+    yesterday5pm.setDate(yesterday5pm.getDate() - 1)
+    yesterday5pm.setHours(17, 0, 0, 0) // 5pm yesterday
+    
+    const timeDiff = now.getTime() - yesterday5pm.getTime()
+    const totalSeconds = Math.floor(timeDiff / 1000)
+    
+    const days = Math.floor(totalSeconds / (24 * 60 * 60))
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60))
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60)
+    const seconds = totalSeconds % 60
+    
+    // Calculate remaining time from 90 days
+    const totalRemainingSeconds = (90 * 24 * 60 * 60) - totalSeconds
+    
+    const remainingDays = Math.floor(totalRemainingSeconds / (24 * 60 * 60))
+    const remainingHours = Math.floor((totalRemainingSeconds % (24 * 60 * 60)) / (60 * 60))
+    const remainingMinutes = Math.floor((totalRemainingSeconds % (60 * 60)) / 60)
+    const remainingSeconds = totalRemainingSeconds % 60
+    
+    return {
+      days: Math.max(0, remainingDays),
+      hours: Math.max(0, remainingHours),
+      minutes: Math.max(0, remainingMinutes),
+      seconds: Math.max(0, remainingSeconds)
+    }
+  }
+  
+  const [timeLeft, setTimeLeft] = useState<CountdownTime>({ days: 89, hours: 19, minutes: 0, seconds: 0 })
   const [jumpEffect, setJumpEffect] = useState<{ [key: string]: boolean }>({})
   const [waitlistCount, setWaitlistCount] = useState<number>(9847) // Default fallback number
 
@@ -210,6 +243,12 @@ export default function PublicHomePage() {
       email: "",
     },
   })
+
+  // Set mounted state and initialize countdown on client
+  useEffect(() => {
+    setMounted(true)
+    setTimeLeft(getInitialTime())
+  }, [])
 
   // Fetch waitlist count on mount
   useEffect(() => {
@@ -244,61 +283,84 @@ export default function PublicHomePage() {
   }, [])
 
   useEffect(() => {
+    if (!mounted) return // Don't start timer until mounted
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
-        // Random fluctuations instead of actual countdown
-        const fluctuation = () => Math.floor(Math.random() * 7) - 3 // -3 to +3
+        // Real countdown from 90 days
+        let newDays = prev.days
+        let newHours = prev.hours
+        let newMinutes = prev.minutes
+        let newSeconds = prev.seconds
 
-        let newDays = prev.days + (Math.random() < 0.1 ? fluctuation() : 0)
-        let newHours = prev.hours + (Math.random() < 0.2 ? fluctuation() : -1)
-        let newMinutes = prev.minutes + (Math.random() < 0.3 ? fluctuation() : -1)
-        let newSeconds = prev.seconds + (Math.random() < 0.8 ? fluctuation() : -1)
-
-        // Handle rollovers and keep numbers in realistic ranges
-        if (newSeconds < 0) {
+        // Decrease seconds
+        if (newSeconds > 0) {
+          newSeconds -= 1
+        } else {
           newSeconds = 59
-          newMinutes -= 1
+          // Decrease minutes
+          if (newMinutes > 0) {
+            newMinutes -= 1
+          } else {
+            newMinutes = 59
+            // Decrease hours
+            if (newHours > 0) {
+              newHours -= 1
+            } else {
+              newHours = 23
+              // Decrease days
+              if (newDays > 0) {
+                newDays -= 1
+              }
+            }
+          }
         }
-        if (newSeconds > 59) newSeconds = 0
 
-        if (newMinutes < 0) {
-          newMinutes = 59
-          newHours -= 1
-        }
-        if (newMinutes > 59) newMinutes = 0
-
-        if (newHours < 0) {
-          newHours = 23
-          newDays -= 1
-        }
-        if (newHours > 23) newHours = 0
-
-        // Keep days in a reasonable range
-        if (newDays < 20) newDays = 20 + Math.floor(Math.random() * 10)
-        if (newDays > 60) newDays = 40 + Math.floor(Math.random() * 10)
-
-        return {
+        const newTime = {
           days: Math.max(0, newDays),
           hours: Math.max(0, newHours),
           minutes: Math.max(0, newMinutes),
           seconds: Math.max(0, newSeconds),
         }
-      })
 
-      // Random jump effects
-      const units = ["days", "hours", "minutes", "seconds"]
-      units.forEach((unit) => {
-        if (Math.random() < 0.08) {
-          setJumpEffect((prev) => ({ ...prev, [unit]: true }))
+        // Trigger jump effects only when numbers change
+        if (newTime.seconds !== prev.seconds) {
+          // Only animate seconds when it goes from 00 to 59 (minute change)
+          if (prev.seconds === 0 && newTime.seconds === 59) {
+            setJumpEffect((prev) => ({ ...prev, seconds: true }))
+            setTimeout(() => {
+              setJumpEffect((prev) => ({ ...prev, seconds: false }))
+            }, 400)
+          }
+        }
+        
+        if (newTime.minutes !== prev.minutes) {
+          setJumpEffect((prev) => ({ ...prev, minutes: true }))
           setTimeout(() => {
-            setJumpEffect((prev) => ({ ...prev, [unit]: false }))
+            setJumpEffect((prev) => ({ ...prev, minutes: false }))
           }, 400)
         }
+        
+        if (newTime.hours !== prev.hours) {
+          setJumpEffect((prev) => ({ ...prev, hours: true }))
+          setTimeout(() => {
+            setJumpEffect((prev) => ({ ...prev, hours: false }))
+          }, 400)
+        }
+        
+        if (newTime.days !== prev.days) {
+          setJumpEffect((prev) => ({ ...prev, days: true }))
+          setTimeout(() => {
+            setJumpEffect((prev) => ({ ...prev, days: false }))
+          }, 400)
+        }
+
+        return newTime
       })
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [])
+  }, [mounted])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
@@ -364,7 +426,7 @@ export default function PublicHomePage() {
             textShadow: "0 0 20px hsla(var(--primary), 0.3)",
           }}
         >
-          {value.toString().padStart(2, "0")}
+          {mounted ? value.toString().padStart(2, "0") : "00"}
         </div>
         <div className="min-h-[16px] md:min-h-[18px] lg:min-h-[20px] flex items-center justify-center">
           <div className="font-[family-name:var(--font-inter)] text-xs md:text-sm lg:text-base font-medium text-[#7A7A7A] tracking-wider text-center">
@@ -501,22 +563,7 @@ export default function PublicHomePage() {
             </div>
           </div>
 
-          {/* User Avatars and Count */}
-          {/* <div className="min-h-[35px] md:min-h-[40px] flex items-center justify-center gap-2 md:gap-3 mb-4 md:mb-6 px-4">
-            <div className="flex -space-x-1 md:-space-x-2">
-              {userAvatars.map((user, index) => (
-                <div
-                  key={index}
-                  className={`w-6 h-6 md:w-8 md:h-8 ${user.bg} rounded-full flex items-center justify-center text-white text-xs font-semibold border-2 border-background`}
-                >
-                  {user.initials}
-                </div>
-              ))}
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground font-medium">
-                              <span className="font-bold text-foreground">{waitlistCount.toLocaleString()}+</span> {t.peopleWaitlist}
-            </p>
-          </div> */}
+       
 
           {/* Social Links */}
           <div className="flex items-center justify-center gap-3 md:gap-4 mb-4 md:mb-6 mt-28">

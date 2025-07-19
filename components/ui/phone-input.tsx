@@ -8,7 +8,6 @@ type LanguageCode = 'nl' | 'en' | 'de' | 'fr' | 'it' | 'es';
 
 const phoneInputTranslations: Record<LanguageCode, {
   placeholders: string[];
-  countryName: string;
   floatingLabel: string;
   validMessage: string;
   helperText: string;
@@ -16,81 +15,75 @@ const phoneInputTranslations: Record<LanguageCode, {
 }> = {
   nl: {
     placeholders: [
-      "Voer je mobiele nummer in...",
-      "61234567 (8 cijfers)",
-      "Start met 6, bijvoorbeeld 61234567",
-      "Nederlandse mobiele nummer"
+      "Voer je telefoonnummer in...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+49 1751234567"
     ],
-    countryName: "Nederland",
-    floatingLabel: "Mobiel nummer",
-    validMessage: "Geldig Nederlands mobiel nummer",
-    helperText: "Nederlandse mobiele nummers beginnen met 6 en hebben 8 cijfers",
-    errorMessage: "Voer 8 cijfers in die beginnen met 6"
+    floatingLabel: "Telefoonnummer",
+    validMessage: "Geldig internationaal telefoonnummer",
+    helperText: "Inclusief landcode, bijvoorbeeld +31 612345678",
+    errorMessage: "Voer een geldig internationaal nummer in"
   },
   en: {
     placeholders: [
-      "Enter your mobile number...",
-      "6 12345678 (8 digits)",
-      "Start with 6, e.g. 61234567",
-      "Dutch mobile number"
+      "Enter your phone number...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+49 1751234567"
     ],
-    countryName: "Netherlands",
-    floatingLabel: "Mobile number",
-    validMessage: "Valid Dutch mobile number",
-    helperText: "Dutch mobile numbers start with 6 and have 8 digits",
-    errorMessage: "Enter 8 digits starting with 6"
+    floatingLabel: "Phone number",
+    validMessage: "Valid mobile phone number",
+    helperText: "Include country code, e.g. +31612345678",
+    errorMessage: "Enter a valid international number"
   },
   de: {
     placeholders: [
-      "Handynummer eingeben...",
-      "6 12345678 (8 Ziffern)",
-      "Beginnt mit 6, z.B. 61234567",
-      "Niederländische Handynummer"
+      "Telefonnummer eingeben...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+49 1751234567"
     ],
-    countryName: "Niederlande",
-    floatingLabel: "Handynummer",
-    validMessage: "Gültige niederländische Handynummer",
-    helperText: "Niederländische Handynummern beginnen mit 6 und haben 8 Ziffern",
-    errorMessage: "8 Ziffern eingeben, die mit 6 beginnen"
+    floatingLabel: "Telefonnummer",
+    validMessage: "Gültige internationale Telefonnummer",
+    helperText: "Mit Ländercode, z.B. +49 1751234567",
+    errorMessage: "Gültige internationale Nummer eingeben"
   },
   fr: {
     placeholders: [
-      "Entrez votre numéro mobile...",
-      "6 12345678 (8 chiffres)",
-      "Commence par 6, ex. 61234567",
-      "Numéro mobile néerlandais"
+      "Entrez votre numéro de téléphone...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+33 123456789"
     ],
-    countryName: "Pays-Bas",
-    floatingLabel: "Numéro mobile",
-    validMessage: "Numéro mobile néerlandais valide",
-    helperText: "Les numéros mobiles néerlandais commencent par 6 et ont 8 chiffres",
-    errorMessage: "Entrez 8 chiffres commençant par 6"
+    floatingLabel: "Numéro de téléphone",
+    validMessage: "Numéro de téléphone international valide",
+    helperText: "Avec indicatif pays, ex. +33 123456789",
+    errorMessage: "Entrez un numéro international valide"
   },
   it: {
     placeholders: [
-      "Inserisci il tuo numero mobile...",
-      "6 12345678 (8 cifre)",
-      "Inizia con 6, es. 61234567",
-      "Numero mobile olandese"
+      "Inserisci il tuo numero di telefono...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+39 3123456789"
     ],
-    countryName: "Paesi Bassi",
-    floatingLabel: "Numero mobile",
-    validMessage: "Numero mobile olandese valido",
-    helperText: "I numeri mobili olandesi iniziano con 6 e hanno 8 cifre",
-    errorMessage: "Inserisci 8 cifre che iniziano con 6"
+    floatingLabel: "Numero di telefono",
+    validMessage: "Numero di telefono internazionale valido",
+    helperText: "Con prefisso paese, es. +39 3123456789",
+    errorMessage: "Inserisci un numero internazionale valido"
   },
   es: {
     placeholders: [
-      "Ingresa tu número móvil...",
-      "6 12345678 (8 dígitos)",
-      "Empieza con 6, ej. 61234567",
-      "Número móvil holandés"
+      "Ingresa tu número de teléfono...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+34 123456789"
     ],
-    countryName: "Países Bajos",
-    floatingLabel: "Número móvil",
-    validMessage: "Número móvil holandés válido",
-    helperText: "Los números móviles holandeses empiezan con 6 y tienen 8 dígitos",
-    errorMessage: "Ingresa 8 dígitos que empiecen con 6"
+    floatingLabel: "Número de teléfono",
+    validMessage: "Número de teléfono internacional válido",
+    helperText: "Con código de país, ej. +34 123456789",
+    errorMessage: "Ingresa un número internacional válido"
   }
 };
 
@@ -100,7 +93,7 @@ export const BeautifulPhoneInput = ({
   onSubmit,
   className,
   disabled = false,
-  language = 'nl',
+  language = 'en',
   ...props
 }: {
   value: string;
@@ -153,133 +146,122 @@ export const BeautifulPhoneInput = ({
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value.replace(/\D/g, '').slice(0, 8);
+    let newValue = e.target.value;
+    
+    // Allow + at the beginning, numbers, spaces, hyphens, and parentheses
+    newValue = newValue.replace(/[^+\d\s\-()]/g, '');
+    
+    // Ensure + is only at the beginning
+    if (newValue.includes('+') && newValue.indexOf('+') > 0) {
+      newValue = newValue.replace(/\+/g, '');
+      newValue = '+' + newValue;
+    }
+    
+    // Limit length to 20 characters
+    newValue = newValue.slice(0, 20);
+    
     onChange(newValue);
   };
 
-  const formatDisplayValue = (val: string) => {
-    if (!val) return "";
-    // Format as: 6 1234 567 or similar
-    if (val.length <= 2) return val;
-    if (val.length <= 6) return `${val.slice(0, 1)} ${val.slice(1)}`;
-    return `${val.slice(0, 1)} ${val.slice(1, 5)} ${val.slice(5)}`;
-  };
-
-  const isValid = value.length === 8 && /^6[0-9]{7}$/.test(value);
+  // International phone number validation
+  const isValid = /^\+[1-9]\d{1,14}$/.test(value.replace(/[\s\-()]/g, '')) && value.length >= 8;
 
   return (
     <div className="w-full relative">
-      <div className="flex items-center gap-4">
-        {/* Country Code Display */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground border border-gray-300 h-16 rounded-2xl px-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-4 bg-gradient-to-b from-red-500 via-white to-blue-500 rounded-sm shadow-sm" />
-            <span className="font-medium hidden lg:flex">{t.countryName}</span>
-            <span className="text-foreground font-semibold">+31</span>
-          </div>
-        </div>
-
-        {/* Beautiful Input Container */}
-        <div
+      {/* Beautiful Input Container */}
+      <div
+        className={cn(
+          "w-full relative bg-white dark:bg-zinc-800 h-16 rounded-2xl overflow-hidden transition-all duration-300",
+          "shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]",
+          "hover:shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-1px_rgba(0,0,0,0.06)]",
+          isFocused && "ring-2 ring-primary ring-opacity-50 shadow-lg",
+          isValid && "ring-2 ring-green-500 ring-opacity-50",
+          className
+        )}
+      >
+        {/* Main Input */}
+        <input
+          ref={inputRef}
+          type="tel"
+          value={value}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          disabled={disabled}
           className={cn(
-            "w-full relative bg-white dark:bg-zinc-800 h-16 rounded-2xl overflow-hidden transition-all duration-300",
-            "shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]",
-            "hover:shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-1px_rgba(0,0,0,0.06)]",
-            isFocused && "ring-2 ring-primary ring-opacity-50 shadow-lg",
-            isValid && "ring-2 ring-green-500 ring-opacity-50",
-            className
+            "w-full h-full bg-transparent border-none outline-none text-xl font-medium",
+            "text-black dark:text-white px-6 py-4",
+            "placeholder:text-transparent",
+            disabled && "cursor-not-allowed opacity-50"
           )}
-        >
-          {/* Main Input */}
-          <input
-            ref={inputRef}
-            type="tel"
-            value={value}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            disabled={disabled}
-            className={cn(
-              "w-full h-full bg-transparent border-none outline-none text-xl font-medium",
-              "text-black dark:text-white px-6 py-4 pl-16",
-              "placeholder:text-transparent",
-              disabled && "cursor-not-allowed opacity-50"
-            )}
-            maxLength={8}
-            {...props}
-          />
+          maxLength={20}
+          {...props}
+        />
 
-          {/* Prefix Display */}
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="flex items-center gap-1">
-              <span className="text-xl font-bold text-primary">6</span>
-            </div>
-          </div>
-
-          {/* Animated Placeholder */}
-          <div className="absolute inset-0 flex items-center pointer-events-none pl-20">
-            <AnimatePresence mode="wait">
-              {!value && !isFocused && (
-                <motion.p
-                  initial={{ y: 5, opacity: 0 }}
-                  key={`current-placeholder-${currentPlaceholder}`}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -15, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "linear" }}
-                  className="text-neutral-500 dark:text-zinc-500 text-lg font-normal truncate w-full"
-                >
-                  {placeholders[currentPlaceholder]}
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Floating Label */}
-          <AnimatePresence>
-            {(isFocused || value) && (
-              <motion.label
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2 }}
-                className="absolute top-2 left-6 text-xs font-medium text-primary"
+        {/* Animated Placeholder */}
+        <div className="absolute inset-0 flex items-center pointer-events-none pl-6">
+          <AnimatePresence mode="wait">
+            {!value && !isFocused && (
+              <motion.p
+                initial={{ y: 5, opacity: 0 }}
+                key={`current-placeholder-${currentPlaceholder}`}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -15, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "linear" }}
+                className="text-neutral-500 dark:text-zinc-500 text-lg font-normal truncate w-full"
               >
-                {t.floatingLabel}
-              </motion.label>
+                {placeholders[currentPlaceholder]}
+              </motion.p>
             )}
           </AnimatePresence>
+        </div>
 
-          {/* Validation Indicator */}
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <AnimatePresence>
-              {value.length > 0 && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                    isValid 
-                      ? "bg-green-500 text-white" 
-                      : value.length > 0 
-                      ? "bg-orange-500 text-white" 
-                      : "bg-gray-300"
-                  )}
-                >
-                  {isValid ? (
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <span className="text-sm font-bold">{value.length}</span>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        {/* Floating Label */}
+        <AnimatePresence>
+          {(isFocused || value) && (
+            <motion.label
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="absolute top-2 left-6 text-xs font-medium text-primary"
+            >
+              {t.floatingLabel}
+            </motion.label>
+          )}
+        </AnimatePresence>
+
+        {/* Validation Indicator */}
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          <AnimatePresence>
+            {value.length > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
+                  isValid 
+                    ? "bg-green-500 text-white" 
+                    : value.length > 0 
+                    ? "bg-orange-500 text-white" 
+                    : "bg-gray-300"
+                )}
+              >
+                {isValid ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span className="text-sm font-bold">{value.length}</span>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
+
       {/* Helper Text */}
       <div className="mt-3 text-sm">
         <AnimatePresence mode="wait">

@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { z } from 'zod'
 
-// Validation schema for early access signup
+// Validation schema for early access signup - now accepts international phone numbers
 const earlyAccessSchema = z.object({
   phoneNumber: z.string()
-    .min(10, 'Phone number must be at least 10 characters')
-    .max(15, 'Phone number must be at most 15 characters')
-    .regex(/^\+31[0-9]{8,11}$/, 'Invalid Dutch phone number format')
+    .min(8, 'Phone number must be at least 8 characters')
+    .max(20, 'Phone number must be at most 20 characters')
+    .regex(/^\+[1-9]\d{1,14}$/, 'Please enter a valid international phone number')
 })
 
 export async function POST(request: NextRequest) {
@@ -17,140 +17,84 @@ export async function POST(request: NextRequest) {
     // Validate the phone number
     const { phoneNumber } = earlyAccessSchema.parse(body)
 
-    // Check if phone number already exists in CRM by looking for any CRM profile with this phone
-    // We'll check via WhatsApp contacts first
-    const { data: existingContact } = await (supabaseAdmin as any)
-      .from('whatsapp_contacts')
-      .select('id')
+    // Check if phone number already exists in user_profiles
+    const { data: existingProfile } = await (supabaseAdmin as any)
+      .from('user_profiles')
+      .select('id, lifecycle_stage')
       .eq('phone_number', phoneNumber)
       .single()
 
-    let contactId: string
-
-    if (existingContact) {
-      // Check if there's already a CRM profile for this contact
-      const { data: existingProfile } = await (supabaseAdmin as any)
-        .from('crm_profiles')
-        .select('id, lifecycle_stage, tags')
-        .eq('whatsapp_contact_id', existingContact.id)
-        .single()
-
-      if (existingProfile) {
-        // Check if they're already in early access by looking at tags
-        const isEarlyAccess = existingProfile.tags && existingProfile.tags.includes('early_access_signup')
-        
-        if (isEarlyAccess) {
-          return NextResponse.json({
-            success: true,
-            message: 'Je staat al op de early access lijst!',
-            alreadyExists: true
-          })
-        } else {
-          return NextResponse.json({
-            success: true,
-            message: 'Dit telefoonnummer is al in ons systeem!',
-            alreadyExists: true
-          })
-        }
-      }
-
-      // Contact exists but no CRM profile, use existing contact
-      contactId = existingContact.id
-    } else {
-      // Create a placeholder WhatsApp contact for phone-only signup
-      const placeholderJid = `early_${Date.now()}_${Math.random().toString(36).substring(7)}@phone.early`
-      
-      const { data: whatsappContact, error: whatsappError } = await (supabaseAdmin as any)
-        .from('whatsapp_contacts')
-        .insert({
-          phone_number: phoneNumber,
-          whatsapp_jid: placeholderJid,
-          push_name: 'Early Access User',
-          display_name: phoneNumber,
-          whatsapp_status: 'early_access',
-          is_active: true,
-          raw_contact_data: {
-            source: 'early_access_signup',
-            signup_method: 'phone_only',
-            original_phone: phoneNumber
-          }
+    if (existingProfile) {
+      // Check if they're already in early access
+      if (existingProfile.lifecycle_stage === 'early_access') {
+        return NextResponse.json({
+          success: true,
+          message: 'You are already on the early access list!',
+          alreadyExists: true
         })
-        .select()
-        .single()
-
-      if (whatsappError) {
-        console.error('Error creating WhatsApp contact for early access:', whatsappError)
-        return NextResponse.json(
-          { success: false, error: 'Failed to process early access signup' },
-          { status: 500 }
-        )
+      } else {
+        return NextResponse.json({
+          success: true,
+          message: 'This phone number is already in our system!',
+          alreadyExists: true
+        })
       }
-
-      contactId = whatsappContact.id
     }
 
-    // Create CRM profile linked to the WhatsApp contact
-    const { data: crmProfile, error: crmError } = await (supabaseAdmin as any)
-      .from('crm_profiles')
+    // Create a placeholder WhatsApp JID for phone-only signup
+    const placeholderJid = `early_${Date.now()}_${Math.random().toString(36).substring(7)}@phone.early`
+    
+    // Create user profile with integrated WhatsApp data
+    const { data: userProfile, error: profileError } = await (supabaseAdmin as any)
+      .from('user_profiles')
       .insert({
-        whatsapp_contact_id: contactId,
+        phone_number: phoneNumber,
         email: null,
         full_name: null,
-        preferred_name: phoneNumber.split('+31')[1] || phoneNumber, // Use phone number as preferred name
-        lifecycle_stage: 'prospect', // Use valid lifecycle stage
-        customer_since: new Date().toISOString(),
+        preferred_name: phoneNumber.replace('+', ''), // Use phone number as preferred name
+        lifecycle_stage: 'early_access', // Use early_access lifecycle stage
+        onboarding_completed: false,
+        assistant_created: false,
+        ai_introduction_sent: false,
+        whatsapp_jid: placeholderJid,
+        push_name: 'Early Access User',
+        display_name: phoneNumber,
+        whatsapp_raw_data: {
+          source: 'early_access_signup',
+          signup_method: 'phone_only',
+          original_phone: phoneNumber
+        },
+        country_code: null, // Let the system detect based on phone number
+        language_code: 'en', // Default to English
+        dietary_restrictions: null,
+        budget_level: null,
+        household_size: 1,
+        store_preference: null,
         preferred_stores: [],
-        shopping_persona: null,
-        dietary_restrictions: [],
-        engagement_score: 25, // Higher score for early access signup
-        total_conversations: 0,
-        total_messages: 0,
-        tags: ['early_access_signup', 'phone_only'], // Use tags to identify early access users
-        notes: 'Signed up for early access via website'
+        store_websites: null
       })
       .select()
       .single()
 
-    if (crmError) {
-      console.error('Error creating CRM profile for early access:', crmError)
+    if (profileError) {
+      console.error('Error creating user profile for early access:', profileError)
       return NextResponse.json(
         { success: false, error: 'Failed to process early access signup' },
         { status: 500 }
       )
     }
 
-    // Create a customer event to track the early access signup
-    try {
-      await (supabaseAdmin as any)
-        .from('customer_events')
-        .insert({
-          crm_profile_id: crmProfile.id,
-          event_type: 'early_access_signup',
-          event_description: 'User signed up for early access via website',
-          event_data: {
-            phone_number: phoneNumber,
-            signup_source: 'website_early_access',
-            user_agent: request.headers.get('user-agent'),
-            ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
-          }
-        })
-    } catch (eventError) {
-      console.warn('Failed to create customer event:', eventError)
-      // Don't fail the request if event tracking fails
-    }
-
     console.log('✅ New early access signup:', {
       phoneNumber,
-      contactId: contactId,
-      profileId: crmProfile.id
+      profileId: userProfile.id
     })
 
     return NextResponse.json({
       success: true,
       message: 'Successfully joined early access!',
       data: {
-        profileId: crmProfile.id,
-        lifecycle_stage: crmProfile.lifecycle_stage
+        profileId: userProfile.id,
+        lifecycle_stage: userProfile.lifecycle_stage
       }
     })
 
@@ -179,10 +123,9 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const { count } = await (supabaseAdmin as any)
-      .from('crm_profiles')
+      .from('user_profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('lifecycle_stage', 'prospect')
-      .contains('tags', ['early_access_signup'])
+      .eq('lifecycle_stage', 'early_access')
 
     return NextResponse.json({
       success: true,

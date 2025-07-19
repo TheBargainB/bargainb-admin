@@ -87,7 +87,8 @@ export const onboardingTranslations = {
         back: "Terug",
         continue: "Doorgaan",
         skip: "Overslaan",
-        optional: "Optioneel"
+        optional: "Optioneel",
+        close: "Sluiten"
       },
       step3: {
         title: "Waar ben je?",
@@ -316,7 +317,8 @@ export const onboardingTranslations = {
         back: "Back",
         continue: "Continue",
         skip: "Skip",
-        optional: "Optional"
+        optional: "Optional",
+        close: "Close"
       },
       step3: {
         title: "Where are you?",
@@ -545,7 +547,8 @@ export const onboardingTranslations = {
         back: "Zurück",
         continue: "Fortfahren",
         skip: "Überspringen",
-        optional: "Optional"
+        optional: "Optional",
+        close: "Schließen"
       },
       step3: {
         title: "Wo sind Sie?",
@@ -637,7 +640,7 @@ export const onboardingTranslations = {
         },
         listItems: {
           essentials: ["Milch", "Brot", "Eier", "Butter", "Reis", "Nudeln", "Olivenöl", "Salz", "Zucker", "Mehl"],
-          weekly: ["Hühnerbrust", "Hackfleisch", "Frisches Gemüse", "Früchte", "Joghurt", "Käse", "Zwiebeln", "Knoblauch", "Tomaten", "Kartoffeln"],
+          weekly: ["Hühnerbrust", "Hackfleisch", "Frisches Gemüse", "Frutte", "Joghurt", "Käse", "Zwiebeln", "Knoblauch", "Tomaten", "Kartoffeln"],
           healthy: ["Quinoa", "Griechischer Joghurt", "Avocados", "Spinat", "Lachs", "Nüsse", "Beeren", "Süßkartoffeln", "Haferflocken", "Olivenöl"],
           family: ["Reis in großer Packung", "Familien-Hühnerpack", "Tiefkühlgemüse", "Müsli", "Erdnussbutter", "Saft", "Sandwich-Brot", "Snacks", "Nudelsauce", "Kekse"],
           quick: ["Instantnudeln", "Dosensuppe", "Tiefkühlpizza", "Energieriegel", "Instantkaffee", "Kekse", "Käsescheiben", "Bananen"],
@@ -759,9 +762,9 @@ export const onboardingTranslations = {
       // Middle East
       ae: "Émirats arabes unis",
       sa: "Arabie saoudite",
-      qa: "Qatar",
+      qa: "Catar",
       kw: "Koweït",
-      il: "Israël",
+      il: "Israele",
       tr: "Turquie",
       jo: "Jordanie",
       lb: "Liban",
@@ -774,7 +777,8 @@ export const onboardingTranslations = {
         back: "Retour",
         continue: "Continuer",
         skip: "Passer",
-        optional: "Optionnel"
+        optional: "Optionnel",
+        close: "Fermer"
       },
       step3: {
         title: "Où êtes-vous ?",
@@ -862,15 +866,15 @@ export const onboardingTranslations = {
           quick: "Repas rapides",
           quickDesc: "Options faciles et rapides",
           breakfast: "Essentiels petit-déjeuner",
-          breakfastDesc: "Tout pour bien commencer"
+          breakfastDesc: "Tout pour iniziare bene"
         },
         listItems: {
-          essentials: ["Lait", "Pain", "Oeufs", "Beurre", "Riz", "Pâtes", "Huile d'olive", "Sel", "Sucre", "Farine"],
-          weekly: ["Blanc de poulet", "Boeuf haché", "Légumes frais", "Fruits", "Yaourt", "Fromage", "Oignons", "Ail", "Tomates", "Pommes de terre"],
-          healthy: ["Quinoa", "Yaourt grec", "Avocats", "Épinards", "Saumon", "Noix", "Baies", "Patates douces", "Avoine", "Huile d'olive"],
-          family: ["Riz en vrac", "Pack famille poulet", "Légumes surgelés", "Céréales", "Beurre de cacahuète", "Jus", "Pain de mie", "Snacks", "Sauce pâtes", "Crackers"],
+          essentials: ["Lait", "Pain", "Oeufs", "Beurre", "Riz", "Pasta", "Huile d'olive", "Sel", "Zucchero", "Farine"],
+          weekly: ["Blanc de poulet", "Boeuf haché", "Légumes frais", "Fruits", "Yogurt", "Formaggio", "Cipolle", "Ail", "Tomates", "Pommes de terre"],
+          healthy: ["Quinoa", "Yaourt grec", "Avocados", "Épinards", "Saumon", "Noix", "Baies", "Patates douces", "Avoine", "Huile d'olive"],
+          family: ["Riz en vrac", "Pack famille poulet", "Légumes surgelés", "Cereales", "Burro di arachidi", "Succo", "Pane per sandwich", "Snack", "Sugo per pasta", "Crackers"],
           quick: ["Nouilles instantanées", "Soupe en conserve", "Pizza surgelée", "Barres énergétiques", "Café instantané", "Crackers", "Tranches de fromage", "Bananes"],
-          breakfast: ["Céréales", "Flocons d'avoine", "Fruits frais", "Yaourt", "Café", "Thé", "Miel", "Noix", "Granola", "Lait"]
+          breakfast: ["Céréales", "Flocons d'avoine", "Fruits frais", "Yogurt", "Café", "Thé", "Miel", "Noci", "Granola", "Lait"]
         },
         categories: {
           fridge: "Réfrigérateur",
@@ -890,7 +894,7 @@ export const onboardingTranslations = {
         benefit1: "• Recevoir des messages directs",
         benefit2: "• Poser des questions facilement",
         benefit3: "• Obtenir des offres et mises à jour",
-        benefit4: "• Assistant IA 24h/24",
+        benefit4: "• Assistente IA 24h/24",
         skipForNow: "Configurer plus tard",
         helpText: "Vous pouvez ajouter plus de plateformes plus tard"
       },
@@ -988,7 +992,7 @@ export const onboardingTranslations = {
       // Middle East
       ae: "Emirati Arabi Uniti",
       sa: "Arabia Saudita",
-      qa: "Qatar",
+      qa: "Catar",
       kw: "Kuwait",
       il: "Israele",
       tr: "Turchia",
@@ -1003,7 +1007,8 @@ export const onboardingTranslations = {
         back: "Indietro",
         continue: "Continua",
         skip: "Salta",
-        optional: "Opzionale"
+        optional: "Opzionale",
+        close: "Chiudi"
       },
       step3: {
         title: "Dove ti trovi?",
@@ -1061,14 +1066,14 @@ export const onboardingTranslations = {
         quickStartLists: "Liste di avvio rapido",
         quickStartDescription: "Scegli dalle liste pre-fatte",
         smartAnalysis: "Analisi intelligente",
-        smartAnalysisDescription: "Carica foto per suggerimenti AI",
+        smartAnalysisDescription: "Carica foto per suggerimenti IA",
         fridgeDescription: "Scansiona il tuo frigorifero",
         pantryDescription: "Scansiona la tua dispensa",
         shoppingListDescription: "Carica la tua lista della spesa",
         upload: "Carica",
         camera: "Fotocamera",
         analyzing: "Analizzando...",
-        aiSuggestions: "Suggerimenti AI",
+        aiSuggestions: "Suggerimenti IA",
         yourShoppingList: "La tua lista della spesa",
         helpText: "Puoi aggiungere o rimuovere elementi in seguito",
         items: "articoli",
@@ -1094,12 +1099,12 @@ export const onboardingTranslations = {
           breakfastDesc: "Tutto per iniziare bene"
         },
         listItems: {
-          essentials: ["Latte", "Pane", "Uova", "Burro", "Riso", "Pasta", "Olio d'oliva", "Sale", "Zucchero", "Farina"],
-          weekly: ["Petto di pollo", "Carne macinata", "Verdure fresche", "Frutta", "Yogurt", "Formaggio", "Cipolle", "Aglio", "Pomodori", "Patate"],
-          healthy: ["Quinoa", "Yogurt greco", "Avocadi", "Spinaci", "Salmone", "Noci", "Frutti di bosco", "Patate dolci", "Avena", "Olio d'oliva"],
-          family: ["Riso sfuso", "Pollo confezione famiglia", "Verdure surgelate", "Cereali", "Burro di arachidi", "Succo", "Pane per sandwich", "Snack", "Sugo per pasta", "Crackers"],
-          quick: ["Noodles istantanei", "Zuppa in scatola", "Pizza surgelata", "Barrette energetiche", "Caffè istantaneo", "Crackers", "Fette di formaggio", "Banane"],
-          breakfast: ["Cereali", "Fiocchi d'avena", "Frutta fresca", "Yogurt", "Caffè", "Tè", "Miele", "Noci", "Granola", "Latte"]
+          essentials: ["Latte", "Pane", "Uova", "Burro", "Riz", "Pasta", "Olio d'oliva", "Sal", "Zucchero", "Farina"],
+          weekly: ["Petto di pollo", "Carne macinata", "Verdure fresche", "Frutte", "Yogurt", "Formaggio", "Cipolle", "Ail", "Pomodori", "Patate"],
+          healthy: ["Quinoa", "Yogur griego", "Avocadi", "Spinaci", "Salmone", "Nueces", "Bayas", "Patate dolci", "Avena", "Olio d'oliva"],
+          family: ["Riz sfuso", "Pollo confezione famiglia", "Verdure surgelate", "Cereali", "Burro di arachidi", "Succo", "Pane per sandwich", "Snack", "Sugo per pasta", "Crackers"],
+          quick: ["Fideos istantanei", "Zuppa in scatola", "Pizza surgelata", "Barrette energetiche", "Caffè istantaneo", "Crackers", "Fette di formaggio", "Banane"],
+          breakfast: ["Cereali", "Fiocchi d'avena", "Frutte fresca", "Yogurt", "Caffè", "Tè", "Miele", "Nueces", "Granola", "Latte"]
         },
         categories: {
           fridge: "Frigorifero",
@@ -1119,7 +1124,7 @@ export const onboardingTranslations = {
         benefit1: "• Ricevi messaggi diretti",
         benefit2: "• Fai domande facilmente",
         benefit3: "• Ottieni offerte e aggiornamenti",
-        benefit4: "• Assistente AI 24/7",
+        benefit4: "• Assistente IA 24/7",
         skipForNow: "Configura dopo",
         helpText: "Puoi aggiungere più piattaforme in seguito"
       },
@@ -1232,7 +1237,8 @@ export const onboardingTranslations = {
         back: "Atrás",
         continue: "Continuar",
         skip: "Omitir",
-        optional: "Opcional"
+        optional: "Opcional",
+        close: "Cerrar"
       },
       step3: {
         title: "¿Dónde estás?",
@@ -1319,7 +1325,7 @@ export const onboardingTranslations = {
           familyDesc: "Perfecto para familias",
           quick: "Comidas rápidas",
           quickDesc: "Opciones fáciles y rápidas",
-          breakfast: "Esenciales desayuno",
+          breakfast: "Essenciales desayuno",
           breakfastDesc: "Todo para empezar bien"
         },
         listItems: {
