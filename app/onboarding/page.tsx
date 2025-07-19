@@ -109,7 +109,7 @@ export default function OnboardingPage() {
   
   const [errors, setErrors] = useState<any>({})
   const [currentLanguage, setCurrentLanguage] = useState("nl")
-  const t = onboardingTranslations[currentLanguage as keyof typeof onboardingTranslations]
+  const t = onboardingTranslations[currentLanguage as keyof typeof onboardingTranslations] || onboardingTranslations.en
 
   useEffect(() => {
     setMounted(true)
@@ -300,7 +300,9 @@ export default function OnboardingPage() {
         {/* Progress Indicator */}
         <div className="mb-6 sm:mb-8 w-full max-w-sm sm:max-w-2xl px-2">
           <div className="flex items-center justify-center mb-2">
-            <span className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB]">
+            <span className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] ${
+              currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+            }`}>
               Step {currentStep} of 6
             </span>
           </div>
@@ -327,6 +329,7 @@ export default function OnboardingPage() {
             t={t}
             setStep={handleNext}
             setLoading={setLoading}
+            currentLanguage={currentLanguage}
           />
         )}
 
@@ -343,6 +346,7 @@ export default function OnboardingPage() {
             t={t}
             onNext={handleOpenGroceryStoresModal}
             onBack={handleBack}
+            currentLanguage={currentLanguage}
           />
         )}
 
@@ -357,6 +361,7 @@ export default function OnboardingPage() {
           isOpen={isGroceryStoresModalOpen}
           onClose={handleCloseGroceryStoresModal}
           country={country}
+          currentLanguage={currentLanguage}
         />
 
         {/* Step 3: Dietary & Allergies */}
@@ -370,6 +375,7 @@ export default function OnboardingPage() {
             t={t}
             onNext={handleNext}
             onBack={handleBack}
+            currentLanguage={currentLanguage}
           />
         )}
 
@@ -382,6 +388,7 @@ export default function OnboardingPage() {
             t={t}
             onNext={handleNext}
             onBack={handleBack}
+            currentLanguage={currentLanguage}
           />
         )}
 
@@ -394,6 +401,7 @@ export default function OnboardingPage() {
             t={t}
             onNext={handleCreateUser}
             onBack={handleBack}
+            currentLanguage={currentLanguage}
           />
         )}
 
@@ -403,6 +411,7 @@ export default function OnboardingPage() {
             loading={loading}
             t={t}
             onComplete={handleComplete}
+            currentLanguage={currentLanguage}
             userData={{
               name,
               phone,

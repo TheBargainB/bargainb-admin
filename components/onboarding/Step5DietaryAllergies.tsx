@@ -15,10 +15,11 @@ export type Step5DietaryAllergiesProps = {
   t: any;
   onNext: () => void;
   onBack: () => void;
+  currentLanguage?: string;
 };
 
 const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
-  const { selectedDietary, selectedAllergies, setSelectedDietary, setSelectedAllergies, loading, t, onNext, onBack } = props;
+  const { selectedDietary, selectedAllergies, setSelectedDietary, setSelectedAllergies, loading, t, onNext, onBack, currentLanguage = 'en' } = props;
 
   const dietaryOptions = [
     { id: "vegetarian", name: t.onboarding.step5.dietaryOptions.vegetarian, icon: Leaf },
@@ -77,10 +78,14 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
           <div className="text-center mb-2 sm:mb-3">
             <Image src="/bb-icon.svg" alt="BargainB" width={24} height={24} className="mx-auto mb-2 sm:mb-3" />
           </div>
-          <CardTitle className="text-base sm:text-xl md:text-2xl font-[family-name:var(--font-paytone-one)] text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1">
+          <CardTitle className={`text-base sm:text-xl md:text-2xl text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1 ${
+            currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : 'font-[family-name:var(--font-paytone-one)]'
+          }`}>
             {t.onboarding.step5.title}
           </CardTitle>
-          <div className="text-xs sm:text-sm md:text-base font-[family-name:var(--font-inter)] text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed">
+          <div className={`text-xs sm:text-sm md:text-base text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed ${
+            currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+          }`}>
             {t.onboarding.step5.description}
           </div>
         </CardHeader>
@@ -92,10 +97,14 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <Heart className="w-4 h-4 text-[#00B207]" />
-              <span className="text-sm font-semibold font-[family-name:var(--font-inter)] text-[#1F1F1F] dark:text-[#F5F5F5]">
+              <span className={`text-sm font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.onboarding.step5.dietaryPreferences}
               </span>
-              <span className="text-xs font-[family-name:var(--font-inter)] text-[#7A7A7A] dark:text-[#B7EACB]">
+              <span className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 ({t.onboarding.common.optional})
               </span>
             </div>
@@ -128,7 +137,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
                     {/* Content */}
                     <div className="flex flex-col items-center space-y-1 h-full justify-center">
                       <option.icon className="w-4 h-4 sm:w-6 sm:h-6 text-[#00B207]" />
-                      <span className="text-xs font-medium font-[family-name:var(--font-inter)] text-[#1F1F1F] dark:text-[#F5F5F5] text-center leading-tight">
+                      <span className={`text-xs font-medium text-[#1F1F1F] dark:text-[#F5F5F5] text-center leading-tight ${
+                        currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                      }`}>
                         {option.name}
                       </span>
                     </div>
@@ -142,10 +153,14 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="text-sm font-semibold font-[family-name:var(--font-inter)] text-[#1F1F1F] dark:text-[#F5F5F5]">
+              <span className={`text-sm font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.onboarding.step5.foodAllergies}
               </span>
-              <span className="text-xs font-[family-name:var(--font-inter)] text-[#7A7A7A] dark:text-[#B7EACB]">
+              <span className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 ({t.onboarding.common.optional})
               </span>
             </div>
@@ -182,7 +197,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
                     {/* Content */}
                     <div className="flex flex-col items-center space-y-1 h-full justify-center">
                       <allergy.icon className="w-4 h-4 sm:w-6 sm:h-6 text-red-500" />
-                      <span className="text-xs font-medium font-[family-name:var(--font-inter)] text-[#1F1F1F] dark:text-[#F5F5F5] text-center leading-tight">
+                      <span className={`text-xs font-medium text-[#1F1F1F] dark:text-[#F5F5F5] text-center leading-tight ${
+                        currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                      }`}>
                         {allergy.name}
                       </span>
                     </div>
@@ -197,7 +214,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
             <div className="bg-green-50/80 dark:bg-green-950/40 rounded-lg p-2 sm:p-3 border border-[#00B207]/20 backdrop-blur-sm">
               <div className="flex items-center gap-2 mb-1 sm:mb-2">
                 <Check className="w-3 h-3 sm:w-4 sm:h-4 text-[#00B207]" />
-                <span className="text-xs sm:text-sm font-medium font-[family-name:var(--font-inter)] text-[#1F1F1F] dark:text-[#F5F5F5]">
+                <span className={`text-xs sm:text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] ${
+                  currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+                }`}>
                   {t.onboarding.step5.yourSelections} ({selectedDietary.length + selectedAllergies.length})
                 </span>
               </div>
@@ -210,7 +229,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
                   return (
                     <span
                       key={dietaryId}
-                      className="px-2 py-1 bg-[#00B207] text-white text-xs font-[family-name:var(--font-inter)] rounded-full shadow-sm flex items-center gap-1"
+                      className={`px-2 py-1 bg-[#00B207] text-white text-xs rounded-full shadow-sm flex items-center gap-1 ${
+                        currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                      }`}
                     >
                       <IconComponent className="w-2 h-2 sm:w-3 sm:h-3" />
                       {dietary.name}
@@ -224,7 +245,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
                   return (
                     <span
                       key={allergyId}
-                      className="px-2 py-1 bg-red-500 text-white text-xs font-[family-name:var(--font-inter)] rounded-full shadow-sm flex items-center gap-1"
+                      className={`px-2 py-1 bg-red-500 text-white text-xs rounded-full shadow-sm flex items-center gap-1 ${
+                        currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                      }`}
                     >
                       <IconComponent className="w-2 h-2 sm:w-3 sm:h-3" />
                       {allergy.name}
@@ -244,7 +267,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
               type="button"
               variant="outline"
               onClick={onBack}
-              className="w-full sm:flex-1 h-10 sm:h-11 text-sm font-[family-name:var(--font-inter)] transition-all duration-300 active:scale-95 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
+              className={`w-full sm:flex-1 h-10 sm:h-11 text-sm transition-all duration-300 active:scale-95 touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}
               style={{ WebkitTapHighlightColor: 'transparent' }}
               aria-label="Go back"
             >
@@ -253,7 +278,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
             <Button
               onClick={handleNext}
               disabled={loading}
-              className="w-full sm:flex-1 h-10 sm:h-11 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold text-sm font-[family-name:var(--font-inter)] rounded-xl transition-all duration-300 active:scale-95 hover:shadow-lg disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 touch-manipulation shadow-lg"
+              className={`w-full sm:flex-1 h-10 sm:h-11 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold text-sm rounded-xl transition-all duration-300 active:scale-95 hover:shadow-lg disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 touch-manipulation shadow-lg ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}
               style={{ WebkitTapHighlightColor: 'transparent' }}
               aria-label="Continue"
             >
@@ -270,7 +297,9 @@ const Step5DietaryAllergies: React.FC<Step5DietaryAllergiesProps> = (props) => {
 
           {/* Help Text */}
           <div className="text-center">
-            <p className="text-xs font-[family-name:var(--font-inter)] text-[#7A7A7A] dark:text-[#B7EACB]">
+            <p className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${
+              currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+            }`}>
               {t.onboarding.step5.helpText}
             </p>
           </div>

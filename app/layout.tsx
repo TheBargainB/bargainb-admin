@@ -2,7 +2,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/hooks/useAuth'
 import type { Metadata } from 'next'
-import { Inter, Noto_Sans, Paytone_One } from 'next/font/google'
+import { Inter, Noto_Sans, Paytone_One, Noto_Sans_Arabic } from 'next/font/google'
 import type React from 'react'
 import './globals.css'
 
@@ -21,6 +21,13 @@ const notoSans = Noto_Sans({
     display: 'swap',
 })
 
+const notoSansArabic = Noto_Sans_Arabic({
+    variable: '--font-noto-sans-arabic',
+    subsets: ['arabic'],
+    display: 'swap',
+    weight: ['300', '400', '700'],
+})
+
 export const metadata: Metadata = {
     title: 'BargainB - Price Comparison Platform',
     description:
@@ -35,7 +42,7 @@ export default function RootLayout({
     return (
         <html lang='en' suppressHydrationWarning>
             <body
-                className={`${notoSans.variable} ${paytoneOne.variable} ${inter.variable}`}
+                className={`${notoSans.variable} ${paytoneOne.variable} ${inter.variable} ${notoSansArabic.variable}`}
             >
                 <ThemeProvider
                     attribute='class'

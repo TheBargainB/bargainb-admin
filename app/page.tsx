@@ -142,6 +142,27 @@ const translations = {
     errorTitle: "¡Ups! Algo salió mal",
     errorDesc: "Inténtalo de nuevo o contacta al soporte si el problema persiste.",
     emailError: "Ingresa una dirección de correo válida."
+  },
+  ar: {
+    launchingIn: "الإطلاق في",
+    days: "أيام",
+    hours: "ساعات",
+    minutes: "دقائق",
+    seconds: "ثواني",
+    joinWaitlist: "انضم إلى",
+    launchWaitlist: "قائمة انتظار الإطلاق",
+    subtitle: "كن أول من يصل إلى منصة مقارنة الأسعار النهائية. انضم إلى آلاف المتسوقين الأذكياء الذين يحصلون بالفعل على وصول مبكر إلى عروض لا تقبل المنافسة.",
+    emailPlaceholder: "أدخل عنوان بريدك الإلكتروني",
+    getNotified: "احصل على إشعار",
+    joining: "انضمام...",
+    youreIn: "أنت منضم!",
+    notifyMessage: "سنخطرك بمجرد إطلاق BargainB!",
+    peopleWaitlist: "شخص في قائمة الانتظار",
+    successTitle: "🎉 مرحبًا بك في BargainB!",
+    successDesc: "أنت الآن جزء من فريق الإطلاق الحصري!",
+    errorTitle: "عذرًا! حدث خطأ ما",
+    errorDesc: "يرجى المحاولة مرة أخرى أو الاتصال بالدعم إذا استمرت المشكلة.",
+    emailError: "يرجى إدخال عنوان بريد إلكتروني صالح."
   }
 }
 
@@ -229,7 +250,7 @@ export default function PublicHomePage() {
   const [jumpEffect, setJumpEffect] = useState<{ [key: string]: boolean }>({})
   const [waitlistCount, setWaitlistCount] = useState<number>(9847) // Default fallback number
 
-  const t = translations[currentLanguage]
+  const t = translations[currentLanguage] || translations.en
 
   const formSchema = z.object({
     email: z.string().email({
@@ -414,6 +435,7 @@ export default function PublicHomePage() {
 
   const CountdownNumber = ({ value, label, unit }: { value: number; label: string; unit: string }) => {
     const isJumping = jumpEffect[unit]
+    const isArabic = currentLanguage === 'ar'
 
     return (
       <div className="flex flex-col items-center space-y-4">
@@ -429,7 +451,9 @@ export default function PublicHomePage() {
           {mounted ? value.toString().padStart(2, "0") : "00"}
         </div>
         <div className="min-h-[16px] md:min-h-[18px] lg:min-h-[20px] flex items-center justify-center">
-          <div className="font-[family-name:var(--font-inter)] text-xs md:text-sm lg:text-base font-medium text-[#7A7A7A] tracking-wider text-center">
+          <div className={`text-xs md:text-sm lg:text-base font-medium text-[#7A7A7A] tracking-wider text-center ${
+            isArabic ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+          }`}>
             {label}
           </div>
         </div>
@@ -473,7 +497,9 @@ export default function PublicHomePage() {
             
             {/* Launching In - Right below logo */}
             <div className="min-h-[20px] md:min-h-[24px] mb-3 md:mb-10 mt-12 flex items-center justify-center">
-              <h3 className="font-[family-name:var(--font-inter)] text-sm md:text-base lg:text-lg font-medium text-[#7A7A7A] dark:text-[#F5F5F5] uppercase tracking-wide">
+              <h3 className={`text-sm md:text-base lg:text-lg font-medium text-[#7A7A7A] dark:text-[#F5F5F5] uppercase tracking-wide ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-medium' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.launchingIn}
               </h3>
             </div>
@@ -487,7 +513,9 @@ export default function PublicHomePage() {
 
           {/* Main Heading */}
           <div className=" flex flex-col justify-center my-5 md:mt-16 md:mb-8">
-            <h2 className="font-[family-name:var(--font-paytone-one)] text-xl md:text-2xl lg:text-4xl xl:text-[40px] font-bold text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight px-4">
+            <h2 className={`text-xl md:text-2xl lg:text-4xl xl:text-[40px] font-bold text-[#1F1F1F] dark:text-[#F5F5F5] leading-tight px-4 ${
+              currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : 'font-[family-name:var(--font-paytone-one)]'
+            }`}>
               {t.joinWaitlist} {' '}
               
               <span className="text-[#00B207] dark:text-[#84D187]">
@@ -498,7 +526,9 @@ export default function PublicHomePage() {
 
           {/* Subtitle */}
           <div className="flex items-center justify-center mb-3 md:mb-4">
-            <p className="font-[family-name:var(--font-inter)] text-xs sm:text-sm md:text-base lg:text-base text-[#3D3D3D] dark:text-[#F5F5F5] max-w-xl lg:max-w-3xl mx-auto leading-relaxed px-4">
+            <p className={`text-xs sm:text-sm md:text-base lg:text-base text-[#3D3D3D] dark:text-[#F5F5F5] max-w-xl lg:max-w-3xl mx-auto leading-relaxed px-4 ${
+              currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+            }`}>
               {t.subtitle}
             </p>
           </div>
@@ -512,8 +542,12 @@ export default function PublicHomePage() {
                     <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
                   </div>
                 </div>
-                <h3 className="font-[family-name:var(--font-paytone-one)] text-lg md:text-xl font-bold text-foreground text-center mb-2">{t.youreIn}</h3>
-                <p className="font-[family-name:var(--font-inter)] text-xs md:text-sm text-muted-foreground text-center">{t.notifyMessage}</p>
+                <h3 className={`text-lg md:text-xl font-bold text-foreground text-center mb-2 ${
+                  currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : 'font-[family-name:var(--font-paytone-one)]'
+                }`}>{t.youreIn}</h3>
+                <p className={`text-xs md:text-sm text-muted-foreground text-center ${
+                  currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                }`}>{t.notifyMessage}</p>
               </div>
             )}
           </div>
@@ -534,7 +568,9 @@ export default function PublicHomePage() {
                               type="email"
                               placeholder={t.emailPlaceholder}
                               {...field}
-                              className="h-9 md:h-10 lg:h-12 px-3 md:px-4 text-xs md:text-sm lg:text-base bg-[#F4FBF4] dark:bg-[#323232] text-[#00B207] rounded-xl border-0 focus-visible:ring-0 focus:ring-0 placeholder:text-muted-foreground w-full font-[family-name:var(--font-inter)]"
+                              className={`h-9 md:h-10 lg:h-12 px-3 md:px-4 text-xs md:text-sm lg:text-base bg-[#F4FBF4] dark:bg-[#323232] text-[#00B207] rounded-xl border-0 focus-visible:ring-0 focus:ring-0 placeholder:text-muted-foreground w-full ${
+                                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                              }`}
                               disabled={isLoading}
                             />
                           </div>
@@ -547,7 +583,9 @@ export default function PublicHomePage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="h-9 md:h-10 lg:h-12 px-4 md:px-6 text-xs md:text-sm lg:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none whitespace-nowrap w-full sm:w-auto md:min-w-[140px] font-[family-name:var(--font-inter)]"
+                    className={`h-9 md:h-10 lg:h-12 px-4 md:px-6 text-xs md:text-sm lg:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none whitespace-nowrap w-full sm:w-auto md:min-w-[140px] ${
+                      currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+                    }`}
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">

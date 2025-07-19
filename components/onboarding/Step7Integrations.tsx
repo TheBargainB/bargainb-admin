@@ -12,6 +12,7 @@ export type Step7IntegrationsProps = {
   t: any;
   onNext: () => void;
   onBack: () => void;
+  currentLanguage: string;
 };
 
 const integrationOptions = [
@@ -66,7 +67,7 @@ const integrationOptions = [
 ];
 
 const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
-  const { selectedIntegrations, setSelectedIntegrations, loading, t, onNext, onBack } = props;
+  const { selectedIntegrations, setSelectedIntegrations, loading, t, onNext, onBack, currentLanguage } = props;
 
   const handleIntegrationToggle = (integrationId: string) => {
     const integration = integrationOptions.find(i => i.id === integrationId);
@@ -91,17 +92,17 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
         <div className="text-center mb-1">
           <img src="/bb-icon.svg" alt="BargainB" className="w-6 h-6 mx-auto mb-2" />
         </div>
-        <CardTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+        <CardTitle className={`text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1 ${currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>
           {t.onboarding.step7.title}
         </CardTitle>
-        <div className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+        <div className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
           {t.onboarding.step7.description}
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-4">
         {/* Integration Options */}
         <div className="space-y-3">
-          <Label className="text-sm font-semibold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+          <Label className={`text-sm font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>
             {t.onboarding.step7.availablePlatforms}
           </Label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -126,7 +127,7 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
                   {/* Popular Badge */}
                   {integration.popular && (
                     <div className="absolute top-2 right-2">
-                      <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <Badge className={`bg-orange-500 text-white text-xs px-2 py-0.5 ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                         {t.onboarding.step7.popular}
                       </Badge>
                     </div>
@@ -135,7 +136,7 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
                   {/* Coming Soon Badge */}
                   {!integration.enabled && (
                     <div className="absolute top-2 right-2">
-                      <Badge variant="secondary" className="bg-gray-500 text-white text-xs px-2 py-0.5" style={{ fontFamily: 'var(--font-inter)' }}>
+                      <Badge variant="secondary" className={`bg-gray-500 text-white text-xs px-2 py-0.5 ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                         {t.onboarding.step7.comingSoon}
                       </Badge>
                     </div>
@@ -162,15 +163,15 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
                     
                     <div className="space-y-1">
                       <div className="flex items-center justify-center gap-1">
-                        <span className={`text-sm font-semibold ${integration.enabled ? 'text-[#1F1F1F] dark:text-[#F5F5F5]' : 'text-gray-400'}`} style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                        <span className={`text-sm font-semibold ${integration.enabled ? 'text-[#1F1F1F] dark:text-[#F5F5F5]' : 'text-gray-400'} ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>
                           {integration.name}
                         </span>
                       </div>
-                      <div className={`text-xs ${integration.enabled ? 'text-[#7A7A7A] dark:text-[#B7EACB]' : 'text-gray-400'}`} style={{ fontFamily: 'var(--font-inter)' }}>
+                      <div className={`text-xs ${integration.enabled ? 'text-[#7A7A7A] dark:text-[#B7EACB]' : 'text-gray-400'} ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                         {integration.description}
                       </div>
                       {integration.enabled && isSelected && (
-                        <div className="text-xs text-green-600 dark:text-green-400 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                        <div className={`text-xs text-green-600 dark:text-green-400 font-medium ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                           ✓ {t.onboarding.step7.selected}
                         </div>
                       )}
@@ -187,7 +188,7 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
           <div className="bg-green-50/80 dark:bg-green-950/40 rounded-lg p-3 border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm">
             <div className="flex items-center gap-2 mb-2">
               <Check className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-inter)' }}>
+              <span className={`text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                 {t.onboarding.step7.selectedIntegrations} ({selectedIntegrations.length})
               </span>
             </div>
@@ -198,8 +199,8 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
                   <Badge
                     key={integrationId}
                     variant="secondary"
-                    className="bg-[#00B207] text-white hover:bg-[#00A006] text-xs px-2 py-0.5"
-                    style={{ fontFamily: 'var(--font-inter)' }}
+                    className={`bg-[#00B207] text-white hover:bg-[#00A006] text-xs px-2 py-0.5 ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`}
+                    style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}
                   >
                     {integration?.name}
                   </Badge>
@@ -211,15 +212,15 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
 
         {/* Info Note */}
         <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-lg p-3 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
-          <div className="text-xs text-[#1F1F1F] dark:text-[#F5F5F5] space-y-1">
-            <div className="font-medium" style={{ fontFamily: 'var(--font-paytone-one)' }}>{t.onboarding.step7.whatsappBenefits}</div>
-            <ul className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] space-y-0.5 ml-3" style={{ fontFamily: 'var(--font-inter)' }}>
-              <li>{t.onboarding.step7.benefit1}</li>
-              <li>{t.onboarding.step7.benefit2}</li>
-              <li>{t.onboarding.step7.benefit3}</li>
-              <li>{t.onboarding.step7.benefit4}</li>
-            </ul>
-          </div>
+                      <div className={`text-xs text-[#1F1F1F] dark:text-[#F5F5F5] space-y-1 ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
+              <div className={`font-medium ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>{t.onboarding.step7.whatsappBenefits}</div>
+              <ul className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] space-y-0.5 ml-3 ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
+                <li>{t.onboarding.step7.benefit1}</li>
+                <li>{t.onboarding.step7.benefit2}</li>
+                <li>{t.onboarding.step7.benefit3}</li>
+                <li>{t.onboarding.step7.benefit4}</li>
+              </ul>
+            </div>
         </div>
 
         {/* Action Buttons */}
@@ -228,8 +229,8 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
             type="button"
             variant="outline"
             onClick={onBack}
-            className="w-full sm:flex-1 h-11 sm:h-12 text-sm sm:text-base transition-all duration-200 hover:scale-[1.02] touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30"
-            style={{ fontFamily: 'var(--font-inter)' }}
+            className={`w-full sm:flex-1 h-11 sm:h-12 text-sm sm:text-base transition-all duration-200 hover:scale-[1.02] touch-manipulation bg-white/30 dark:bg-gray-800/30 backdrop-blur-sm border-white/30 dark:border-gray-600/30 ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`}
+            style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}
             aria-label="Go back"
           >
             {t.onboarding.common.back}
@@ -237,8 +238,8 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
           <Button
             onClick={handleNext}
             disabled={loading}
-            className="w-full sm:flex-1 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-11 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-1 touch-manipulation shadow-lg"
-            style={{ fontFamily: 'var(--font-inter)' }}
+            className={`w-full sm:flex-1 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-11 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-1 touch-manipulation shadow-lg ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`}
+            style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}
             aria-label="Continue"
           >
             {loading ? (
@@ -255,7 +256,7 @@ const Step7Integrations: React.FC<Step7IntegrationsProps> = (props) => {
 
         {/* Help Text */}
         <div className="text-center">
-          <p className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+          <p className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
             {t.onboarding.step7.helpText}
           </p>
         </div>

@@ -11,6 +11,47 @@ body {
     text-wrap: balance;
   }
   
+  /* Noto Sans Arabic font classes */
+  .noto-sans-arabic-light {
+    font-family: var(--font-noto-sans-arabic), sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 300;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+  }
+  
+  .noto-sans-arabic-regular {
+    font-family: var(--font-noto-sans-arabic), sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+  }
+  
+  .noto-sans-arabic-bold {
+    font-family: var(--font-noto-sans-arabic), sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+  }
+  
+  .noto-sans-arabic-medium {
+    font-family: var(--font-noto-sans-arabic), sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+  }
+  
+  .noto-sans-arabic-semibold {
+    font-family: var(--font-noto-sans-arabic), sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-style: normal;
+    font-variation-settings: "wdth" 100;
+  }
+  
   .bg-custom-gradient {
     background: linear-gradient(180deg, #F6FFF5 0%, #FFF 47%);
   }

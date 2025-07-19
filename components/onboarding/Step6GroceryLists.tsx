@@ -15,6 +15,7 @@ export type Step6GroceryListsProps = {
   t: any;
   onNext: () => void;
   onBack: () => void;
+  currentLanguage?: string;
 };
 
 type AnalysisResult = {
@@ -70,7 +71,7 @@ const imageCategories = [
 ];
 
 const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
-  const { selectedItems, setSelectedItems, loading, t, onNext, onBack } = props;
+  const { selectedItems, setSelectedItems, loading, t, onNext, onBack, currentLanguage = 'en' } = props;
   const [isPreMadeModalOpen, setIsPreMadeModalOpen] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [selectedPreMadeLists, setSelectedPreMadeLists] = useState<string[]>([]);
@@ -310,10 +311,14 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
           <div className="text-center mb-1">
             <img src="/bb-icon.svg" alt="BargainB" className="w-6 h-6 mx-auto mb-2" />
           </div>
-          <CardTitle className="text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+          <CardTitle className={`text-lg sm:text-xl font-bold text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1 ${
+            currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : ''
+          }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>
             {t.onboarding.step6.title}
           </CardTitle>
-          <div className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+          <div className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed ${
+            currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+          }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
             {t.onboarding.step6.description}
           </div>
         </CardHeader>
@@ -331,14 +336,20 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                   <List className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                  <h3 className={`text-sm sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1 ${
+                    currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''
+                  }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>
                     {t.onboarding.step6.quickStartLists}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+                  <p className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${
+                    currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                  }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                     {t.onboarding.step6.quickStartDescription}
                   </p>
                   {selectedPreMadeLists.length > 0 && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                    <p className={`text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium ${
+                      currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                    }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                       {selectedPreMadeLists.length} {t.onboarding.step6.listsSelected}
                     </p>
                   )}
@@ -357,14 +368,20 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                   <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1" style={{ fontFamily: 'var(--font-paytone-one)' }}>
+                  <h3 className={`text-sm sm:text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] mb-1 ${
+                    currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''
+                  }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone-one)' }}>
                     {t.onboarding.step6.smartAnalysis}
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+                  <p className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${
+                    currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                  }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                     {t.onboarding.step6.smartAnalysisDescription}
                   </p>
                   {analysisResults.length > 0 && (
-                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium" style={{ fontFamily: 'var(--font-inter)' }}>
+                    <p className={`text-xs text-purple-600 dark:text-purple-400 mt-2 font-medium ${
+                      currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                    }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                       {analysisResults.reduce((total, result) => total + result.items.length, 0)} {t.onboarding.step6.itemsAnalyzed}
                     </p>
                   )}
@@ -378,7 +395,9 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-lg p-3 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
               <div className="flex items-center gap-2 mb-2">
                 <ShoppingCart className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-inter)' }}>
+                <span className={`text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] ${
+                  currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''
+                }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                   {t.onboarding.step6.yourShoppingList} ({selectedItems.length} {t.onboarding.step6.items})
                 </span>
               </div>
@@ -390,7 +409,9 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                       <Badge
                         key={index}
                         variant="secondary"
-                        className={`${getSourceColor(source)} text-white hover:opacity-80 text-xs px-2 py-0.5 cursor-pointer touch-manipulation flex items-center gap-1`}
+                        className={`${getSourceColor(source)} text-white hover:opacity-80 text-xs px-2 py-0.5 cursor-pointer touch-manipulation flex items-center gap-1 ${
+                          currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                        }`}
                         onClick={() => handleItemToggle(item)}
                         style={{ WebkitTapHighlightColor: 'transparent' }}
                       >
@@ -402,14 +423,20 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
                   })}
                 </div>
               </ScrollArea>
-              <div className="flex items-center gap-4 mt-2 text-xs" style={{ fontFamily: 'var(--font-inter)' }}>
+              <div className={`flex items-center gap-4 mt-2 text-xs ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+              }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="text-[#7A7A7A] dark:text-[#B7EACB]">{t.onboarding.step6.fromLists}</span>
+                  <span className={`text-[#7A7A7A] dark:text-[#B7EACB] ${
+                    currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                  }`}>{t.onboarding.step6.fromLists}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span className="text-[#7A7A7A] dark:text-[#B7EACB]">{t.onboarding.step6.fromAI}</span>
+                  <span className={`text-[#7A7A7A] dark:text-[#B7EACB] ${
+                    currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+                  }`}>{t.onboarding.step6.fromAI}</span>
                 </div>
               </div>
             </div>
@@ -421,8 +448,10 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
               type="button"
               variant="outline"
               onClick={onBack}
-              className="w-full sm:flex-1 bg-white/50 dark:bg-gray-800/50 border-white/50 dark:border-gray-600/50 text-[#1F1F1F] dark:text-[#F5F5F5] h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md touch-manipulation backdrop-blur-sm"
-              style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
+              className={`w-full sm:flex-1 bg-white/50 dark:bg-gray-800/50 border-white/50 dark:border-gray-600/50 text-[#1F1F1F] dark:text-[#F5F5F5] h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md touch-manipulation backdrop-blur-sm ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''
+              }`}
+              style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
               aria-label="Go back"
             >
               {t.onboarding.common.back}
@@ -431,8 +460,10 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
             <Button
               onClick={handleNext}
               disabled={loading || selectedItems.length === 0}
-              className="w-full sm:flex-1 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-1 touch-manipulation shadow-lg"
-              style={{ fontFamily: 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
+              className={`w-full sm:flex-1 bg-gradient-to-r from-[#00B207] to-[#84D187] hover:from-[#00A006] hover:to-[#7BC682] text-white font-semibold h-10 sm:h-12 text-sm sm:text-base rounded-lg transition-all duration-200 active:scale-95 hover:shadow-md disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-1 touch-manipulation shadow-lg ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''
+              }`}
+              style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)', WebkitTapHighlightColor: 'transparent' }}
               aria-label="Continue"
             >
               {loading ? (
@@ -448,7 +479,9 @@ const Step6GroceryLists: React.FC<Step6GroceryListsProps> = (props) => {
 
           {/* Help Text */}
           <div className="text-center">
-            <p className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+            <p className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${
+              currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''
+            }`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
               {t.onboarding.step6.helpText}
             </p>
           </div>

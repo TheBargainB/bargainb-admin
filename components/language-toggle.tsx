@@ -17,6 +17,7 @@ const languages = [
   { code: "fr", name: "Français", flag: "🇫🇷" },
   { code: "it", name: "Italiano", flag: "🇮🇹" },
   { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "ar", name: "العربية", flag: "🇸🇦" },
 ]
 
 export function LanguageToggle() {
@@ -38,13 +39,20 @@ export function LanguageToggle() {
 
   const handleLanguageChange = (language: typeof languages[0]) => {
     setCurrentLanguage(language)
+    
+    // Handle RTL languages
+    const isRTL = language.code === 'ar'
+    document.documentElement.dir = isRTL ? 'rtl' : 'ltr'
+    document.documentElement.lang = language.code
+    
     // Emit custom event for the main page to listen to
     const event = new CustomEvent('languageChange', {
-      detail: { language: language.code }
+      detail: { language: language.code, isRTL }
     })
     window.dispatchEvent(event)
+    
     // Here you would typically integrate with your i18n solution
-    console.log("Language changed to:", language.code)
+    console.log("Language changed to:", language.code, "RTL:", isRTL)
   }
 
   return (
@@ -58,6 +66,7 @@ export function LanguageToggle() {
           >
             <Globe className="h-4 w-4" />
             <span className="hidden sm:block">{currentLanguage.flag}</span>
+            <span className="hidden md:block text-xs ml-1">{currentLanguage.name}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 z-[70] pointer-events-auto">
@@ -68,7 +77,7 @@ export function LanguageToggle() {
               className="flex items-center space-x-2 cursor-pointer pointer-events-auto"
             >
               <span className="text-lg">{language.flag}</span>
-              <span>{language.name}</span>
+              <span className={language.code === 'ar' ? 'font-arabic' : ''}>{language.name}</span>
               {currentLanguage.code === language.code && (
                 <span className="ml-auto text-primary">✓</span>
               )}

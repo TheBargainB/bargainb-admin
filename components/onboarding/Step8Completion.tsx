@@ -7,6 +7,7 @@ export type Step8CompletionProps = {
   loading?: boolean;
   t: any;
   onComplete?: () => void;
+  currentLanguage: string;
   userData: {
     name: string;
     phone: string;
@@ -16,7 +17,7 @@ export type Step8CompletionProps = {
 };
 
 const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
-  const { loading, t, onComplete, userData } = props;
+  const { loading, t, onComplete, currentLanguage, userData } = props;
 
 
 
@@ -33,11 +34,11 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
               className="object-contain"
             />
           </div>
-          <CardTitle className="text-2xl md:text-3xl text-[#1F1F1F] dark:text-[#F5F5F5] m-0" style={{ fontFamily: 'var(--font-paytone)' }}>
+          <CardTitle className={`text-2xl md:text-3xl text-[#1F1F1F] dark:text-[#F5F5F5] m-0 ${currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>
             {t.onboarding.step8.title}
           </CardTitle>
         </div>
-        <div className="text-base text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+        <div className={`text-base text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
           {t.onboarding.step8.subtitle.replace('{name}', userData.name.split(' ')[0])}
         </div>
       </CardHeader>
@@ -48,15 +49,15 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
           <div className="bg-green-50/80 dark:bg-green-950/40 rounded-xl p-4 border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm">
             <div className="flex items-center gap-3 mb-3">
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-              <span className="text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone)' }}>
+              <span className={`text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>
                 {t.onboarding.step8.setupComplete}
               </span>
             </div>
             
-            <div className="space-y-2 text-sm" style={{ fontFamily: 'var(--font-inter)' }}>
+            <div className={`space-y-2 text-sm ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                <span className="text-[#1F1F1F] dark:text-[#F5F5F5]">
+                <span className={`text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                   {t.onboarding.step8.profileCreated}
                 </span>
               </div>
@@ -64,7 +65,7 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
               {userData.selectedStores.length > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                  <span className="text-[#1F1F1F] dark:text-[#F5F5F5]">
+                  <span className={`text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                     {t.onboarding.step8.storesConfigured.replace('{count}', userData.selectedStores.length.toString())}
                   </span>
                 </div>
@@ -73,7 +74,7 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
               {userData.selectedIntegrations.length > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                  <span className="text-[#1F1F1F] dark:text-[#F5F5F5]">
+                  <span className={`text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                     {t.onboarding.step8.integrationsSetup}
                   </span>
                 </div>
@@ -86,11 +87,11 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
             <div className="bg-blue-50/80 dark:bg-blue-950/40 rounded-xl p-4 border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm">
               <div className="flex items-center gap-3 mb-3">
                 <MessageCircle className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                <span className="text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone)' }}>
+                <span className={`text-base font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>
                   {t.onboarding.step8.whatsappTitle}
                 </span>
               </div>
-              <p className="text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>
+              <p className={`text-sm text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
                 {t.onboarding.step8.whatsappMessage}
               </p>
             </div>
@@ -101,31 +102,31 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
 
         {/* Next Steps - Compact Horizontal */}
         <div className="space-y-4">
-          <h4 className="text-lg font-semibold text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone)' }}>
+          <h4 className={`text-lg font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>
             {t.onboarding.step8.nextSteps}
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex items-start gap-3 p-3 bg-gray-50/80 dark:bg-gray-800/40 rounded-lg">
               <div className="w-6 h-6 bg-[#00B207] rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">1</div>
               <div>
-                <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone)' }}>{t.onboarding.step8.step1Title}</div>
-                <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>{t.onboarding.step8.step1Desc}</div>
+                <div className={`text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>{t.onboarding.step8.step1Title}</div>
+                <div className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>{t.onboarding.step8.step1Desc}</div>
               </div>
             </div>
             
             <div className="flex items-start gap-3 p-3 bg-gray-50/80 dark:bg-gray-800/40 rounded-lg">
               <div className="w-6 h-6 bg-[#00B207] rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">2</div>
               <div>
-                <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone)' }}>{t.onboarding.step8.step2Title}</div>
-                <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>{t.onboarding.step8.step2Desc}</div>
+                <div className={`text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>{t.onboarding.step8.step2Title}</div>
+                <div className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>{t.onboarding.step8.step2Desc}</div>
               </div>
             </div>
             
             <div className="flex items-start gap-3 p-3 bg-gray-50/80 dark:bg-gray-800/40 rounded-lg">
               <div className="w-6 h-6 bg-[#00B207] rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">3</div>
               <div>
-                <div className="text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5]" style={{ fontFamily: 'var(--font-paytone)' }}>{t.onboarding.step8.step3Title}</div>
-                <div className="text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed" style={{ fontFamily: 'var(--font-inter)' }}>{t.onboarding.step8.step3Desc}</div>
+                <div className={`text-sm font-medium text-[#1F1F1F] dark:text-[#F5F5F5] ${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>{t.onboarding.step8.step3Title}</div>
+                <div className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] leading-relaxed ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>{t.onboarding.step8.step3Desc}</div>
               </div>
             </div>
           </div>
@@ -135,7 +136,7 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
         <div className="pt-4">
           <div className="w-full h-14 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold text-lg rounded-xl flex items-center justify-center gap-2 shadow-lg">
             <CheckCircle className="w-5 h-5" />
-            <span style={{ fontFamily: 'var(--font-paytone)' }}>
+            <span className={`${currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-paytone)' }}>
               {t.onboarding.step8.setupComplete}
             </span>
           </div>
@@ -143,7 +144,7 @@ const Step8Completion: React.FC<Step8CompletionProps> = (props) => {
 
         {/* Help Text */}
         <div className="text-center">
-          <p className="text-xs text-[#7A7A7A] dark:text-[#B7EACB]" style={{ fontFamily: 'var(--font-inter)' }}>
+          <p className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : ''}`} style={{ fontFamily: currentLanguage === 'ar' ? 'var(--font-noto-sans-arabic)' : 'var(--font-inter)' }}>
             {t.onboarding.step8.helpText}
           </p>
         </div>

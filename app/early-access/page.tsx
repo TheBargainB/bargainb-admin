@@ -79,7 +79,7 @@ export default function EarlyAccessPage() {
   const [mounted, setMounted] = useState(false)
   const [phoneNumber, setPhoneNumber] = useState('')
 
-  const t = getTranslation(currentLanguage)
+  const t = getTranslation(currentLanguage) || getTranslation('en')
 
   // Modern validation schema that accepts international phone numbers
   const earlyAccessSchema = z.object({
@@ -172,6 +172,7 @@ export default function EarlyAccessPage() {
     currentLanguage === 'de' ? 'Funktioniert mit Supermärkten in Ihrer Nähe' :
     currentLanguage === 'fr' ? 'Fonctionne avec les supermarchés près de chez vous' :
     currentLanguage === 'it' ? 'Funziona con i supermercati vicino a te' :
+    currentLanguage === 'ar' ? 'يعمل مع متاجر البقالة القريبة منك' :
     'Funciona con supermercados cerca de ti',
     t.hero.exclusiveWhatsApp,
     currentLanguage === 'nl' ? 'Geen gedoe met folders of apps' : 
@@ -179,6 +180,7 @@ export default function EarlyAccessPage() {
     currentLanguage === 'de' ? 'Kein Ärger mit Flyern oder Apps' :
     currentLanguage === 'fr' ? 'Pas de tracas avec les dépliants ou les applications' :
     currentLanguage === 'it' ? 'Niente seccature con volantini o app' :
+    currentLanguage === 'ar' ? 'لا مشاكل مع النشرات أو التطبيقات' :
     'Sin complicaciones con folletos o aplicaciones'
   ]
 
@@ -241,12 +243,15 @@ export default function EarlyAccessPage() {
               
               {/* Title */}
               <div className="space-y-6 mb-10">
-                <h1 className="font-[family-name:var(--font-paytone-one)] text-[30px] lg:text-[35px] xl:text-[35px] 2xl:text-[45px] text-[#3D3D3D] dark:text-[#F5F5F5] text-center md:text-start tracking-[0.9px] leading-9 md:leading-[50px] 2xl:leading-[55px]">
+                <h1 className={`text-[30px] lg:text-[35px] xl:text-[35px] 2xl:text-[45px] text-[#3D3D3D] dark:text-[#F5F5F5] text-center md:text-start tracking-[0.9px] leading-9 md:leading-[50px] 2xl:leading-[55px] ${
+                  currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : 'font-[family-name:var(--font-paytone-one)]'
+                }`}>
                   {currentLanguage === 'nl' ? 'Krijg gratis early access tot' : 
                    currentLanguage === 'en' ? 'Get free early access to' :
                    currentLanguage === 'de' ? 'Erhalten Sie kostenlosen frühen Zugang zu' :
                    currentLanguage === 'fr' ? 'Obtenez un accès anticipé gratuit à' :
                    currentLanguage === 'it' ? 'Ottieni accesso anticipato gratuito a' :
+                   currentLanguage === 'ar' ? 'احصل على وصول مبكر مجاني إلى' :
                    'Obtén acceso anticipado gratuito a'}{' '}
                   <span className="text-primary">{t.hero.bargainB}!</span>
                 </h1>
@@ -259,7 +264,9 @@ export default function EarlyAccessPage() {
                     <div className="flex-shrink-0 w-5 h-5 bg-primary rounded-sm flex items-center justify-center mt-0.5">
                       <Check className="w-3.5 h-3.5 text-primary-foreground" />
                     </div>
-                    <span className="font-[family-name:var(--font-inter)] text-sm xl:text-base text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed">{benefit}</span>
+                    <span className={`text-sm xl:text-base text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed ${
+                      currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+                    }`}>{benefit}</span>
                   </div>
                 ))}
               </div>
@@ -308,7 +315,9 @@ export default function EarlyAccessPage() {
       {/* FAQ Section */}
       <section className="relative z-10 max-w-4xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
-          <h2 className="font-[family-name:var(--font-paytone-one)] text-center my-10 text-[30px] sm:text-[35px] md:text-[45px] text-[#3D3D3D] dark:text-[#F5F5F5] tracking-[0.9px] leading-[50px] px-4">
+          <h2 className={`text-center my-10 text-[30px] sm:text-[35px] md:text-[45px] text-[#3D3D3D] dark:text-[#F5F5F5] tracking-[0.9px] leading-[50px] px-4 ${
+            currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : 'font-[family-name:var(--font-paytone-one)]'
+          }`}>
             {t.faq.title}
           </h2>
         </div>
@@ -316,37 +325,53 @@ export default function EarlyAccessPage() {
         <div className="max-w-3xl mx-auto">
           <Accordion type="single" collapsible className="space-y-6">
             <AccordionItem value="item-1" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
+              <AccordionTrigger className={`font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.free.question}
               </AccordionTrigger>
-              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
+              <AccordionContent className={`text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.free.answer}
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-2" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
+              <AccordionTrigger className={`font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.whenAccess.question}
               </AccordionTrigger>
-              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
+              <AccordionContent className={`text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.whenAccess.answer}
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-3" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
+              <AccordionTrigger className={`font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.whatIs.question}
               </AccordionTrigger>
-              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
+              <AccordionContent className={`text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.whatIs.answer}
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="item-4" className="bg-background/60 backdrop-blur-sm border border-border rounded-xl px-6 py-2 shadow-sm dark:bg-card/30">
-              <AccordionTrigger className="font-[family-name:var(--font-inter)] font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4">
+              <AccordionTrigger className={`font-bold text-base text-[#3D3D3D] dark:text-[#F5F5F5] py-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.benefits.question}
               </AccordionTrigger>
-              <AccordionContent className="font-[family-name:var(--font-inter)] text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4">
+              <AccordionContent className={`text-sm text-[#7A7A7A] dark:text-[#F5F5F5] leading-relaxed pb-4 ${
+                currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
+              }`}>
                 {t.faq.questions.benefits.answer}
               </AccordionContent>
             </AccordionItem>

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type LanguageCode = 'nl' | 'en' | 'de' | 'fr' | 'it' | 'es';
+type LanguageCode = 'nl' | 'en' | 'de' | 'fr' | 'it' | 'es' | 'ar';
 
 const phoneInputTranslations: Record<LanguageCode, {
   placeholders: string[];
@@ -84,6 +84,18 @@ const phoneInputTranslations: Record<LanguageCode, {
     validMessage: "Número de teléfono internacional válido",
     helperText: "Con código de país, ej. +34 123456789",
     errorMessage: "Ingresa un número internacional válido"
+  },
+  ar: {
+    placeholders: [
+      "أدخل رقم هاتفك...",
+      "+31 612345678",
+      "+1 5551234567",
+      "+966 501234567"
+    ],
+    floatingLabel: "رقم الهاتف",
+    validMessage: "رقم هاتف دولي صحيح",
+    helperText: "مع رمز البلد، مثال: +966 501234567",
+    errorMessage: "أدخل رقماً دولياً صحيحاً"
   }
 };
 
@@ -106,7 +118,7 @@ export const BeautifulPhoneInput = ({
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const t = phoneInputTranslations[language];
+  const t = phoneInputTranslations[language] || phoneInputTranslations['en'];
   const placeholders = t.placeholders;
 
   const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
