@@ -16,6 +16,7 @@ import {
   Step3CountryCity,
   Step4GroceryStores,
   Step5DietaryAllergies,
+  Step5_5AssistantPreferences,
   Step6GroceryLists,
   Step7Integrations,
   Step8Completion,
@@ -98,6 +99,11 @@ export default function OnboardingPage() {
   const [selectedDietary, setSelectedDietary] = useState<string[]>([])
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([])
   
+  // Step 5.5: Assistant Preferences
+  const [selectedResponseStyle, setSelectedResponseStyle] = useState("")
+  const [selectedCommunicationTone, setSelectedCommunicationTone] = useState("")
+  const [customPreferences, setCustomPreferences] = useState("")
+  
   // Step 6: Grocery Lists
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   
@@ -129,6 +135,9 @@ export default function OnboardingPage() {
         setSelectedStores(progress.selectedStores || [])
         setSelectedDietary(progress.selectedDietary || [])
         setSelectedAllergies(progress.selectedAllergies || [])
+        setSelectedResponseStyle(progress.selectedResponseStyle || "")
+        setSelectedCommunicationTone(progress.selectedCommunicationTone || "")
+        setCustomPreferences(progress.customPreferences || "")
         setSelectedItems(progress.selectedItems || [])
         setSelectedIntegrations(progress.selectedIntegrations || [])
         setCurrentStep(progress.currentStep || 1)
@@ -166,6 +175,9 @@ export default function OnboardingPage() {
       selectedStores,
       selectedDietary,
       selectedAllergies,
+      selectedResponseStyle,
+      selectedCommunicationTone,
+      customPreferences,
       selectedItems,
       selectedIntegrations
     }
@@ -204,6 +216,41 @@ export default function OnboardingPage() {
     try {
       setLoading(true)
 
+      // Generate personalized prompts for all agents
+      let generatedPrompts = null
+      try {
+        const promptResponse = await fetch('/api/onboarding/generate-prompt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            selectedResponseStyle,
+            selectedCommunicationTone,
+            customPreferences,
+            userInfo: {
+              name,
+              country,
+              city,
+              language: currentLanguage === 'nl' ? 'Dutch' : 'English',
+              stores: selectedStores.map(store => store.name).join(', '),
+              dietary: selectedDietary?.length ? selectedDietary.join(', ') : 'no specific dietary restrictions',
+              allergies: selectedAllergies?.length ? selectedAllergies.join(', ') : 'no known allergies'
+            }
+          })
+        })
+
+        const promptData = await promptResponse.json()
+        if (promptResponse.ok && promptData.success) {
+          generatedPrompts = promptData.data.prompts
+          console.log('✅ Generated personalized prompts for all agents')
+        } else {
+          console.warn('⚠️ Failed to generate prompts, continuing without them:', promptData.error)
+        }
+      } catch (promptError) {
+        console.warn('⚠️ Error generating prompts, continuing without them:', promptError)
+      }
+
       // Create user in database
       const response = await fetch('/api/onboarding/create-user', {
         method: 'POST',
@@ -219,9 +266,13 @@ export default function OnboardingPage() {
           selectedStores: selectedStores.map(store => store.name), // Send store names for backend compatibility
           selectedDietary,
           selectedAllergies,
+          selectedResponseStyle,
+          selectedCommunicationTone,
+          customPreferences,
           selectedItems,
           selectedIntegrations,
-          preferredLanguage: currentLanguage
+          preferredLanguage: currentLanguage,
+          generatedPrompts // Include the generated prompts
         })
       })
 
@@ -240,11 +291,12 @@ export default function OnboardingPage() {
         city,
         selectedStores,
         selectedIntegrations,
-        language: currentLanguage
+        language: currentLanguage,
+        generatedPrompts // Store prompts for potential future use
       }))
 
       // Move to completion step
-      setCurrentStep(6)
+      setCurrentStep(7)
 
     } catch (error) {
       console.error('Error creating user:', error)
@@ -303,13 +355,13 @@ export default function OnboardingPage() {
             <span className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] ${
               currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
             }`}>
-              Step {currentStep} of 6
+              Step {currentStep} of 7
             </span>
           </div>
           <div className="w-full bg-gray-200/60 dark:bg-gray-700/60 rounded-full h-1.5 sm:h-2 backdrop-blur-sm">
             <div 
               className="bg-gradient-to-r from-[#00B207] to-[#84D187] h-1.5 sm:h-2 rounded-full transition-all duration-500 ease-out shadow-sm"
-              style={{ width: `${(currentStep / 6) * 100}%` }}
+              style={{ width: `${(currentStep / 7) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -379,8 +431,25 @@ export default function OnboardingPage() {
           />
         )}
 
-        {/* Step 4: Grocery Lists */}
+        {/* Step 3.5: Assistant Preferences */}
         {currentStep === 4 && (
+          <Step5_5AssistantPreferences
+            selectedResponseStyle={selectedResponseStyle}
+            selectedCommunicationTone={selectedCommunicationTone}
+            customPreferences={customPreferences}
+            setSelectedResponseStyle={setSelectedResponseStyle}
+            setSelectedCommunicationTone={setSelectedCommunicationTone}
+            setCustomPreferences={setCustomPreferences}
+            loading={loading}
+            t={t}
+            onNext={handleNext}
+            onBack={handleBack}
+            currentLanguage={currentLanguage}
+          />
+        )}
+
+        {/* Step 4: Grocery Lists */}
+        {currentStep === 5 && (
           <Step6GroceryLists
             selectedItems={selectedItems}
             setSelectedItems={setSelectedItems}
@@ -393,7 +462,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 5: Integrations */}
-        {currentStep === 5 && (
+        {currentStep === 6 && (
           <Step7Integrations
             selectedIntegrations={selectedIntegrations}
             setSelectedIntegrations={setSelectedIntegrations}
@@ -406,7 +475,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Step 6: Completion */}
-        {currentStep === 6 && (
+        {currentStep === 7 && (
           <Step8Completion
             loading={loading}
             t={t}

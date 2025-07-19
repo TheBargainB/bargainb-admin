@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
       selectedAllergies = [],
       selectedItems = [],
       selectedIntegrations = [],
-      preferredLanguage = 'nl'
+      preferredLanguage = 'nl',
+      generatedPrompts = null
     } = await request.json()
 
     // Clean phone number (fix double + issue and formatting)
@@ -227,7 +228,12 @@ export async function POST(request: NextRequest) {
                }
                return storeMap[store] || store.toLowerCase() + '.nl'
              }).join(', '))
-        : 'ah.nl'
+        : 'ah.nl',
+      
+      // Generated Personalized Prompts for AI Agents
+      supervisor_prompt: generatedPrompts?.supervisor || null,
+      promotion_agent_prompt: generatedPrompts?.promotionAgent || null,
+      grocery_search_agent_prompt: generatedPrompts?.grocerySearchAgent || null
     }
 
     let userProfile
