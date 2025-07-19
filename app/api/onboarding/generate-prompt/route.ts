@@ -29,49 +29,45 @@ export async function POST(request: NextRequest) {
 
     // Create prompts for each agent type following the existing structure
     const generateAgentPrompt = async (agentType: string, basePrompt: string, userContext: any) => {
-      const systemPrompt = `You are an AI assistant that creates personalized system prompts for a ${agentType} in a grocery shopping assistant system named BargainB. 
+      const systemPrompt = `You are an AI assistant that creates personalization sections for a ${agentType} in a grocery shopping assistant system named BargainB. 
 
-Based on the user's preferences and the existing system prompt structure, create a personalized version that incorporates the user's specific communication preferences and personal information.
+Your task is to create a personalization section that will be added to the base system prompt to customize the communication style.
 
-The prompt should:
-1. Follow the exact structure and format of the base prompt
-2. Include all the same tools and capabilities
-3. Incorporate the user's communication preferences (response style, tone, custom preferences)
-4. Personalize the language and communication style based on user preferences
-5. Maintain all technical functionality while making it more personalized
+**CRITICAL: DO NOT MODIFY THE BASE PROMPT**
+- You are only creating a personalization section to be appended
+- Do not include any variable placeholders or technical content
+- Focus only on communication style and tone instructions
+- Keep it concise (2-4 sentences)
 
-Create a complete system prompt that can be used directly to configure the ${agentType}.`
+The personalization section should:
+1. Add communication style instructions based on user preferences
+2. Incorporate tone and style guidance
+3. Enhance user experience with personal touches
+4. Keep it concise (2-4 sentences)`
 
-      const userPrompt = `Create a personalized system prompt for a BargainB ${agentType} based on these user preferences:
+      const userPrompt = `Create a personalization section for a BargainB ${agentType} based on these communication preferences:
 
 **User's Communication Preferences:**
 - Response Style: ${selectedResponseStyle}
 - Communication Tone: ${selectedCommunicationTone}
 - Custom Preferences: ${customPreferences}
 
-**User Information:**
-${userInfo ? `
-- Name: ${userInfo.name || 'Not provided'}
-- Country: ${userInfo.country || 'Not provided'}
-- City: ${userInfo.city || 'Not provided'}
-- Language: ${userInfo.language || 'English'}
-- Selected Stores: ${userInfo.stores || 'Not provided'}
-- Dietary Preferences: ${userInfo.dietary || 'Not provided'}
-- Allergies: ${userInfo.allergies || 'Not provided'}
-` : 'No additional user information provided'}
+Please create a personalization section that:
 
-**Base System Prompt Structure:**
-${basePrompt}
+1. **Adds communication style instructions** - Include specific instructions for the tone and style
+2. **Incorporates user preferences** - Add guidance for emojis, formality level, etc.
+3. **Enhances user experience** - Make the assistant more relatable and personalized
+4. **Keeps it concise** - This will be added to the base system prompt
 
-Please create a personalized version of this system prompt that:
+**IMPORTANT:**
+- Do not include any variable placeholders like {{country_code}} or {{language_code}}
+- Do not include any technical content or tool descriptions
+- Focus only on communication style and tone instructions
+- This section will be appended to the base prompt, so keep it simple
 
-1. **Maintains the exact structure** - Keep all tools, capabilities, and technical functionality
-2. **Incorporates communication preferences** - Adjust the tone and style based on user preferences
-3. **Personalizes the language** - Make it more tailored to how this specific user prefers to communicate
-4. **Adds personal context** - Include user's name, preferences, and specific needs
-5. **Enhances user experience** - Make the assistant more relatable and personalized
+The personalization section should be 2-4 sentences that can be inserted into the base system prompt to customize the communication style.
 
-The output should be a complete system prompt that can be used directly to configure the ${agentType} for this specific user.`
+You must output your response as valid JSON with a "personalization" field containing the personalization section.`
 
       const messages = [
         { role: 'system' as const, content: systemPrompt },
@@ -81,17 +77,34 @@ The output should be a complete system prompt that can be used directly to confi
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages,
-        max_tokens: 1500,
+        max_tokens: 500,
         temperature: 0.7,
         top_p: 1,
         frequency_penalty: 0,
-        presence_penalty: 0
+        presence_penalty: 0,
+        response_format: {
+          type: "json_object"
+        }
       })
 
-      return completion.choices[0]?.message?.content || ''
+      const responseContent = completion.choices[0]?.message?.content
+      if (responseContent) {
+        try {
+          const parsed = JSON.parse(responseContent)
+          const personalization = parsed.personalization || ''
+          
+          // Combine base prompt with personalization
+          const combinedPrompt = basePrompt + "\n\n" + personalization
+          return combinedPrompt
+        } catch (e) {
+          console.error('Failed to parse structured response:', e)
+          return basePrompt
+        }
+      }
+      return basePrompt
     }
 
-    // Base prompts for each agent type
+    // Base prompts for each agent type (keep exactly as they are)
     const grocerySearchBasePrompt = `Today's date is ${today}. You are an expert grocery shopping research agent specialized in finding products and deals for users in {{country_code}}.
 
 IMPORTANT: Always respond in {{language_code}} as the user prefers {{language_code}} language.
@@ -205,9 +218,9 @@ Always provide personalized grocery shopping assistance adapted to {{country_cod
 
     // Generate personalized prompts for all three agents
     const [supervisorPrompt, promotionAgentPrompt, grocerySearchAgentPrompt] = await Promise.all([
-      generateAgentPrompt('Supervisor Agent', supervisorBasePrompt, userInfo),
-      generateAgentPrompt('Promotion Agent', promotionsBasePrompt, userInfo),
-      generateAgentPrompt('Grocery Search Agent', grocerySearchBasePrompt, userInfo)
+      generateAgentPrompt('Supervisor Agent', supervisorBasePrompt, null),
+      generateAgentPrompt('Promotion Agent', promotionsBasePrompt, null),
+      generateAgentPrompt('Grocery Search Agent', grocerySearchBasePrompt, null)
     ])
 
     if (!supervisorPrompt || !promotionAgentPrompt || !grocerySearchAgentPrompt) {
