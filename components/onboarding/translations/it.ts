@@ -108,9 +108,9 @@ export const it = {
       helpText: "Puoi modificare le tue preferenze in seguito"
     },
     step5: {
-      title: "Preferenze dietetiche e allergie",
+      title: "Preferenze alimentari e allergie",
       description: "Aiutaci a personalizzare la tua esperienza",
-      dietaryPreferences: "Preferenze dietetiche",
+      dietaryPreferences: "Preferenze alimentari",
       foodAllergies: "Allergie alimentari",
       yourSelections: "Le tue selezioni",
       helpText: "Queste informazioni ci aiutano a fornire suggerimenti migliori",
@@ -121,22 +121,53 @@ export const it = {
         dairyFree: "Senza lattosio",
         keto: "Keto",
         paleo: "Paleo",
-        lowSodium: "Basso in sodio",
+        lowSodium: "Basso contenuto di sodio",
         diabetic: "Diabetico",
         halal: "Halal",
         kosher: "Kosher"
       },
       allergyOptions: {
-        nuts: "Noci",
+        nuts: "Frutta secca",
         peanuts: "Arachidi",
         dairy: "Latticini",
         eggs: "Uova",
         soy: "Soia",
         gluten: "Glutine",
-        shellfish: "Molluschi",
+        shellfish: "Crostacei",
         fish: "Pesce",
         sesame: "Sesamo",
         sulfites: "Solfiti"
+      }
+    },
+    step5_5: {
+      title: "Come dovrebbe rispondere il tuo assistente?",
+      description: "Ora che abbiamo raccolto le tue preferenze di negozi e cibo, come vorresti che l'assistente ti rispondesse?",
+      responseStyle: "Stile di risposta",
+      communicationTone: "Tono di comunicazione",
+      helpText: "Puoi modificare queste preferenze più tardi nelle impostazioni",
+      responseStyles: {
+        concise: "Conciso",
+        detailed: "Dettagliato",
+        friendly: "Amichevole",
+        professional: "Professionale",
+        casual: "Informale",
+        formal: "Formale"
+      },
+      communicationTones: {
+        helpful: "Utile e di supporto",
+        direct: "Diretto ed efficiente",
+        encouraging: "Incoraggiante e motivante",
+        informative: "Informativo ed educativo",
+        friendly: "Amichevole e caloroso",
+        professional: "Professionale e affidabile"
+      },
+      examples: {
+        concise: "Risposte rapide e dirette",
+        detailed: "Spiegazioni dettagliate con contesto",
+        friendly: "Comunicazione calorosa e accessibile",
+        professional: "Tono educato e professionale",
+        casual: "Stile rilassato e conversazionale",
+        formal: "Risposte rispettose e strutturate"
       }
     },
     step6: {

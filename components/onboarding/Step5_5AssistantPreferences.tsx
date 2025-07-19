@@ -36,22 +36,28 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
     currentLanguage = 'en' 
   } = props;
 
+  // Add null checks and fallbacks for translations
+  const safeT = t || {};
+  const onboardingT = safeT.onboarding || {};
+  const step5_5T = onboardingT.step5_5 || {};
+  const commonT = onboardingT.common || {};
+
   const responseStyleOptions = [
-    { id: "concise", name: t.onboarding.step5_5.responseStyles.concise, icon: MessageSquare },
-    { id: "detailed", name: t.onboarding.step5_5.responseStyles.detailed, icon: Sparkles },
-    { id: "friendly", name: t.onboarding.step5_5.responseStyles.friendly, icon: User },
-    { id: "professional", name: t.onboarding.step5_5.responseStyles.professional, icon: Settings },
-    { id: "casual", name: t.onboarding.step5_5.responseStyles.casual, icon: MessageSquare },
-    { id: "formal", name: t.onboarding.step5_5.responseStyles.formal, icon: Settings }
+    { id: "concise", name: step5_5T.responseStyles?.concise || "Concise", icon: MessageSquare },
+    { id: "detailed", name: step5_5T.responseStyles?.detailed || "Detailed", icon: Sparkles },
+    { id: "friendly", name: step5_5T.responseStyles?.friendly || "Friendly", icon: User },
+    { id: "professional", name: step5_5T.responseStyles?.professional || "Professional", icon: Settings },
+    { id: "casual", name: step5_5T.responseStyles?.casual || "Casual", icon: MessageSquare },
+    { id: "formal", name: step5_5T.responseStyles?.formal || "Formal", icon: Settings }
   ];
 
   const communicationToneOptions = [
-    { id: "helpful", name: t.onboarding.step5_5.communicationTones.helpful, icon: User },
-    { id: "direct", name: t.onboarding.step5_5.communicationTones.direct, icon: MessageSquare },
-    { id: "encouraging", name: t.onboarding.step5_5.communicationTones.encouraging, icon: Sparkles },
-    { id: "informative", name: t.onboarding.step5_5.communicationTones.informative, icon: Settings },
-    { id: "friendly", name: t.onboarding.step5_5.communicationTones.friendly, icon: User },
-    { id: "professional", name: t.onboarding.step5_5.communicationTones.professional, icon: Settings }
+    { id: "helpful", name: step5_5T.communicationTones?.helpful || "Helpful & Supportive", icon: User },
+    { id: "direct", name: step5_5T.communicationTones?.direct || "Direct & Efficient", icon: MessageSquare },
+    { id: "encouraging", name: step5_5T.communicationTones?.encouraging || "Encouraging & Motivational", icon: Sparkles },
+    { id: "informative", name: step5_5T.communicationTones?.informative || "Informative & Educational", icon: Settings },
+    { id: "friendly", name: step5_5T.communicationTones?.friendly || "Friendly & Warm", icon: User },
+    { id: "professional", name: step5_5T.communicationTones?.professional || "Professional & Reliable", icon: Settings }
   ];
 
   const handleResponseStyleToggle = (styleId: string) => {
@@ -80,12 +86,12 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
           <CardTitle className={`text-sm sm:text-lg md:text-xl text-[#1F1F1F] dark:text-[#F5F5F5] text-center mb-1 ${
             currentLanguage === 'ar' ? 'noto-sans-arabic-bold' : 'font-[family-name:var(--font-paytone-one)]'
           }`}>
-            {t.onboarding.step5_5.title}
+            {step5_5T.title || "How should your assistant respond?"}
           </CardTitle>
           <div className={`text-xs sm:text-sm text-[#7A7A7A] dark:text-[#B7EACB] text-center leading-relaxed ${
             currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
           }`}>
-            {t.onboarding.step5_5.description}
+            {step5_5T.description || "Now that we've gathered your store and food preferences, how would you like the assistant to respond to you?"}
           </div>
         </CardHeader>
         
@@ -99,7 +105,7 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
               <span className={`text-xs sm:text-sm font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${
                 currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
               }`}>
-                {t.onboarding.step5_5.responseStyle}
+                {step5_5T.responseStyle || "Response Style"}
               </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
@@ -150,7 +156,7 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
               <span className={`text-xs sm:text-sm font-semibold text-[#1F1F1F] dark:text-[#F5F5F5] ${
                 currentLanguage === 'ar' ? 'noto-sans-arabic-semibold' : 'font-[family-name:var(--font-inter)]'
               }`}>
-                {t.onboarding.step5_5.communicationTone}
+                {step5_5T.communicationTone || "Communication Tone"}
               </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2">
@@ -292,7 +298,7 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
               style={{ WebkitTapHighlightColor: 'transparent' }}
               aria-label="Go back"
             >
-              {t.onboarding.common.back}
+              {commonT.back || "Back"}
             </Button>
             <Button
               onClick={handleNext}
@@ -307,7 +313,7 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
                 <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  {t.onboarding.common.continue}
+                  {commonT.continue || "Continue"}
                   <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4" />
                 </>
               )}
@@ -319,7 +325,7 @@ const Step5_5AssistantPreferences: React.FC<Step5_5AssistantPreferencesProps> = 
             <p className={`text-xs text-[#7A7A7A] dark:text-[#B7EACB] ${
               currentLanguage === 'ar' ? 'noto-sans-arabic-regular' : 'font-[family-name:var(--font-inter)]'
             }`}>
-              {t.onboarding.step5_5.helpText}
+              {step5_5T.helpText || "You can adjust these preferences later in settings"}
             </p>
           </div>
         </CardContent>

@@ -139,6 +139,37 @@ export const de = {
         sulfites: "Sulfite"
       }
     },
+    step5_5: {
+      title: "Wie soll Ihr Assistent antworten?",
+      description: "Jetzt, da wir Ihre Geschäfts- und Essensvorlieben gesammelt haben, wie möchten Sie, dass der Assistent Ihnen antwortet?",
+      responseStyle: "Antwortstil",
+      communicationTone: "Kommunikationston",
+      helpText: "Sie können diese Einstellungen später in den Einstellungen anpassen",
+      responseStyles: {
+        concise: "Knapp",
+        detailed: "Detailliert",
+        friendly: "Freundlich",
+        professional: "Professionell",
+        casual: "Lässig",
+        formal: "Formell"
+      },
+      communicationTones: {
+        helpful: "Hilfreich & Unterstützend",
+        direct: "Direkt & Effizient",
+        encouraging: "Ermutigend & Motivierend",
+        informative: "Informativ & Lehrreich",
+        friendly: "Freundlich & Warm",
+        professional: "Professionell & Zuverlässig"
+      },
+      examples: {
+        concise: "Schnelle, prägnante Antworten",
+        detailed: "Gründliche Erklärungen mit Kontext",
+        friendly: "Warme, zugängliche Kommunikation",
+        professional: "Höflicher, geschäftlicher Ton",
+        casual: "Entspannte, gesprächige Art",
+        formal: "Respektvolle, strukturierte Antworten"
+      }
+    },
     step6: {
       title: "Ihre Einkaufsliste",
       description: "Erstellen Sie Ihre erste Einkaufsliste",

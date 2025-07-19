@@ -139,6 +139,37 @@ export const ar = {
           sulfites: "كبريتات"
         }
       },
+      step5_5: {
+        title: "كيف يجب أن يستجيب مساعدك؟",
+        description: "الآن بعد أن جمعنا تفضيلات المتاجر والطعام، كيف تريد أن يستجيب لك المساعد؟",
+        responseStyle: "أسلوب الاستجابة",
+        communicationTone: "نبرة التواصل",
+        helpText: "يمكنك تعديل هذه التفضيلات لاحقًا في الإعدادات",
+        responseStyles: {
+          concise: "مختصر",
+          detailed: "مفصل",
+          friendly: "ودي",
+          professional: "مهني",
+          casual: "عادي",
+          formal: "رسمي"
+        },
+        communicationTones: {
+          helpful: "مساعد وداعم",
+          direct: "مباشر وفعال",
+          encouraging: "مشجع ومحفز",
+          informative: "مفيد وتعليمي",
+          friendly: "ودي ودافئ",
+          professional: "مهني وموثوق"
+        },
+        examples: {
+          concise: "استجابات سريعة ومباشرة",
+          detailed: "شرح شامل مع السياق",
+          friendly: "تواصل دافئ وودي",
+          professional: "نبرة مهذبة ومهنية",
+          casual: "أسلوب مرتاح ومحادثة",
+          formal: "استجابات محترمة ومنظمة"
+        }
+      },
       step6: {
         title: "قائمة التسوق الخاصة بك",
         description: "أنشئ أول قائمة تسوق لك",

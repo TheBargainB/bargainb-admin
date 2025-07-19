@@ -108,35 +108,66 @@ export const nl = {
       helpText: "Je kunt je voorkeuren later altijd wijzigen"
     },
     step5: {
-      title: "Voedingsvoorkeuren en allergieën",
+      title: "Dieetvoorkeuren en allergieën",
       description: "Help ons je ervaring te personaliseren",
-      dietaryPreferences: "Voedingsvoorkeuren",
+      dietaryPreferences: "Dieetvoorkeuren",
       foodAllergies: "Voedselallergieën",
-      yourSelections: "Je selecties",
-      helpText: "Deze informatie helpt ons betere suggesties te doen",
+      yourSelections: "Jouw selecties",
+      helpText: "Deze informatie helpt ons betere suggesties te geven",
       dietaryOptions: {
         vegetarian: "Vegetarisch",
         vegan: "Veganistisch",
         glutenFree: "Glutenvrij",
-        dairyFree: "Zuivelvrij",
+        dairyFree: "Lactosevrij",
         keto: "Keto",
         paleo: "Paleo",
-        lowSodium: "Zoutarm",
+        lowSodium: "Laag in natrium",
         diabetic: "Diabetisch",
         halal: "Halal",
         kosher: "Kosher"
       },
       allergyOptions: {
-        nuts: "Boomnoten",
+        nuts: "Noten",
         peanuts: "Pinda's",
-        dairy: "Melkproducten",
+        dairy: "Zuivel",
         eggs: "Eieren",
         soy: "Soja",
         gluten: "Gluten",
-        shellfish: "Schelpdieren",
+        shellfish: "Schaaldieren",
         fish: "Vis",
         sesame: "Sesam",
-        sulfites: "Sulfiten"
+        sulfites: "Sulfieten"
+      }
+    },
+    step5_5: {
+      title: "Hoe moet je assistent reageren?",
+      description: "Nu we je winkel- en voedselvoorkeuren hebben verzameld, hoe wil je dat de assistent je antwoordt?",
+      responseStyle: "Reactiestijl",
+      communicationTone: "Communicatietoon",
+      helpText: "Je kunt deze voorkeuren later aanpassen in de instellingen",
+      responseStyles: {
+        concise: "Beknopt",
+        detailed: "Gedetailleerd",
+        friendly: "Vriendelijk",
+        professional: "Professioneel",
+        casual: "Informeel",
+        formal: "Formeel"
+      },
+      communicationTones: {
+        helpful: "Behulpzaam en ondersteunend",
+        direct: "Direct en efficiënt",
+        encouraging: "Aanmoedigend en motiverend",
+        informative: "Informatief en educatief",
+        friendly: "Vriendelijk en warm",
+        professional: "Professioneel en betrouwbaar"
+      },
+      examples: {
+        concise: "Snelle, directe antwoorden",
+        detailed: "Gedetailleerde uitleg met context",
+        friendly: "Warme, toegankelijke communicatie",
+        professional: "Beleefde, zakelijke toon",
+        casual: "Ontspannen, gesprekachtige stijl",
+        formal: "Respectvolle, gestructureerde antwoorden"
       }
     },
     step6: {
